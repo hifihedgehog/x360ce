@@ -10,22 +10,29 @@
 	Loaded="UserControl_Loaded"
 	Unloaded="UserControl_Unloaded"
 	mc:Ignorable="d">
-	<Grid>
+	<Grid VerticalAlignment="Top">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition />
 			<ColumnDefinition />
 		</Grid.ColumnDefinitions>
 		<Grid.RowDefinitions>
-			<RowDefinition />
-			<RowDefinition />
-			<RowDefinition />
-		</Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition />
+            <RowDefinition />
+            <RowDefinition />
+        </Grid.RowDefinitions>
 		<Grid.Resources>
 			<Style TargetType="GroupBox" BasedOn="{StaticResource GroupBox_Default}">
 				<Setter Property="VerticalAlignment" Value="Stretch" />
 			</Style>
 		</Grid.Resources>
-		<GroupBox Margin="3,3,0,3" Header="General">
+
+        <!-- ViGEm Bus Help -->
+        <Border Style="{StaticResource BorderDescriptionNormal}" Padding="3,3,3,4" Margin="3,3,3,0" Grid.ColumnSpan="2">
+            <Label Content="For force feedback to work on a DirectInput controller, you may need to install controller drivers provided by the manufacturer." />
+        </Border>
+
+        <GroupBox Grid.Row="1" Margin="3,3,0,3" Header="General">
 			<StackPanel>
 				<CheckBox x:Name="ForceEnabledCheckBox" Content="Enabled" />
 				<CheckBox x:Name="SwapMotorsCheckBox" Content="Swap Motors" />
@@ -53,7 +60,7 @@
 				</Grid>
 			</StackPanel>
 		</GroupBox>
-		<GroupBox Grid.Column="1" Margin="3" Header="Effect Implementation Type">
+		<GroupBox Grid.Row="1" Grid.Column="1" Margin="3" Header="Effect Implementation Type">
 			<StackPanel>
 				<ComboBox
 					x:Name="ForceTypeComboBox"
@@ -74,14 +81,14 @@
 					TextWrapping="Wrap" />
 			</StackPanel>
 		</GroupBox>
-		<controls:PadItem_ForceFeedback_MotorControl x:Name="LeftForceFeedbackMotorPanel" Grid.Row="1" x:FieldModifier="public" />
+		<controls:PadItem_ForceFeedback_MotorControl x:Name="LeftForceFeedbackMotorPanel" Grid.Row="2" x:FieldModifier="public" />
 		<controls:PadItem_ForceFeedback_MotorControl
 			x:Name="RightForceFeedbackMotorPanel"
-			Grid.Row="1"
+			Grid.Row="2"
 			Grid.Column="1"
 			x:FieldModifier="public" />
 
-		<RichTextBox Grid.Row="2" Grid.ColumnSpan="2" Background="Transparent">
+		<RichTextBox Grid.Row="3" Grid.ColumnSpan="2" Background="Transparent">
 			<FlowDocument>
 				<Paragraph TextAlignment="Justify">
 					If your controller have only one motor then force feedback effects will be merged automatically. Values sent by the game to the Left Motor, which is used to simulate large explosions, crashes, gun fire, etc, will be able to reach maximum vibration effect. You can reduce strength of the Right Motor to simulate small force feedbacks effects like button responses, small collision bumps, etc. GamePads must use Constant effect type. Wheels must use Periodic effect type, which is perfect for simulating GamePad vibration effects."

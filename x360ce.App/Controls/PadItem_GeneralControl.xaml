@@ -80,7 +80,6 @@
                     <!--  Drag and Drop menu Input Label  -->
                     <Style x:Key="DragAndDropDInputLabel" TargetType="Label">
                         <Setter Property="HorizontalAlignment" Value="Center" />
-                        <Setter Property="Padding" Value="4,2,4,4" />
                         <Setter Property="IsHitTestVisible" Value="False" />
                         <Setter Property="Content" Value="STEP 3 - Drag and drop labels into text boxes." />
                     </Style>
@@ -221,7 +220,7 @@
 
                             <!-- Drag and Drop Help -->
                             <Border Style="{StaticResource BorderDescriptionNormal}" Margin="3,3,3,0">
-                                <Label Style="{StaticResource DragAndDropDInputLabel}" HorizontalAlignment="Center" />
+                                <Label Style="{StaticResource DragAndDropDInputLabel}" HorizontalAlignment="Center" Padding="3,3,3,4" />
                             </Border>
 
                             <StackPanel Name="DragAndDropStackPanel" Margin="3,0,3,3">

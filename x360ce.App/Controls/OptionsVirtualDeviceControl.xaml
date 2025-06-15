@@ -19,13 +19,13 @@
         <StackPanel>
         
         <!-- ViGEm Bus Help -->
-            <Border Style="{StaticResource BorderDescriptionNormal}" Margin="3,3,3,0">
-                <StackPanel Orientation="Horizontal" Margin="6,0,6,0">
+            <Border Style="{StaticResource BorderDescriptionNormal}" Margin="3,3,3,0" Padding="6,3,3,4">
+                <StackPanel Orientation="Horizontal">
                     <Label Content="Purpose of ViGEm Bus is to create virtual Xbox 360 Controller, which can be mapped to one or multiple DirectInput devices, keyboard or mouse." />
-                    <TextBlock Margin="14,0,0,0">
+                    <TextBlock Margin="14,0,0,0" Padding="0">
                         <Hyperlink NavigateUri="https://vigembusdriver.com" TextDecorations="None" RequestNavigate="HyperLink_RequestNavigate">vigembusdriver.com</Hyperlink>
                     </TextBlock>
-                    <TextBlock Margin="8,0,0,0">
+                    <TextBlock Margin="8,0,0,0" Padding="0">
                         <Hyperlink NavigateUri="https://github.com/nefarius/ViGEmBus/releases" TextDecorations="None" RequestNavigate="HyperLink_RequestNavigate">github.com/nefarius/ViGEmBus/releases</Hyperlink>
                     </TextBlock>
                 </StackPanel>
