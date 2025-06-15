@@ -31,12 +31,53 @@
                 <TextBlock Text="HidHide by Nefarius" />
             </GroupBox.Header>
 
-                <StackPanel Orientation="Horizontal" Margin="7,0,4,4">
-                <Label Content="Download" />
-                <TextBlock Margin="8,0,0,0">
+                <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Label Content="Download" />
+                        <TextBlock Grid.Column="1" Margin="3,0,0,0" VerticalAlignment="Center">
                         <Hyperlink NavigateUri="https://github.com/nefarius/HidHide/releases" TextDecorations="None" RequestNavigate="HyperLink_RequestNavigate">github.com/nefarius/HidHide/releases</Hyperlink>
-                </TextBlock>
-</StackPanel>
+                        </TextBlock>
+
+                        <Button
+                        Name="HidHideRefreshButton"
+                        Grid.Column="3"
+                        Width="60"
+                        Click="HidHideRefreshButton_Click"
+                        Content="Refresh" />
+                        <Label Name="HidHideLabel" Grid.Row="1" Grid.Column="0">HidHide</Label>
+                        <TextBox
+                        Name="HidHideStatusTextBox"
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        IsReadOnly="True" />
+                         <Button
+                        Name="HidHideInstallButton"
+                        Grid.Row="1"
+                        Grid.Column="2"
+                        Width="60"
+                        Click="HidHideInstallButton_Click"
+                        Content="Install"
+                        IsEnabled="False" />
+                        <Button
+                        Name="HidHideUninstallButton"
+                        Grid.Row="1"
+                        Grid.Column="3"
+                        Width="60"
+                        Click="HidHideUninstallButton_Click"
+                        Content="Uninstall"
+                        IsEnabled="False" />
+                    </Grid>
+
                 <!--<RichTextBox Name="HidHideRichTextBox" Background="Transparent">
                 <RichTextBox.Style>
                     <Style TargetType="RichTextBox" BasedOn="{StaticResource RichTextBox_Default}">
@@ -78,28 +119,28 @@
                     Grid.Row="0"
                     Grid.Column="3"
                     Width="60"
-                    Click="RefreshButton_Click"
+                    Click="HidGuardianRefreshButton_Click"
                     Content="Refresh" />
-                    <Label Name="HidGuardianLabel" Grid.Row="1" Grid.Column="0">HID Guardian</Label>
+                    <Label Name="HidGuardianLabel" Grid.Row="1" Grid.Column="0">HidGuardian</Label>
                     <TextBox
-                    Name="StatusTextBox"
+                    Name="HidGuardianStatusTextBox"
                     Grid.Row="1"
                     Grid.Column="1"
                     IsReadOnly="True" />
                     <Button
-                    Name="InstallButton"
+                    Name="HidGuardianInstallButton"
                     Grid.Row="1"
                     Grid.Column="2"
                     Width="60"
-                    Click="InstallButton_Click"
+                    Click="HidGuardianInstallButton_Click"
                     Content="Install"
                     IsEnabled="False" />
                     <Button
-                    Name="UninstallButton"
+                    Name="HidGuardianUninstallButton"
                     Grid.Row="1"
                     Grid.Column="3"
                     Width="60"
-                    Click="UninstallButton_Click"
+                    Click="HidGuardianUninstallButton_Click"
                     Content="Uninstall"
                     IsEnabled="False" />
                 </Grid>

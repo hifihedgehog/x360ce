@@ -28,7 +28,13 @@ namespace x360ce.App.DInput
 			return driver;
 		}
 
-		public static string GetViGEmBusPath()
+        public static SP_DRVINFO_DATA GetHideDriverInfo()
+        {
+            var driver = DeviceDetector.GetDrivers(DEVCLASS.SYSTEM, DIGCF.DIGCF_PRESENT, SPDIT.SPDIT_COMPATDRIVER, null, HidHideHardwareId).FirstOrDefault();
+            return driver;
+        }
+
+        public static string GetViGEmBusPath()
 		{
 			string baseDirectory = Path.GetPathRoot(Environment.GetFolderPath(Environment.SpecialFolder.System));
 			return Path.Combine(baseDirectory, "Program Files", "ViGEm ViGEmBus");
@@ -42,12 +48,13 @@ namespace x360ce.App.DInput
 
 		public static string[] ViGEmBusHardwareIds = { "Root\\ViGEmBus", "Nefarius\\ViGEmBus\\Gen1" };
 		public const string HidGuardianHardwareId = "Root\\HidGuardian";
+        public const string HidHideHardwareId = "Root\\HidHide";
 
-		/// <summary>
-		/// Install Virtual driver.
-		/// </summary>
-		/// <remarks>Must be executed in administrative mode.</remarks>
-		public static void InstallViGEmBus(ProcessWindowStyle style = ProcessWindowStyle.Hidden)
+        /// <summary>
+        /// Install Virtual driver.
+        /// </summary>
+        /// <remarks>Must be executed in administrative mode.</remarks>
+        public static void InstallViGEmBus(ProcessWindowStyle style = ProcessWindowStyle.Hidden)
 		{
 			// Extract files first.
 			ExtractViGemBusFiles();
@@ -99,11 +106,11 @@ namespace x360ce.App.DInput
 			ExtractViGemFiles("HidGuardian", target);
 		}
 
-		/// <summary>
-		/// Install HID Guardian
-		/// </summary>
-		/// <remarks>Must be executed in administrative mode.</remarks>
-		public static void InstallHidGuardian(ProcessWindowStyle style = ProcessWindowStyle.Hidden)
+        /// <summary>
+        /// Install HID Guardian
+        /// </summary>
+        /// <remarks>Must be executed in administrative mode.</remarks>
+        public static void InstallHidGuardian(ProcessWindowStyle style = ProcessWindowStyle.Hidden)
 		{
 			// Extract files first.
 			ExtractHidGuardianFiles();
@@ -125,7 +132,6 @@ namespace x360ce.App.DInput
 			if (canModify)
 				ViGEm.HidGuardianHelper.FixWhiteListRegistryKey();
 		}
-
 
 		/// <summary>
 		/// Uninstall HID Guardian.

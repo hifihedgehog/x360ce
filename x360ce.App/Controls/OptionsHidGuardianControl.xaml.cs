@@ -25,53 +25,88 @@ namespace x360ce.App.Controls
 				window.OptionsPanel.MainTabControl.SelectedItem == window.OptionsPanel.HidGuardianTabPage;
 			// If HidGuardian Tab was selected then refresh.
 			if (isSelected)
-				RefreshStatus();
+				HidRefreshStatus();
 		}
 
-		private void InstallButton_Click(object sender, RoutedEventArgs e)
+        private void HidHideInstallButton_Click(object sender, RoutedEventArgs e)
+        {
+            //ControlsHelper.BeginInvoke(() =>
+            //{
+            //    HidHideStatusTextBox.Text = "Installing. Please Wait...";
+            //    Program.RunElevated(AdminCommand.InstallHidHide);
+            //    //ViGEm.HidGuardianHelper.InsertCurrentProcessToWhiteList();
+            //    HidRefreshStatus();
+            //});
+        }
+
+        private void HidGuardianInstallButton_Click(object sender, RoutedEventArgs e)
 		{
 			ControlsHelper.BeginInvoke(() =>
 			{
-				StatusTextBox.Text = "Installing. Please Wait...";
+				HidGuardianStatusTextBox.Text = "Installing. Please Wait...";
 				Program.RunElevated(AdminCommand.InstallHidGuardian);
 				ViGEm.HidGuardianHelper.InsertCurrentProcessToWhiteList();
-				RefreshStatus();
+				HidRefreshStatus();
 			});
 		}
 
-		private void RefreshButton_Click(object sender, RoutedEventArgs e)
+        private void HidHideRefreshButton_Click(object sender, RoutedEventArgs e)
+        {
+            HidRefreshStatus();
+        }
+
+        private void HidGuardianRefreshButton_Click(object sender, RoutedEventArgs e)
 		{
-			RefreshStatus();
+			HidRefreshStatus();
 		}
 
-		private void UninstallButton_Click(object sender, RoutedEventArgs e)
+        private void HidHideUninstallButton_Click(object sender, RoutedEventArgs e)
+        {
+            //ControlsHelper.BeginInvoke(() =>
+            //{
+            //    HidHideStatusTextBox.Text = "Uninstalling. Please Wait...";
+            //    Program.RunElevated(AdminCommand.UninstallHidHide);
+            //    HidRefreshStatus();
+            //});
+        }
+
+        private void HidGuardianUninstallButton_Click(object sender, RoutedEventArgs e)
 		{
 			ControlsHelper.BeginInvoke(() =>
 			{
-				StatusTextBox.Text = "Uninstalling. Please Wait...";
+				HidGuardianStatusTextBox.Text = "Uninstalling. Please Wait...";
 				Program.RunElevated(AdminCommand.UninstallHidGuardian);
-				RefreshStatus();
+				HidRefreshStatus();
 			});
 		}
 
-		void RefreshStatus()
+		void HidRefreshStatus()
 		{
-			ControlsHelper.SetText(StatusTextBox, "Please wait...");
+			ControlsHelper.SetText(HidGuardianStatusTextBox, "Please wait...");
 			// run in another thread, to make sure it is not freezing interface.
 			var ts = new System.Threading.ThreadStart(delegate ()
 			{
-				// Get Virtual Bus and HID Guardian status.
-				var hid = DInput.VirtualDriverInstaller.GetHidGuardianDriverInfo();
-				ControlsHelper.BeginInvoke(() =>
+				// Get Virtual Bus, HidGuardian, and HidHide status.
+				var hidGuardian = DInput.VirtualDriverInstaller.GetHidGuardianDriverInfo();
+                var hidHide = DInput.VirtualDriverInstaller.GetHideDriverInfo();
+                ControlsHelper.BeginInvoke(() =>
 				{
-					// Update HID status.
-					var hidStatus = hid.DriverVersion == 0
+					// Update HidGuardian status.
+					var hidGuardianStatus = hidGuardian.DriverVersion == 0
 						? "Not installed"
-						: string.Format("{0} {1}", hid.Description, hid.GetVersion());
-					ControlsHelper.SetText(StatusTextBox, hidStatus);
-					InstallButton.IsEnabled = hid.DriverVersion == 0;
-					UninstallButton.IsEnabled = hid.DriverVersion != 0;
-				});
+						: string.Format("{0} {1}", hidGuardian.Description, hidGuardian.GetVersion());
+					ControlsHelper.SetText(HidGuardianStatusTextBox, hidGuardianStatus);
+					HidGuardianInstallButton.IsEnabled = hidGuardian.DriverVersion == 0;
+					HidGuardianUninstallButton.IsEnabled = hidGuardian.DriverVersion != 0;
+
+                    // Update HidHide status.
+					var hidHideStatus = hidHide.DriverVersion == 0
+						? "Not installed"
+						: string.Format("{0} {1}", hidHide.Description, hidHide.GetVersion());
+                    ControlsHelper.SetText(HidHideStatusTextBox, hidHideStatus);
+                    HidHideInstallButton.IsEnabled = hidHide.DriverVersion == 0;
+                    HidHideUninstallButton.IsEnabled = hidHide.DriverVersion != 0;
+                });
 			});
 			var t = new System.Threading.Thread(ts);
 			t.Start();
@@ -90,7 +125,7 @@ namespace x360ce.App.Controls
 			// Bind Controls.
 			var o = SettingsManager.Options;
 			SettingsManager.LoadAndMonitor(o, nameof(o.HidGuardianConfigureAutomatically), HidGuardianConfigureAutomaticallyCheckBox);
-			RefreshStatus();
+			HidRefreshStatus();
 		}
 
 		private void UserControl_Unloaded(object sender, RoutedEventArgs e)
