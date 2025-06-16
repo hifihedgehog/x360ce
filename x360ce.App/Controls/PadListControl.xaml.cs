@@ -333,7 +333,7 @@ namespace x360ce.App.Controls
 				PadSettingChecksum.Content = EngineHelper.GetID(selected.PadSettingChecksum); ;
 
 				var ud = SettingsManager.UserDevices.Items.FirstOrDefault(x => x.InstanceGuid == selected.InstanceGuid);
-				VendorName.Content = ud?.HidManufacturer.ToString();
+				VendorName.Content = ud?.DevManufacturer.ToString();
 
 				var imageSource = ConnectionClassToImageConverter.Convert(selected.InstanceGuid);
 				ConnectionClassImage.Source = imageSource;
