@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path=".clinerules/instructions.md" />
+    <File Path=".clinerules/repository-analysis.instructions.md" />
     <File Path=".editorconfig" />
     <File Path="TODO.md" />
     <File Path="x360ce.slnx.vsspell" />

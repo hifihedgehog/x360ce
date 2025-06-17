@@ -221,6 +221,45 @@ This section specifies the tools and platforms needed for development work on th
 - **HID Guardian**: Optional controller hiding functionality
 - **SharpDX Libraries**: DirectInput wrapper assemblies
 
+## Terminal Environment & Command Syntax
+
+### PowerShell Environment
+- **PowerShell Version**: 7.5.1 Core
+- **Edition**: Core  
+- **Operating System**: Microsoft Windows 10.0.26100 (Windows 11)
+- **Platform**: Win32NT
+- **Default Shell**: C:\Program Files\PowerShell\7\pwsh.exe
+
+### Command Chaining Syntax
+In PowerShell environments, use the semicolon (`;`) for sequential command execution instead of double ampersands (`&&`).
+
+**Correct PowerShell Syntax:**
+```powershell
+cd x360ce.App; dotnet build x360ce.App.csproj
+```
+
+**Incorrect Syntax (avoid):**
+```powershell
+cd x360ce.App && dotnet build x360ce.App.csproj
+```
+
+### Build Commands for x360ce Projects
+When building individual x360ce projects, use this pattern:
+```powershell
+cd {PROJECT_DIRECTORY}; dotnet build {PROJECT_NAME}.csproj
+```
+
+**Examples:**
+- `cd x360ce.App; dotnet build x360ce.App.csproj`
+- `cd x360ce.Engine; dotnet build x360ce.Engine.csproj`
+- `cd x360ce.RemoteController; dotnet build x360ce.RemoteController.csproj`
+
+### PowerShell Command Guidelines
+1. **Sequential Execution**: Use `;` to run commands sequentially regardless of success/failure
+2. **Conditional Execution**: Use `&&` only when you need the second command to run only if the first succeeds (PowerShell 7+ feature)
+3. **Error Handling**: For better error handling, use `if` statements or try-catch blocks
+4. **Developer Certificate**: If certificate is not trusted: `dotnet dev-certs https --trust`
+
 ## Build, CI/CD & Testing
 
 This section documents the testing strategy and build processes to support development workflow decisions.
@@ -385,4 +424,3 @@ Mobile applications handle remote controller functionality:
 - **Bluetooth Communication**: Android-specific Bluetooth device receiver
 - **Cross-Platform Security**: Xamarin.Essentials for secure device access
 - **Platform Permissions**: Platform-specific permission models for device access
-
