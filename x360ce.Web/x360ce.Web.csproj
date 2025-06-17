@@ -258,6 +258,12 @@
     <Compile Include="..\x360ce.Engine\Data\x360ceModel.Designer.cs">
       <Link>Engine\x360ceModel.Designer.cs</Link>
     </Compile>
+    <Compile Include="..\x360ce.Engine\Data\x360ceModel.Designer.cs">
+      <Link>Engine\x360ceModel.Designer.cs</Link>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>x360ceModel.edmx</DependentUpon>
+    </Compile>
     <Compile Include="..\x360ce.Engine\JocysCom\Common\GuidEnum.cs">
       <Link>JocysCom\GuidEnum.cs</Link>
     </Compile>
@@ -287,6 +293,18 @@
     </Compile>
     <Compile Include="..\x360ce.Engine\JocysCom\Data\SqlHelper.cs">
       <Link>JocysCom\SqlHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\x360ce.Engine\JocysCom\Diagnostics\RawDataLogHttpModule.cs">
+      <Link>JocysCom\RawDataLogHttpModule.cs</Link>
+    </Compile>
+    <Compile Include="..\x360ce.Engine\JocysCom\Diagnostics\RollingWriterOptions.cs">
+      <Link>JocysCom\RollingWriterOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\x360ce.Engine\JocysCom\Diagnostics\RollingXmlWriterTraceListener.cs">
+      <Link>JocysCom\RollingXmlWriterTraceListener.cs</Link>
+    </Compile>
+    <Compile Include="..\x360ce.Engine\JocysCom\Diagnostics\TraceHelper.cs">
+      <Link>JocysCom\TraceHelper.cs</Link>
     </Compile>
     <Compile Include="..\x360ce.Engine\JocysCom\IO\DeviceInfo.cs">
       <Link>JocysCom\DeviceInfo.cs</Link>
@@ -356,6 +374,12 @@
     </Compile>
     <Compile Include="..\x360ce.Engine\JocysCom\Security\Data\SecurityModel.Designer.cs">
       <Link>JocysCom\SecurityModel.Designer.cs</Link>
+    </Compile>
+    <Compile Include="..\x360ce.Engine\JocysCom\Security\Data\SecurityModel.Designer.cs">
+      <Link>JocysCom\SecurityModel.Designer.cs</Link>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>SecurityModel.edmx</DependentUpon>
     </Compile>
     <Compile Include="..\x360ce.Engine\JocysCom\Security\Data\User.cs">
       <Link>JocysCom\User.cs</Link>
@@ -576,6 +600,20 @@
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
+    <EntityDeploy Include="..\x360ce.Engine\JocysCom\Security\Data\SecurityModel.edmx">
+      <Link>JocysCom\SecurityModel.edmx</Link>
+      <Generator>EntityModelCodeGenerator</Generator>
+      <LastGenOutput>SecurityModel1.Designer.cs</LastGenOutput>
+    </EntityDeploy>
+  </ItemGroup>
+  <ItemGroup>
+    <EntityDeploy Include="..\x360ce.Engine\Data\x360ceModel.edmx">
+      <Link>Engine\x360ceModel.edmx</Link>
+      <Generator>EntityModelCodeGenerator</Generator>
+      <LastGenOutput>x360ceModel1.Designer.cs</LastGenOutput>
+    </EntityDeploy>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
