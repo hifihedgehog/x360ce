@@ -24,20 +24,37 @@
 			<Link>Common\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</Compile>
 	</ItemGroup>
+	
 	<ItemGroup>
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
-		<PackageReference Include="MSTest.TestAdapter" Version="3.5.0" />
-		<PackageReference Include="MSTest.TestFramework" Version="3.5.0" />
-		<PackageReference Include="coverlet.collector" Version="6.0.2">
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
+		<PackageReference Include="coverlet.collector" Version="6.0.4">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="System.Data.Common" Version="4.3.0" />
+		<PackageReference Include="Unofficial.Microsoft.mshtml.NetStandard" Version="7.0.3300.2" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\x360ce.App\x360ce.App.csproj" />
-		<ProjectReference Include="..\x360ce.Engine\x360ce.Engine.csproj" />
+		<ProjectReference Include="..\x360ce.App\x360ce.App.csproj">
+			<ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+			<IncludeAssets>compile; build; native; contentfiles; analyzers</IncludeAssets>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<ProjectReference Include="..\x360ce.Engine\x360ce.Engine.csproj">
+			<ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+			<IncludeAssets>compile; build; native; contentfiles; analyzers</IncludeAssets>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
 	</ItemGroup>
+
+	<!-- Suppress warnings for incompatible package dependencies from referenced projects -->
+
+	<!-- Suppress System.Text.Json version conflicts -->
+	<PropertyGroup>
+		<NoWarn>$(NoWarn);MSB3277</NoWarn>
+	</PropertyGroup>
 
 </Project>
