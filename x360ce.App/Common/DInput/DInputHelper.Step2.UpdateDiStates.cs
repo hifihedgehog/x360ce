@@ -22,7 +22,7 @@ namespace x360ce.App.DInput
 			device.Unacquire();
 			exceptionData.AppendLine($"SetCooperativeLevel ({Non}Exclusive)...");
 			device.SetCooperativeLevel(detector.DetectorForm.Handle, CooperativeLevel.Background | cooperationLevel);
-			exceptionData.AppendLine("Acquire (Exclusive)...");
+            exceptionData.AppendLine("Acquire...");
 			device.Acquire();
 			ud.IsExclusiveMode = cooperationLevel == CooperativeLevel.Exclusive;
 		}
@@ -98,14 +98,13 @@ namespace x360ce.App.DInput
 							DeviceExclusiveMode(ud, detector, device, exceptionData, cooperativeLevel);
 						}
 						exceptionData.AppendFormat($"device.GetCurrentState() // ud.IsExclusiveMode = {ud.IsExclusiveMode}").AppendLine();
-						// Polling - Retrieves data from polled objects on a DirectInput device.
-						// Some devices require pooling (For example original "XBOX Controller S" with XBCD drivers).
-						// If the device does not require polling, calling this method has no effect.
-						// If a device that requires polling is not polled periodically, no new data is received from the device.
-						// Calling this method causes DirectInput to update the device state, generate input
-						// events (if buffered data is enabled), and set notification events (if notification is enabled).
-						device.Poll();
-
+                        // Polling - Retrieves data from polled objects on a DirectInput device.
+                        // Some devices require pooling (For example original "XBOX Controller S" with XBCD drivers).
+                        // If the device does not require polling, calling this method has no effect.
+                        // If a device that requires polling is not polled periodically, no new data is received from the device.
+                        // Calling this method causes DirectInput to update the device state, generate input
+                        // events (if buffered data is enabled), and set notification events (if notification is enabled).
+                        device.Poll();
 						// Use switch based on pattern matching for supported device types.
 						switch (device)
 						{
@@ -130,7 +129,16 @@ namespace x360ce.App.DInput
 								{
 									var state = jDevice.GetCurrentState();
 									newState = new CustomDiState(state);
-									ud.DeviceState = state;
+
+                                    // Test if button 0 was pressed.
+                                    var oldState = ud.DeviceState as JoystickState;
+									if (oldState != null && oldState.Buttons[0] != state.Buttons[0])
+									{
+
+									}
+									//-----------------------------
+
+                                    ud.DeviceState = state;
 								}
 								break;
 							default:
