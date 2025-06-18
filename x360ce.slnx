@@ -9,10 +9,10 @@
   <Project Path="x360ce.Net60Test/x360ce.Net60Test.csproj" />
   <Project Path="x360ce.RemoteController/x360ce.RemoteController.csproj" />
   <Project Path="x360ce.Web/x360ce.Web.csproj" Id="ee2589b6-b2f3-44f9-a95c-17ebf74788fb" />
-  <Project Path="_Solution Items.csproj" Id="95297b3a-b8f1-49dc-89af-863a6f8be5b3">
-    <BuildType Project="Debug" />
-    <Platform Project="x86" />
-  </Project>
+	<Project Path="_Solution Items.csproj" Id="95297b3a-b8f1-49dc-89af-863a6f8be5b3">
+	  <BuildType Project="DisableBuild" />
+	  <Platform Project="x86" />
+	</Project>
   <Properties Name="Performance">
     <Property Name="HasPerformanceSessions" Value="true" />
   </Properties>
