@@ -1,6 +1,7 @@
 ﻿using JocysCom.ClassLibrary.IO;
 using SharpDX.DirectInput;
 using System;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Xml.Serialization;
 
@@ -15,6 +16,8 @@ namespace x360ce.Engine.Data
 			DateUpdated = DateCreated;
 			IsEnabled = true;
 			ConnectionClass = Guid.Empty;
+			// Set default input method to DirectInput for backward compatibility
+			InputMethod = InputMethod.DirectInput;
 		}
 
 		[XmlIgnore]
@@ -219,6 +222,27 @@ namespace x360ce.Engine.Data
 		}
 		bool _IsOnline;
 
+		/// <summary>
+		/// Gets or sets the input method used to read controller data from this device.
+		/// Determines which API (DirectInput, XInput, Gaming Input, Raw Input) is used for input processing.
+		/// </summary>
+		/// <remarks>
+		/// Each input method has specific capabilities and limitations:
+		/// • DirectInput: All controllers, but Xbox controllers lose background access on Win10+
+		/// • XInput: Xbox controllers only, max 4, works in background
+		/// • Gaming Input: Windows 10+ only, no background access, best Xbox support
+		/// • Raw Input: All controllers, works in background, complex setup
+		/// 
+		/// Default value is DirectInput for backward compatibility.
+		/// User must manually select appropriate method based on their needs.
+		/// </remarks>
+		public InputMethod InputMethod
+		{
+			get { return _InputMethod; }
+			set { _InputMethod = value; ReportPropertyChanged(x => x.InputMethod); }
+		}
+		InputMethod _InputMethod;
+
 		[XmlIgnore]
 		public string InstanceId
 		{
@@ -246,6 +270,55 @@ namespace x360ce.Engine.Data
 					// Device Id must be set.
 					!string.IsNullOrEmpty(HidDeviceId);
 			}
+		}
+
+		/// <summary>
+		/// Gets whether this device is an Xbox-compatible controller that supports XInput.
+		/// </summary>
+		[XmlIgnore]
+		public bool IsXboxCompatible
+		{
+			get
+			{
+				// Check for common Xbox controller identifiers
+				var productName = ProductName?.ToLowerInvariant() ?? "";
+				var instanceName = InstanceName?.ToLowerInvariant() ?? "";
+				
+				return productName.Contains("xbox") ||
+					   productName.Contains("x360") ||
+					   productName.Contains("gamepad") ||
+					   instanceName.Contains("xbox") ||
+					   instanceName.Contains("x360") ||
+					   // Check VID/PID for known Xbox controllers
+					   IsKnownXboxVidPid();
+			}
+		}
+
+		/// <summary>
+		/// Checks if the device has known Xbox controller VID/PID combinations.
+		/// </summary>
+		private bool IsKnownXboxVidPid()
+		{
+			// Microsoft VID is 0x045E
+			if (DevVendorId == 0x045E || HidVendorId == 0x045E)
+			{
+				// Common Xbox controller PIDs
+				var xboxPids = new int[]
+				{
+					0x028E, // Xbox 360 Controller
+					0x028F, // Xbox 360 Wireless Controller
+					0x02D1, // Xbox One Controller
+					0x02DD, // Xbox One Controller (Firmware 2015)
+					0x02E3, // Xbox One Elite Controller
+					0x02EA, // Xbox One S Controller
+					0x02FD, // Xbox One S Controller (Bluetooth)
+					0x0719, // Xbox 360 Wireless Adapter
+				};
+
+				var devicePid = DevProductId != 0 ? DevProductId : HidProductId;
+				return xboxPids.Contains(devicePid);
+			}
+			return false;
 		}
 
 

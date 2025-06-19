@@ -3,6 +3,7 @@ using SharpDX;
 using SharpDX.DirectInput;
 using SharpDX.XInput;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -13,18 +14,53 @@ namespace x360ce.App.DInput
 {
 	public partial class DInputHelper
 	{
-		#region Device Acquisition Methods
+		#region Input Processor Management
 
-		private void DeviceExclusiveMode(UserDevice ud, DeviceDetector detector, Device device, StringBuilder exceptionData, CooperativeLevel cooperationLevel)
+		/// <summary>
+		/// Registry of available input processors.
+		/// </summary>
+		private static readonly Dictionary<InputMethod, IInputProcessor> _processors = new Dictionary<InputMethod, IInputProcessor>
 		{
-			string Non = cooperationLevel == CooperativeLevel.Exclusive ? "" : "Non";
-			exceptionData.AppendLine($"UnAcquire ({Non}Exclusive)...");
-			device.Unacquire();
-			exceptionData.AppendLine($"SetCooperativeLevel ({Non}Exclusive)...");
-			device.SetCooperativeLevel(detector.DetectorForm.Handle, CooperativeLevel.Background | cooperationLevel);
-            exceptionData.AppendLine("Acquire...");
-			device.Acquire();
-			ud.IsExclusiveMode = cooperationLevel == CooperativeLevel.Exclusive;
+			{ InputMethod.DirectInput, new DirectInputProcessor() },
+			{ InputMethod.XInput, new XInputProcessor() },
+			// Gaming Input and Raw Input processors will be added when implemented
+		};
+
+		/// <summary>
+		/// Gets the appropriate input processor for the specified device.
+		/// </summary>
+		/// <param name="device">The device to get a processor for</param>
+		/// <returns>The input processor for the device's selected input method</returns>
+		/// <exception cref="NotSupportedException">Thrown when the input method is not supported</exception>
+		private IInputProcessor GetInputProcessor(UserDevice device)
+		{
+			var inputMethod = device.InputMethod;
+			
+			if (_processors.TryGetValue(inputMethod, out var processor))
+				return processor;
+				
+			throw new NotSupportedException($"Input method {inputMethod} is not yet implemented");
+		}
+
+		/// <summary>
+		/// Validates that a device can be processed with its selected input method.
+		/// </summary>
+		/// <param name="device">The device to validate</param>
+		/// <returns>ValidationResult indicating compatibility</returns>
+		public ValidationResult ValidateDeviceInputMethod(UserDevice device)
+		{
+			if (device == null)
+				return ValidationResult.Error("Device is null");
+
+			try
+			{
+				var processor = GetInputProcessor(device);
+				return processor.ValidateDevice(device);
+			}
+			catch (NotSupportedException ex)
+			{
+				return ValidationResult.Error(ex.Message);
+			}
 		}
 
 		#endregion
@@ -33,8 +69,6 @@ namespace x360ce.App.DInput
 
 		UserDevice[] mappedDevices = new UserDevice[0];
 		UserGame currentGame = SettingsManager.CurrentGame;
-		CustomDiState newState = null;
-		CustomDiUpdate[] newUpdates = null;
 		Options options = SettingsManager.Options;
 		Boolean isVirtual = false;
 
@@ -42,6 +76,19 @@ namespace x360ce.App.DInput
 
 		#region UpdateDiStates Method
 
+		/// <summary>
+		/// Updates device states using the appropriate input processors based on each device's selected input method.
+		/// This is the main entry point for reading controller input across all input methods.
+		/// </summary>
+		/// <param name="game">The current game configuration</param>
+		/// <param name="detector">The device detector for DirectInput operations</param>
+		/// <remarks>
+		/// NEW MULTI-INPUT PROCESSOR ARCHITECTURE:
+		/// • Each device can use a different input method (DirectInput, XInput, Gaming Input, Raw Input)
+		/// • No automatic fallbacks - user must manually select appropriate input method
+		/// • Processors handle method-specific limitations and provide clear error messages
+		/// • All processors produce consistent CustomDiState output for compatibility
+		/// </remarks>
 		void UpdateDiStates(UserGame game, DeviceDetector detector)
 		{
 			// Get all mapped user devices for the specified game (if game or devices changed).
@@ -50,282 +97,336 @@ namespace x360ce.App.DInput
 				currentGame = game;
 				options = SettingsManager.Options;
 				mappedDevices = SettingsManager.GetMappedDevices(game?.FileName)
-					.Where(x => x != null && x.IsOnline && x.Device != null)
+					.Where(x => x != null && x.IsOnline)
 					.ToArray();
 				isVirtual = ((EmulationType)game.EmulationType).HasFlag(EmulationType.Virtual);
 			}
 
-			//if (options.TestEnabled && !options.TestGetDInputStates) return;
+			// Skip processing if testing is enabled but input state reading is disabled
+			if (options.TestEnabled && !options.TestGetDInputStates) 
+				return;
 
-			foreach (var ud in mappedDevices)
+			foreach (var device in mappedDevices)
 			{
-				//if (/*ud == null || !ud.IsOnline || ud.Device == null || */(options.TestEnabled && !options.TestGetDInputStates)) continue;
-				// Update direct input form and return actions (pressed Buttons/DPads, turned Axis/Sliders).
-				//JoystickState state = null;
+				// Skip device if testing is enabled but this device shouldn't be processed
+				if (options.TestEnabled && !options.TestGetDInputStates) 
+					continue;
 
-				// Note: && manager.IsDeviceAttached(ud.InstanceGuid) use a lot of CPU resources. 
-				// Allow if not testing or testing with option enabled.
-				var device = ud.Device;
+				CustomDiState newState = null;
+				CustomDiUpdate[] newUpdates = null;
 
-				if (device != null)
+				try
 				{
-					var exceptionData = new StringBuilder();
-					try
+					// Handle test devices (virtual/simulated devices for testing)
+					if (TestDeviceHelper.ProductGuid.Equals(device.ProductGuid))
 					{
-						bool useData = false;
-						if (options.UseDeviceBufferedData && device.Properties.BufferSize == 0)
-						{
-							// Set BufferSize in order to use buffered data.
-							device.Properties.BufferSize = 128;
-							useData = true;
-						}
-						var deviceType = device.Information.Type;
-						// Original device will be hidden from the game when acquired in exclusive mode.
-						// If device is not keyboard or mouse then apply AcquireMappedDevicesInExclusiveMode option.
-						var acquireMappedDevicesInExclusiveMode =
-							(deviceType != SharpDX.DirectInput.DeviceType.Keyboard && deviceType != SharpDX.DirectInput.DeviceType.Mouse)
-							? options.AcquireMappedDevicesInExclusiveMode
-							: false;
-						// Exclusive mode required only if force feedback is available and device is virtual or there is no info about effects.
-						var hasForceFeedback = device.Capabilities.Flags.HasFlag(DeviceFlags.ForceFeedback);
-						var exclusiveRequired = acquireMappedDevicesInExclusiveMode ||
-							(hasForceFeedback && (isVirtual || ud.DeviceEffects == null));
-						// Check if the current mode is unknown or differs from the desired, then reacquire the device.
-						if (!ud.IsExclusiveMode.HasValue || ud.IsExclusiveMode.Value != exclusiveRequired)
-						{
-							var cooperativeLevel = exclusiveRequired ? CooperativeLevel.Exclusive : CooperativeLevel.NonExclusive;
-							// Reacquire device in exclusive or in non exclusive mode (xinput.dll can control force feedback).
-							DeviceExclusiveMode(ud, detector, device, exceptionData, cooperativeLevel);
-						}
-						exceptionData.AppendFormat($"device.GetCurrentState() // ud.IsExclusiveMode = {ud.IsExclusiveMode}").AppendLine();
-                        // Polling - Retrieves data from polled objects on a DirectInput device.
-                        // Some devices require pooling (For example original "XBOX Controller S" with XBCD drivers).
-                        // If the device does not require polling, calling this method has no effect.
-                        // If a device that requires polling is not polled periodically, no new data is received from the device.
-                        // Calling this method causes DirectInput to update the device state, generate input
-                        // events (if buffered data is enabled), and set notification events (if notification is enabled).
-                        device.Poll();
-						// Use switch based on pattern matching for supported device types.
-						switch (device)
-						{
-							case Mouse mDevice:
-								newUpdates = useData ? mDevice.GetBufferedData()?.Select(x => new CustomDiUpdate(x)).ToArray() : null;
-								{
-									var state = mDevice.GetCurrentState();
-									newState = new CustomDiState(state);
-									ud.DeviceState = state;
-								}
-								break;
-							case Keyboard kDevice:
-								newUpdates = useData ? kDevice.GetBufferedData()?.Select(x => new CustomDiUpdate(x)).ToArray() : null;
-								{
-									var state = kDevice.GetCurrentState();
-									newState = new CustomDiState(state);
-									ud.DeviceState = state;
-								}
-								break;
-							case Joystick jDevice:
-								newUpdates = useData ? jDevice.GetBufferedData()?.Select(x => new CustomDiUpdate(x)).ToArray() : null;
-								{
-									var state = jDevice.GetCurrentState();
-									newState = new CustomDiState(state);
-
-                                    // Test if button 0 was pressed.
-                                    var oldState = ud.DeviceState as JoystickState;
-									if (oldState != null && oldState.Buttons[0] != state.Buttons[0])
-									{
-
-									}
-									//-----------------------------
-
-                                    ud.DeviceState = state;
-								}
-								break;
-							default:
-								throw new Exception($"Unknown device: {device}");
-						}
-
-						// Fill device objects force feedback actuator masks.
-						if (ud.DeviceObjects == null)
-						{
-							exceptionData.AppendFormat($"AppHelper.GetDeviceObjectsByUsageAndInstanceNumber(device) // ud.IsExclusiveMode = {ud.IsExclusiveMode}").AppendLine();
-							// var item = AppHelper.GetDeviceObjects(ud, device);
-							// ud.DeviceObjects = item;
-							//// Update masks.
-							//int axisMask = 0;
-							//int actuatorMask = 0;
-							//int actuatorCount = 0;
-							//if (device is Mouse mDevice2)
-							//{
-							//	CustomDiState.GetMouseAxisMask(item, mDevice2, out axisMask);
-							//}
-							//else if (device is Joystick jDevice)
-							//{
-							//	CustomDiState.GetJoystickAxisMask(item, jDevice, out axisMask, out actuatorMask, out actuatorCount);
-							//}
-							//ud.DiAxeMask = axisMask;
-							//// Contains information about which axis have force feedback actuator attached.
-							//ud.DiActuatorMask = actuatorMask;
-							//ud.DiActuatorCount = actuatorCount;
-						}
-						if (ud.DeviceEffects == null)
-						{
-							exceptionData.AppendFormat($"AppHelper.GetDeviceEffects(device) // ud.IsExclusiveMode = {ud.IsExclusiveMode}").AppendLine();
-							ud.DeviceEffects = AppHelper.GetDeviceEffects(device);
-						}
-
-						// Handle force feedback if supported.
-						if (hasForceFeedback)
-						{
-							// Get setting related to user device.
-							var setting = SettingsManager.UserSettings.ItemsToArraySynchronized()
-								.FirstOrDefault(x => x.InstanceGuid == ud.InstanceGuid);
-							if (setting != null && setting.MapTo > (int)MapTo.None)
-							{
-								// Get pad setting attached to device.
-								var ps = SettingsManager.GetPadSetting(setting.PadSettingChecksum);
-								if (ps != null)
-								{
-									if (ps.ForceEnable == "1")
-									{
-										ud.FFState = ud.FFState ?? new Engine.ForceFeedbackState();
-										// If force update supplied then...
-										var force = CopyAndClearFeedbacks()[setting.MapTo - 1];
-										if (force != null || ud.FFState.Changed(ps))
-										{
-											var vibration = new Vibration
-											{
-												LeftMotorSpeed = (force == null) ? short.MinValue : (short)ConvertHelper.ConvertRange(force.LargeMotor, byte.MinValue, byte.MaxValue, short.MinValue, short.MaxValue),
-												RightMotorSpeed = (force == null) ? short.MinValue : (short)ConvertHelper.ConvertRange(force.SmallMotor, byte.MinValue, byte.MaxValue, short.MinValue, short.MaxValue)
-											};
-											// For the future: Investigate device states if force feedback is not working. 
-											// var st = ud.Device.GetForceFeedbackState();
-											// st == SharpDX.DirectInput.ForceFeedbackState
-											// ud.Device.SendForceFeedbackCommand(ForceFeedbackCommand.SetActuatorsOn);
-											exceptionData.AppendFormat("ud.FFState.SetDeviceForces(device) // ud.IsExclusiveMode = {0}", ud.IsExclusiveMode).AppendLine();
-											ud.FFState.SetDeviceForces(ud, device, ps, vibration);
-										}
-									}
-									else if (ud.FFState != null)
-									{
-										// Stop device forces.
-										exceptionData.AppendFormat("ud.FFState.StopDeviceForces(device) // ud.IsExclusiveMode = {0}", ud.IsExclusiveMode).AppendLine();
-										ud.FFState.StopDeviceForces(device);
-										ud.FFState = null;
-									}
-								}
-							}
-						}
+						newState = ProcessTestDevice(device);
 					}
-					catch (Exception ex)
+					// Handle DirectInput devices using legacy path (maintains existing acquisition logic)
+					else if (device.InputMethod == InputMethod.DirectInput && device.Device != null)
 					{
-						var dex = ex as SharpDXException;
-						if (dex != null &&
-							(dex.ResultCode == SharpDX.DirectInput.ResultCode.InputLost ||
-							 dex.ResultCode == SharpDX.DirectInput.ResultCode.NotAcquired ||
-							 dex.ResultCode == SharpDX.DirectInput.ResultCode.Unplugged))
+						newState = ProcessDirectInputDevice(device, detector, out newUpdates);
+					}
+					// Handle non-DirectInput devices using processors
+					else if (device.InputMethod != InputMethod.DirectInput)
+					{
+						// Use the appropriate input processor based on device's selected input method
+						var processor = GetInputProcessor(device);
+						
+						// Validate device compatibility with selected input method
+						var validation = processor.ValidateDevice(device);
+						if (!validation.IsValid)
 						{
-							Debug.WriteLine($"InputLost {DateTime.Now:HH: mm: ss.fff}");
-							Debug.WriteLine($"Device {dex.Descriptor.ApiCode}. DisplayName {ud.DisplayName}. ProductId {ud.DevProductId}. ProductName {ud.ProductName}. InstanceName {ud.InstanceName}.");
-							DevicesNeedUpdating = true;
+							Debug.WriteLine($"Input method validation failed for {device.DisplayName}: {validation.Message}");
+							continue;
 						}
-						else
+
+						// Read device state using the selected input method
+						newState = processor.ReadState(device);
+
+						// Handle force feedback if the device supports it
+						if (device.FFState != null)
 						{
-							var cx = new DInputException("UpdateDiStates Exception", ex);
-							cx.Data.Add("FFInfo", exceptionData.ToString());
-							JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
+							processor.HandleForceFeedback(device, device.FFState);
 						}
-						ud.IsExclusiveMode = null;
 					}
 				}
-				// If this is test device then...
-				else if (TestDeviceHelper.ProductGuid.Equals(ud.ProductGuid))
+				catch (InputMethodException ex)
 				{
-					// Fill device objects and update masks.
-					if (ud.DeviceObjects == null)
+					// Handle input method specific errors
+					Debug.WriteLine($"Input method error for {device.DisplayName} using {ex.InputMethod}: {ex.Message}");
+					
+					// For certain errors, mark devices as needing update
+					if (ex.Message.Contains("InputLost") || ex.Message.Contains("NotAcquired"))
 					{
-						ud.DeviceObjects = TestDeviceHelper.GetDeviceObjects();
-						ud.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8;
-						ud.DiSliderMask = 0;
+						DevicesNeedUpdating = true;
 					}
-					ud.DeviceEffects = ud.DeviceEffects ?? new DeviceEffectItem[0];
-					var state = TestDeviceHelper.GetCurrentState(ud);
-					newState = new CustomDiState(state);
-					ud.DeviceState = state;
+					
+					// Continue with next device
+					continue;
+				}
+				catch (NotSupportedException ex)
+				{
+					// Input method not yet implemented
+					Debug.WriteLine($"Input method not supported for {device.DisplayName}: {ex.Message}");
+					continue;
+				}
+				catch (Exception ex)
+				{
+					// Handle DirectInput exceptions (maintaining original behavior)
+					var dex = ex as SharpDXException;
+					if (dex != null &&
+						(dex.ResultCode == SharpDX.DirectInput.ResultCode.InputLost ||
+						 dex.ResultCode == SharpDX.DirectInput.ResultCode.NotAcquired ||
+						 dex.ResultCode == SharpDX.DirectInput.ResultCode.Unplugged))
+					{
+						Debug.WriteLine($"InputLost {DateTime.Now:HH:mm:ss.fff}");
+						Debug.WriteLine($"Device {dex.Descriptor.ApiCode}. DisplayName {device.DisplayName}. ProductId {device.DevProductId}. ProductName {device.ProductName}. InstanceName {device.InstanceName}.");
+						DevicesNeedUpdating = true;
+					}
+					else
+					{
+						// Unexpected error
+						var inputMethodName = device.InputMethod.ToString();
+						var cx = new DInputException($"UpdateDiStates Exception using {inputMethodName}", ex);
+						cx.Data.Add("Device", device.DisplayName);
+						cx.Data.Add("InputMethod", inputMethodName);
+						JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
+					}
+					device.IsExclusiveMode = null;
+					continue;
 				}
 
+				// Update device state if we successfully read it
 				if (newState != null)
 				{
-					// If updates from buffer supplied and old state is available then...
-					if (newUpdates != null && newUpdates.Count(x => x.Type == MapType.Button) > 1 && ud.DiState != null)
-					{
-						// Analyse if state must be modified.
-						for (int b = 0; b < newState.Buttons.Length; b++)
-						{
-							// If button state was not changed.
-							if (ud.DiState.Buttons[b] == newState.Buttons[b])
-							{
-								// But buffer contains press then...
-								if (newUpdates.Count(x => x.Type == MapType.Button && x.Index == b) > 1)
-								{
-									// Invert state and give chance for the game to recognize the press.
-									newState.Buttons[b] = !newState.Buttons[b];
-								}
-							}
-						}
-					}
-					var newTime = _Stopwatch.ElapsedTicks;
-					// Remember old value, set new value.
-					(ud.OldDiState, ud.DiState) = (ud.DiState, newState);
-					(ud.OldDiUpdates, ud.DiUpdates) = (ud.DiUpdates, newUpdates);
-					(ud.OldDiStateTime, ud.DiStateTime) = (ud.DiStateTime, newTime);
-					// Mouse needs special update.
-					if (ud.Device != null && ud.Device.Information.Type == SharpDX.DirectInput.DeviceType.Mouse)
-					{
-						// If original state is missing then...
-						if (ud.OrgDiState == null)
-						{
-							// Store current values.
-							ud.OrgDiState = newState;
-							ud.OrgDiStateTime = newTime;
-							// Make sure new states have zero values.
-							for (int a = 0; a < newState.Axis.Length; a++)
-								newState.Axis[a] = -short.MinValue;
-							for (int s = 0; s < newState.Sliders.Length; s++)
-								newState.Sliders[s] = -short.MinValue;
-						}
-						var mouseState = new CustomDiState(new JoystickState());
-						// Clone button values.
-						Array.Copy(newState.Buttons, mouseState.Buttons, mouseState.Buttons.Length);
-
-						//	//--------------------------------------------------------
-						//	// Map mouse acceleration to axis position. Good for FPS control.
-						//	//--------------------------------------------------------
-
-						//	// This parts needs to be worked on.
-						//	//var ticks = (int)(newTime - ud.DiStateTime);
-						//	// Update axis with delta.
-						//	//for (int a = 0; a < newState.Axis.Length; a++)
-						//	//	mouseState.Axis[a] = ticks * (newState.Axis[a] - ud.OldDiState.Axis[a]) - short.MinValue;
-						//	// Update sliders with delta.
-						//	//for (int s = 0; s < newState.Sliders.Length; s++)
-						//	//	mouseState.Sliders[s] = ticks * (newState.Sliders[s] - ud.OldDiState.Sliders[s]) - short.MinValue;
-
-						//--------------------------------------------------------
-						// Map mouse position to axis position. Good for car wheel controls.
-						//--------------------------------------------------------
-						Calc(ud.OrgDiState.Axis, newState.Axis, mouseState.Axis);
-						Calc(ud.OrgDiState.Sliders, newState.Sliders, mouseState.Sliders);
-						ud.DiState = mouseState;
-					}
+					UpdateDeviceState(device, newState, newUpdates);
 				}
 			}
 		}
 
-		#endregion
+		/// <summary>
+		/// Processes DirectInput devices using the original logic (preserves device acquisition and force feedback).
+		/// This maintains backward compatibility and prevents "NotAcquired" errors.
+		/// </summary>
+		/// <param name="device">The DirectInput device to process</param>
+		/// <param name="detector">Device detector for acquisition</param>
+		/// <param name="newUpdates">Output parameter for buffered updates</param>
+		/// <returns>CustomDiState for the device</returns>
+		private CustomDiState ProcessDirectInputDevice(UserDevice device, DeviceDetector detector, out CustomDiUpdate[] newUpdates)
+		{
+			newUpdates = null;
+			var exceptionData = new StringBuilder();
 
-		#region Helper Methods
+			bool useData = false;
+			if (options.UseDeviceBufferedData && device.Device.Properties.BufferSize == 0)
+			{
+				// Set BufferSize in order to use buffered data.
+				device.Device.Properties.BufferSize = 128;
+				useData = true;
+			}
 
+			var deviceType = device.Device.Information.Type;
+			// Original device will be hidden from the game when acquired in exclusive mode.
+			// If device is not keyboard or mouse then apply AcquireMappedDevicesInExclusiveMode option.
+			var acquireMappedDevicesInExclusiveMode =
+				(deviceType != SharpDX.DirectInput.DeviceType.Keyboard && deviceType != SharpDX.DirectInput.DeviceType.Mouse)
+				? options.AcquireMappedDevicesInExclusiveMode
+				: false;
+
+			// Exclusive mode required only if force feedback is available and device is virtual or there is no info about effects.
+			var hasForceFeedback = device.Device.Capabilities.Flags.HasFlag(DeviceFlags.ForceFeedback);
+			var exclusiveRequired = acquireMappedDevicesInExclusiveMode ||
+				(hasForceFeedback && (isVirtual || device.DeviceEffects == null));
+
+			// Check if the current mode is unknown or differs from the desired, then reacquire the device.
+			if (!device.IsExclusiveMode.HasValue || device.IsExclusiveMode.Value != exclusiveRequired)
+			{
+				var cooperativeLevel = exclusiveRequired ? CooperativeLevel.Exclusive : CooperativeLevel.NonExclusive;
+				// Reacquire device in exclusive or in non exclusive mode (xinput.dll can control force feedback).
+				DeviceExclusiveMode(device, detector, device.Device, exceptionData, cooperativeLevel);
+			}
+
+			exceptionData.AppendFormat($"device.GetCurrentState() // device.IsExclusiveMode = {device.IsExclusiveMode}").AppendLine();
+
+			// Polling - Retrieves data from polled objects on a DirectInput device.
+			// Some devices require polling (For example original "XBOX Controller S" with XBCD drivers).
+			// If the device does not require polling, calling this method has no effect.
+			// If a device that requires polling is not polled periodically, no new data is received from the device.
+			// Calling this method causes DirectInput to update the device state, generate input
+			// events (if buffered data is enabled), and set notification events (if notification is enabled).
+			device.Device.Poll();
+
+			CustomDiState newState = null;
+
+			// Use switch based on pattern matching for supported device types.
+			switch (device.Device)
+			{
+				case Mouse mDevice:
+					newUpdates = useData ? mDevice.GetBufferedData()?.Select(x => new CustomDiUpdate(x)).ToArray() : null;
+					{
+						var state = mDevice.GetCurrentState();
+						newState = new CustomDiState(state);
+						device.DeviceState = state;
+					}
+					break;
+				case Keyboard kDevice:
+					newUpdates = useData ? kDevice.GetBufferedData()?.Select(x => new CustomDiUpdate(x)).ToArray() : null;
+					{
+						var state = kDevice.GetCurrentState();
+						newState = new CustomDiState(state);
+						device.DeviceState = state;
+					}
+					break;
+				case Joystick jDevice:
+					newUpdates = useData ? jDevice.GetBufferedData()?.Select(x => new CustomDiUpdate(x)).ToArray() : null;
+					{
+						var state = jDevice.GetCurrentState();
+						newState = new CustomDiState(state);
+
+						// Test if button 0 was pressed.
+						var oldState = device.DeviceState as JoystickState;
+						if (oldState != null && oldState.Buttons[0] != state.Buttons[0])
+						{
+
+						}
+						//-----------------------------
+
+						device.DeviceState = state;
+					}
+					break;
+				default:
+					throw new Exception($"Unknown device: {device.Device}");
+			}
+
+			// Fill device objects force feedback actuator masks.
+			if (device.DeviceObjects == null)
+			{
+				exceptionData.AppendFormat($"AppHelper.GetDeviceObjectsByUsageAndInstanceNumber(device) // device.IsExclusiveMode = {device.IsExclusiveMode}").AppendLine();
+				// var item = AppHelper.GetDeviceObjects(device, device.Device);
+				// device.DeviceObjects = item;
+				//// Update masks.
+				//int axisMask = 0;
+				//int actuatorMask = 0;
+				//int actuatorCount = 0;
+				//if (device.Device is Mouse mDevice2)
+				//{
+				//	CustomDiState.GetMouseAxisMask(item, mDevice2, out axisMask);
+				//}
+				//else if (device.Device is Joystick jDevice)
+				//{
+				//	CustomDiState.GetJoystickAxisMask(item, jDevice, out axisMask, out actuatorMask, out actuatorCount);
+				//}
+				//device.DiAxeMask = axisMask;
+				//// Contains information about which axis have force feedback actuator attached.
+				//device.DiActuatorMask = actuatorMask;
+				//device.DiActuatorCount = actuatorCount;
+			}
+			if (device.DeviceEffects == null)
+			{
+				exceptionData.AppendFormat($"AppHelper.GetDeviceEffects(device.Device) // device.IsExclusiveMode = {device.IsExclusiveMode}").AppendLine();
+				device.DeviceEffects = AppHelper.GetDeviceEffects(device.Device);
+			}
+
+			// Handle force feedback if supported.
+			if (hasForceFeedback)
+			{
+				// Get setting related to user device.
+				var setting = SettingsManager.UserSettings.ItemsToArraySynchronized()
+					.FirstOrDefault(x => x.InstanceGuid == device.InstanceGuid);
+				if (setting != null && setting.MapTo > (int)MapTo.None)
+				{
+					// Get pad setting attached to device.
+					var ps = SettingsManager.GetPadSetting(setting.PadSettingChecksum);
+					if (ps != null)
+					{
+						if (ps.ForceEnable == "1")
+						{
+							device.FFState = device.FFState ?? new Engine.ForceFeedbackState();
+							// If force update supplied then...
+							var force = CopyAndClearFeedbacks()[setting.MapTo - 1];
+							if (force != null || device.FFState.Changed(ps))
+							{
+								var vibration = new Vibration
+								{
+									LeftMotorSpeed = (force == null) ? short.MinValue : (short)ConvertHelper.ConvertRange(force.LargeMotor, byte.MinValue, byte.MaxValue, short.MinValue, short.MaxValue),
+									RightMotorSpeed = (force == null) ? short.MinValue : (short)ConvertHelper.ConvertRange(force.SmallMotor, byte.MinValue, byte.MaxValue, short.MinValue, short.MaxValue)
+								};
+								// For the future: Investigate device states if force feedback is not working. 
+								// var st = device.Device.GetForceFeedbackState();
+								// st == SharpDX.DirectInput.ForceFeedbackState
+								// device.Device.SendForceFeedbackCommand(ForceFeedbackCommand.SetActuatorsOn);
+								exceptionData.AppendFormat("device.FFState.SetDeviceForces(device.Device) // device.IsExclusiveMode = {0}", device.IsExclusiveMode).AppendLine();
+								device.FFState.SetDeviceForces(device, device.Device, ps, vibration);
+							}
+						}
+						else if (device.FFState != null)
+						{
+							// Stop device forces.
+							exceptionData.AppendFormat("device.FFState.StopDeviceForces(device.Device) // device.IsExclusiveMode = {0}", device.IsExclusiveMode).AppendLine();
+							device.FFState.StopDeviceForces(device.Device);
+							device.FFState = null;
+						}
+					}
+				}
+			}
+
+			// Mouse needs special update.
+			if (device.Device != null && device.Device.Information.Type == SharpDX.DirectInput.DeviceType.Mouse)
+			{
+				// If original state is missing then...
+				if (device.OrgDiState == null)
+				{
+					// Store current values.
+					device.OrgDiState = newState;
+					device.OrgDiStateTime = _Stopwatch.ElapsedTicks;
+					// Make sure new states have zero values.
+					for (int a = 0; a < newState.Axis.Length; a++)
+						newState.Axis[a] = -short.MinValue;
+					for (int s = 0; s < newState.Sliders.Length; s++)
+						newState.Sliders[s] = -short.MinValue;
+				}
+				var mouseState = new CustomDiState(new JoystickState());
+				// Clone button values.
+				Array.Copy(newState.Buttons, mouseState.Buttons, mouseState.Buttons.Length);
+
+				//--------------------------------------------------------
+				// Map mouse position to axis position. Good for car wheel controls.
+				//--------------------------------------------------------
+				Calc(device.OrgDiState.Axis, newState.Axis, mouseState.Axis);
+				Calc(device.OrgDiState.Sliders, newState.Sliders, mouseState.Sliders);
+				newState = mouseState;
+			}
+
+			return newState;
+		}
+
+		/// <summary>
+		/// Processes test devices (virtual/simulated devices for testing).
+		/// </summary>
+		/// <param name="device">The test device to process</param>
+		/// <returns>CustomDiState for the test device</returns>
+		private CustomDiState ProcessTestDevice(UserDevice device)
+		{
+			// Fill device objects and update masks for test devices
+			if (device.DeviceObjects == null)
+			{
+				device.DeviceObjects = TestDeviceHelper.GetDeviceObjects();
+				device.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8;
+				device.DiSliderMask = 0;
+			}
+			device.DeviceEffects = device.DeviceEffects ?? new DeviceEffectItem[0];
+			
+			var state = TestDeviceHelper.GetCurrentState(device);
+			var customState = new CustomDiState(state);
+			device.DeviceState = state;
+			
+			return customState;
+		}
+
+		/// <summary>
+		/// Mouse axis calculation helper method.
+		/// </summary>
 		void Calc(int[] orgRange, int[] newState, int[] mouseState)
 		{
 			// Sensitivity factor for mouse movement conversion.
@@ -346,6 +447,123 @@ namespace x360ce.App.DInput
 				}
 				mouseState[a] = value;
 			}
+		}
+
+		/// <summary>
+		/// Gets buffered updates for DirectInput devices when buffered data is enabled.
+		/// </summary>
+		/// <param name="device">The device to get buffered data for</param>
+		/// <returns>Array of CustomDiUpdate objects, or null if no buffered data</returns>
+		private CustomDiUpdate[] GetBufferedUpdates(UserDevice device)
+		{
+			if (device.Device == null || device.InputMethod != InputMethod.DirectInput)
+				return null;
+
+			try
+			{
+				// Ensure buffer size is set for DirectInput devices
+				if (device.Device.Properties.BufferSize == 0)
+				{
+					device.Device.Properties.BufferSize = 128;
+				}
+
+				// Get buffered data based on device type
+				switch (device.Device)
+				{
+					case Mouse mDevice:
+						return mDevice.GetBufferedData()?.Select(x => new CustomDiUpdate(x)).ToArray();
+					case Keyboard kDevice:
+						return kDevice.GetBufferedData()?.Select(x => new CustomDiUpdate(x)).ToArray();
+					case Joystick jDevice:
+						return jDevice.GetBufferedData()?.Select(x => new CustomDiUpdate(x)).ToArray();
+					default:
+						return null;
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine($"Error getting buffered data for {device.DisplayName}: {ex.Message}");
+				return null;
+			}
+		}
+
+		/// <summary>
+		/// Updates the device state with new input data and handles button state analysis.
+		/// </summary>
+		/// <param name="device">The device to update</param>
+		/// <param name="newState">The new state read from the device</param>
+		/// <param name="newUpdates">Buffered updates (if available)</param>
+		private void UpdateDeviceState(UserDevice device, CustomDiState newState, CustomDiUpdate[] newUpdates)
+		{
+			// Handle button state analysis for buffered data
+			if (newUpdates != null && newUpdates.Count(x => x.Type == MapType.Button) > 1 && device.DiState != null)
+			{
+				// Analyze if state must be modified to ensure button presses are recognized
+				for (int b = 0; b < newState.Buttons.Length; b++)
+				{
+					// If button state was not changed between readings
+					if (device.DiState.Buttons[b] == newState.Buttons[b])
+					{
+						// But buffer contains multiple presses for this button
+						if (newUpdates.Count(x => x.Type == MapType.Button && x.Index == b) > 1)
+						{
+							// Invert state to give the game a chance to recognize the press
+							newState.Buttons[b] = !newState.Buttons[b];
+						}
+					}
+				}
+			}
+
+			var newTime = _Stopwatch.ElapsedTicks;
+			
+			// Update state history (remember old values, set new values)
+			(device.OldDiState, device.DiState) = (device.DiState, newState);
+			(device.OldDiUpdates, device.DiUpdates) = (device.DiUpdates, newUpdates);
+			(device.OldDiStateTime, device.DiStateTime) = (device.DiStateTime, newTime);
+		}
+
+		#endregion
+
+		#region Legacy DirectInput Support Methods
+
+		/// <summary>
+		/// Legacy method for DirectInput device acquisition - used by DirectInputProcessor.
+		/// </summary>
+		/// <param name="ud">User device</param>
+		/// <param name="detector">Device detector</param>
+		/// <param name="device">DirectInput device</param>
+		/// <param name="exceptionData">Exception data for logging</param>
+		/// <param name="cooperationLevel">Cooperative level to set</param>
+		private void DeviceExclusiveMode(UserDevice ud, DeviceDetector detector, Device device, StringBuilder exceptionData, CooperativeLevel cooperationLevel)
+		{
+			string mode = cooperationLevel == CooperativeLevel.Exclusive ? "Exclusive" : "NonExclusive";
+			exceptionData.AppendLine($"UnAcquire ({mode})...");
+			device.Unacquire();
+			exceptionData.AppendLine($"SetCooperativeLevel ({mode})...");
+			device.SetCooperativeLevel(detector.DetectorForm.Handle, CooperativeLevel.Background | cooperationLevel);
+			exceptionData.AppendLine("Acquire...");
+			device.Acquire();
+			ud.IsExclusiveMode = cooperationLevel == CooperativeLevel.Exclusive;
+		}
+
+		/// <summary>
+		/// Gets whether the current game uses virtual emulation.
+		/// Used by DirectInputProcessor for force feedback decisions.
+		/// </summary>
+		public bool IsVirtual => isVirtual;
+
+		/// <summary>
+		/// Gets the current DInputHelper instance for processors that need access to helper methods.
+		/// </summary>
+		public static DInputHelper Current { get; private set; }
+
+		/// <summary>
+		/// Sets the current DInputHelper instance.
+		/// </summary>
+		/// <param name="helper">The helper instance to set</param>
+		public static void SetCurrent(DInputHelper helper)
+		{
+			Current = helper;
 		}
 
 		#endregion
