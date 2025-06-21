@@ -354,6 +354,8 @@ namespace JocysCom.ClassLibrary.IO
 		/// </summary>
 		/// <param name="classGuid">Filter devices by class.</param>
 		/// <param name="flags">Filter devices by options.</param>
+		/// <param name="deviceInstanceId">Specific device instance ID to enumerate.</param>
+		/// <param name="callback">Callback function to process each device.</param>
 		public static void _EnumDeviceInfo(Guid? classGuid, DIGCF? flags, string deviceInstanceId, Func<IntPtr, SP_DEVINFO_DATA, bool> callback)
 		{
 			if (!classGuid.HasValue)
@@ -535,12 +537,6 @@ namespace JocysCom.ClassLibrary.IO
 		/// <summary>
 		/// Get list of devices.
 		/// </summary>
-		/// <param name="classGuid">Filter devices by class.</param>
-		/// <param name="flags">Filter devices by options.</param>
-		/// <param name="deviceId">Filter results by Device ID.</param>
-		/// <param name="vid">Filter results by Vendor ID.</param>
-		/// <param name="pid">Filter results by Product ID.</param>
-		/// <param name="rev">Filter results by Revision ID.</param>
 		/// <returns>List of devices</returns>
 		/// <remarks>
 		/// This is code I cobbled together from a number of newsgroup threads
@@ -624,7 +620,7 @@ namespace JocysCom.ClassLibrary.IO
 
 			var listOrdered = list.OrderBy(x => x.DeviceId).ToArray();
 			PnPDeviceIDs.Clear();
-			Debug.WriteLine($"\n");
+			Debug.WriteLine($"");
 
 			if (listOrdered.Count() > 0)
 			{
@@ -762,7 +758,7 @@ namespace JocysCom.ClassLibrary.IO
 		/// <summary>
 		/// Fill parent devices. Destination list will contain current device on top.
 		/// </summary>
-		/// <param name="deviceId">Current device instance id.</param>
+		/// <param name="device">Current device.</param>
 		/// <param name="source">List of all devices.</param>
 		/// <param name="destination">Destintion list to fill.</param>
 		public static void FillParents(DeviceInfo device, IEnumerable<DeviceInfo> source, IList<DeviceInfo> destination)
@@ -864,8 +860,8 @@ namespace JocysCom.ClassLibrary.IO
 		/// <summary>
 		/// Set device state.
 		/// </summary>
-		/// <param name="match"></param>
-		/// <param name="enable"></param>
+		/// <param name="deviceId">The device ID to match.</param>
+		/// <param name="enable">True to enable, false to disable.</param>
 		/// <returns>Success state.</returns>
 		/// <remarks>
 		/// This is nearly identical to the method above except it
