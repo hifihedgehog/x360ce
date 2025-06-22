@@ -1,3 +1,4 @@
+using SharpDX.DirectInput;
 using SharpDX.XInput;
 using System;
 using System.Collections.Generic;
@@ -114,6 +115,10 @@ namespace x360ce.App.DInput
 
 			try
 			{
+				// CRITICAL: Set device properties required for UI to display mapping controls
+				// This ensures the PAD UI shows buttons/axes for XInput devices just like DirectInput
+				EnsureDevicePropertiesForUI(device);
+
 				// Get or assign XInput slot for this device
 				int slotIndex = GetOrAssignSlot(device);
 				var controller = _xinputControllers[slotIndex];
@@ -503,6 +508,82 @@ namespace x360ce.App.DInput
 		{
 			_deviceToSlotMapping.Clear();
 			Debug.WriteLine("XInput: Cleared all slot assignments");
+		}
+
+		/// <summary>
+		/// Ensures device has the properties required for the UI to display mapping controls.
+		/// This populates the same properties that DirectInput sets so the PAD UI works.
+		/// </summary>
+		/// <param name="device">The device to ensure properties for</param>
+		private void EnsureDevicePropertiesForUI(UserDevice device)
+		{
+			// Set device objects if not already set (required for UI to show button/axis mapping)
+			if (device.DeviceObjects == null)
+			{
+				// Create Xbox controller device objects that match what DirectInput would provide
+				var deviceObjects = new List<DeviceObjectItem>();
+				
+				// Add button objects (A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad, Guide)
+				for (int i = 0; i < 15; i++)
+				{
+					deviceObjects.Add(new DeviceObjectItem(
+						i * 4, // offset
+						ObjectGuid.Button, // guid
+						ObjectAspect.Position, // aspect
+						DeviceObjectTypeFlags.PushButton, // type
+						i, // instance
+						GetXboxButtonName(i) // name
+					));
+				}
+				
+				// Add axis objects (Left Stick X/Y, Right Stick X/Y, Left Trigger, Right Trigger)
+				string[] axisNames = { "Left Stick X", "Left Stick Y", "Right Stick X", "Right Stick Y", "Left Trigger", "Right Trigger" };
+				for (int i = 0; i < 6; i++)
+				{
+					deviceObjects.Add(new DeviceObjectItem(
+						64 + (i * 4), // offset
+						ObjectGuid.XAxis, // guid (simplified)
+						ObjectAspect.Position, // aspect
+						DeviceObjectTypeFlags.AbsoluteAxis, // type
+						i, // instance
+						axisNames[i] // name
+					));
+				}
+				
+				device.DeviceObjects = deviceObjects.ToArray();
+			}
+			
+			// Set axis mask (which axes are available) - required for UI
+			if (device.DiAxeMask == 0)
+			{
+				// XInput Xbox controllers have 6 axes: Left Stick X/Y, Right Stick X/Y, Left/Right Triggers
+				device.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // First 6 axes
+			}
+			
+			// Set device effects (required for force feedback UI)
+			if (device.DeviceEffects == null)
+			{
+				// XInput supports basic vibration effects
+				device.DeviceEffects = new DeviceEffectItem[]
+				{
+					new DeviceEffectItem { Name = "XInput Vibration" }
+				};
+			}
+		}
+		
+		/// <summary>
+		/// Gets the display name for Xbox controller buttons.
+		/// </summary>
+		/// <param name="buttonIndex">Button index (0-14)</param>
+		/// <returns>Button name</returns>
+		private string GetXboxButtonName(int buttonIndex)
+		{
+			string[] buttonNames = {
+				"A", "B", "X", "Y", "LB", "RB", "Back", "Start", "LS", "RS",
+				"D-Up", "D-Right", "D-Down", "D-Left", "Guide"
+			};
+			
+			return buttonIndex < buttonNames.Length ? buttonNames[buttonIndex] : $"Button {buttonIndex}";
 		}
 
 		#endregion

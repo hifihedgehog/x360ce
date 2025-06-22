@@ -21,7 +21,7 @@ namespace x360ce.App.DInput
 		/// • DirectInput: Uses hybrid approach (legacy path + processor)
 		/// • XInput: Uses XInputProcessor for Xbox controllers (max 4)
 		/// • Gaming Input: Future implementation for Windows 10+ UWP bridging
-		/// • Raw Input: Future implementation for HID report parsing
+		/// • Raw Input: Uses RawInputProcessor for HID-compliant devices
 		/// 
 		/// All processors produce consistent CustomDiState output for compatibility.
 		/// </remarks>
@@ -29,7 +29,8 @@ namespace x360ce.App.DInput
 		{
 			{ InputMethod.DirectInput, new DirectInputProcessor() },
 			{ InputMethod.XInput, new XInputProcessor() },
-			// Gaming Input and Raw Input processors will be added when implemented
+			{ InputMethod.RawInput, new RawInputProcessor() },
+			// Gaming Input processor will be added when implemented
 		};
 
 		/// <summary>
@@ -47,7 +48,7 @@ namespace x360ce.App.DInput
 		/// • InputMethod.DirectInput → DirectInputProcessor (but uses legacy hybrid path)
 		/// • InputMethod.XInput → XInputProcessor (new processor architecture)
 		/// • InputMethod.GamingInput → Not yet implemented
-		/// • InputMethod.RawInput → Not yet implemented
+		/// • InputMethod.RawInput → RawInputProcessor (new implementation)
 		/// </remarks>
 		private IInputProcessor GetInputProcessor(UserDevice device)
 		{
@@ -152,7 +153,7 @@ namespace x360ce.App.DInput
 				case InputMethod.GamingInput:
 					return "Gaming Input - Win10+ only ⚠️ No background access (Not implemented)";
 				case InputMethod.RawInput:
-					return "Raw Input - All controllers ✅ Background access (Not implemented)";
+					return "Raw Input - All controllers ✅ Background access ⚠️ No rumble";
 				default:
 					return $"Unknown input method: {inputMethod}";
 			}

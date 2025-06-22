@@ -75,7 +75,8 @@ namespace x360ce.App.DInput
 						newState = ProcessTestDevice(device);
 					}
 					// Handle DirectInput devices using legacy path (maintains existing acquisition logic)
-					else if (device.InputMethod == InputMethod.DirectInput && device.Device != null)
+					// DEFAULT TO DIRECTINPUT for backward compatibility when InputMethod is not set
+					else if ((device.InputMethod == InputMethod.DirectInput || device.InputMethod == 0) && device.Device != null)
 					{
 						newState = ProcessDirectInputDevice(device, detector, out newUpdates);
 					}
@@ -85,7 +86,7 @@ namespace x360ce.App.DInput
 						newState = ProcessXInputDevice(device);
 					}
 					// Handle other non-DirectInput devices using processors
-					else if (device.InputMethod != InputMethod.DirectInput)
+					else if (device.InputMethod != InputMethod.DirectInput && device.InputMethod != 0)
 					{
 						// Use the appropriate input processor based on device's selected input method
 						var processor = GetInputProcessor(device);
