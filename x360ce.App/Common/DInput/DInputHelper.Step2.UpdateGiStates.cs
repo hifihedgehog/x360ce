@@ -13,6 +13,35 @@ namespace x360ce.App.DInput
 		/// Gaming Input processor placeholder - For future Windows.Gaming.Input API implementation.
 		/// </summary>
 		/// <remarks>
+		/// ⚠️ CRITICAL: MUST OUTPUT CONSISTENT CustomDiState FORMAT ⚠️
+		/// 
+		/// CustomDiState is the ONLY format used by the existing UI and mapping system.
+		/// This implementation MUST map Gaming Input controls to the EXACT SAME CustomDiState indices
+		/// used by DirectInput and XInput for consistency.
+		/// 
+		/// MANDATORY CUSTOMDISTATE MAPPING (MUST match other input methods):
+		/// • Buttons[0] = A button (primary action)
+		/// • Buttons[1] = B button (secondary action) 
+		/// • Buttons[2] = X button (third action)
+		/// • Buttons[3] = Y button (fourth action)
+		/// • Buttons[4] = Left Shoulder (LB)
+		/// • Buttons[5] = Right Shoulder (RB)
+		/// • Buttons[6] = View/Back button
+		/// • Buttons[7] = Menu/Start button
+		/// • Buttons[8] = Left Thumbstick Click (LS)
+		/// • Buttons[9] = Right Thumbstick Click (RS)
+		/// • Buttons[10] = D-Pad Up
+		/// • Buttons[11] = D-Pad Right
+		/// • Buttons[12] = D-Pad Down
+		/// • Buttons[13] = D-Pad Left
+		/// • Buttons[14] = Guide/Xbox button (when available)
+		/// • Axis[0] = Left Thumbstick X (-32768 to 32767)
+		/// • Axis[1] = Left Thumbstick Y (-32768 to 32767)
+		/// • Axis[2] = Right Thumbstick X (-32768 to 32767)
+		/// • Axis[3] = Right Thumbstick Y (-32768 to 32767)
+		/// • Axis[4] = Left Trigger (0 to 32767)
+		/// • Axis[5] = Right Trigger (0 to 32767)
+		/// 
 		/// GAMING INPUT METHOD CAPABILITIES (When Implemented):
 		/// • Unlimited(?) number of controllers on Windows 10+
 		/// • Gamepad class: Xbox One certified/Xbox 360 compatible controllers
@@ -32,18 +61,9 @@ namespace x360ce.App.DInput
 		/// 3. Implement UWP bridging for desktop applications
 		/// 4. Handle Gamepad class for Xbox controllers
 		/// 5. Handle RawGameController class for generic controllers
-		/// 6. Map to CustomDiState format consistently
+		/// 6. Map to CustomDiState format consistently (CRITICAL)
 		/// 7. Implement trigger rumble support
 		/// 8. Handle background access limitation warnings
-		/// 
-		/// CONTROLLER MAPPING (Planned):
-		/// • Buttons[0-15]: A, B, X, Y, LB, RB, View, Menu, LS, RS, DPad (4 directions), unused
-		/// • Axis[0]: Left Thumbstick X (-32768 to 32767)
-		/// • Axis[1]: Left Thumbstick Y (-32768 to 32767)
-		/// • Axis[2]: Right Thumbstick X (-32768 to 32767)
-		/// • Axis[3]: Right Thumbstick Y (-32768 to 32767)
-		/// • Axis[4]: Left Trigger (0 to 32767)
-		/// • Axis[5]: Right Trigger (0 to 32767)
 		/// </remarks>
 		private CustomDiState ProcessGamingInputDevice(UserDevice device)
 		{

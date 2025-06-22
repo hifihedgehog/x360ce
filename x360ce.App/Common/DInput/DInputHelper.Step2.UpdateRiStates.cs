@@ -14,6 +14,37 @@ namespace x360ce.App.DInput
 		/// Raw Input processor placeholder - For future Windows Raw Input API implementation.
 		/// </summary>
 		/// <remarks>
+		/// ⚠️ CRITICAL: MUST OUTPUT CONSISTENT CustomDiState FORMAT ⚠️
+		/// 
+		/// CustomDiState is the ONLY format used by the existing UI and mapping system.
+		/// This implementation MUST map Raw Input controls to the EXACT SAME CustomDiState indices
+		/// used by DirectInput, XInput, and Gaming Input for consistency.
+		/// 
+		/// MANDATORY CUSTOMDISTATE MAPPING (MUST match other input methods):
+		/// Raw Input uses HID reports, so mapping depends on device-specific HID descriptors.
+		/// However, for common controllers (Xbox, PlayStation), MUST map to:
+		/// • Buttons[0] = Primary action button (A on Xbox, Cross on PlayStation)
+		/// • Buttons[1] = Secondary action button (B on Xbox, Circle on PlayStation)
+		/// • Buttons[2] = Third action button (X on Xbox, Square on PlayStation)
+		/// • Buttons[3] = Fourth action button (Y on Xbox, Triangle on PlayStation)
+		/// • Buttons[4] = Left Shoulder (LB/L1)
+		/// • Buttons[5] = Right Shoulder (RB/R1)
+		/// • Buttons[6] = Back/Select/Share button
+		/// • Buttons[7] = Start/Menu/Options button
+		/// • Buttons[8] = Left Thumbstick Click (LS/L3)
+		/// • Buttons[9] = Right Thumbstick Click (RS/R3)
+		/// • Buttons[10] = D-Pad Up
+		/// • Buttons[11] = D-Pad Right
+		/// • Buttons[12] = D-Pad Down
+		/// • Buttons[13] = D-Pad Left
+		/// • Buttons[14] = Guide/Home button (when available via HID)
+		/// • Axis[0] = Left Thumbstick X (-32768 to 32767)
+		/// • Axis[1] = Left Thumbstick Y (-32768 to 32767)
+		/// • Axis[2] = Right Thumbstick X (-32768 to 32767)
+		/// • Axis[3] = Right Thumbstick Y (-32768 to 32767)
+		/// • Axis[4] = Left Trigger OR Combined Triggers (limitation for some controllers)
+		/// • Axis[5] = Right Trigger (when separate) or unused
+		/// 
 		/// RAW INPUT METHOD CAPABILITIES (When Implemented):
 		/// • Controllers CAN be accessed in the background (major advantage)
 		/// • Unlimited number of controllers
@@ -23,7 +54,7 @@ namespace x360ce.App.DInput
 		/// 
 		/// RAW INPUT METHOD LIMITATIONS:
 		/// • Xbox 360/One controllers have triggers on same axis (same as DirectInput)
-		/// • No Guide button access
+		/// • No Guide button access (most HID reports exclude it)
 		/// • Probably no rumble support (needs verification)
 		/// • Requires manual HID report parsing (complex implementation)
 		/// • No built-in controller abstraction (custom profiles needed)
@@ -33,21 +64,11 @@ namespace x360ce.App.DInput
 		/// 1. P/Invoke declarations for Windows Raw Input API (User32.dll)
 		/// 2. HID report descriptor parsing implementation
 		/// 3. Device registration and message handling
-		/// 4. HID usage table mapping to CustomDiState
+		/// 4. HID usage table mapping to CustomDiState (CRITICAL CONSISTENCY)
 		/// 5. Device capability detection and profiling
 		/// 6. Custom controller profiles for unknown devices
 		/// 7. UI for custom button/axis mapping
 		/// 8. Handle Xbox controller HID reports specifically
-		/// 
-		/// CONTROLLER MAPPING (Planned):
-		/// Raw Input uses HID reports, so mapping depends on device-specific HID descriptors.
-		/// Common Xbox controller mapping would be:
-		/// • Buttons[0-15]: A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad (4 directions), unused
-		/// • Axis[0]: Left Thumbstick X
-		/// • Axis[1]: Left Thumbstick Y
-		/// • Axis[2]: Right Thumbstick X  
-		/// • Axis[3]: Right Thumbstick Y
-		/// • Axis[4]: Combined Triggers (LT negative, RT positive) - limitation
 		/// </remarks>
 		private CustomDiState ProcessRawInputDevice(UserDevice device)
 		{

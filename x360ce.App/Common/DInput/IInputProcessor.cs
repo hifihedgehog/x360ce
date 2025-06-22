@@ -44,25 +44,46 @@ namespace x360ce.App.DInput
 		/// <param name="device">The device to read from</param>
 		/// <returns>CustomDiState representing the current controller state, or null if reading failed</returns>
 		/// <remarks>
-		/// IMPLEMENTATION REQUIREMENTS:
-		/// • Must map physical controller inputs to consistent CustomDiState properties
-		/// • Must handle method-specific limitations gracefully
-		/// • Must throw InputMethodException with clear error message on failure
-		/// • Must maintain consistent coordinate systems across all processors
-		/// • Must preserve existing CustomDiState mapping conventions
+		/// ⚠️ CRITICAL: MUST FOLLOW EXISTING DirectInput-to-CustomDiState MAPPING ⚠️
 		/// 
-		/// COORDINATE SYSTEM CONSISTENCY:
-		/// • Buttons: CustomDiState.Buttons[0-255] (true/false)
-		/// • Axes: CustomDiState.Axis[0-23] (int values, -32768 to 32767 range)
-		/// • Sliders: CustomDiState.Sliders[0-7] (int values, -32768 to 32767 range)
-		/// • POVs: CustomDiState.POVs[0-3] (int degrees, -1 for centered)
+		/// CustomDiState is the ONLY format used by the existing UI and mapping system.
+		/// The DirectInput-to-CustomDiState mapping is AUTHORITATIVE because the database 
+		/// contains hundreds of thousands of controller configurations based on this pattern.
 		/// 
-		/// MAPPING CONSISTENCY:
-		/// All processors should map the same physical buttons/axes to the same CustomDiState indices:
-		/// • Primary fire button → Buttons[0]
-		/// • Left thumbstick X/Y → Axis[0]/Axis[1] 
-		/// • Right thumbstick X/Y → Axis[2]/Axis[3]
-		/// • Left/Right triggers → Axis[4]/Axis[5] (when available as separate axes)
+		/// ALL INPUT METHODS MUST MAP TO SAME CustomDiState INDICES AS DirectInput:
+		/// When a user switches from DirectInput to XInput/Gaming Input/Raw Input,
+		/// the same physical controller inputs MUST map to the same CustomDiState indices
+		/// to preserve existing user configurations and database compatibility.
+		/// 
+		/// AUTHORITATIVE DirectInput JoystickState → CustomDiState MAPPING:
+		/// 
+		/// AXES (CustomDiState.Axis[0-23], range: -32768 to 32767):
+		/// • [0] = JoystickState.X (typically Left Thumbstick X)
+		/// • [1] = JoystickState.Y (typically Left Thumbstick Y)
+		/// • [2] = JoystickState.Z (typically Right Thumbstick X or combined triggers)
+		/// • [3] = JoystickState.RotationX (typically Right Thumbstick Y)
+		/// • [4] = JoystickState.RotationY (typically Left Trigger)
+		/// • [5] = JoystickState.RotationZ (typically Right Trigger)
+		/// • [6-23] = Additional DirectInput axes (acceleration, force, velocity, etc.)
+		/// 
+		/// BUTTONS (CustomDiState.Buttons[0-255]):
+		/// • Direct mapping from JoystickState.Buttons[0-255]
+		/// • Button indices match DirectInput button enumeration
+		/// • Varies by controller type and manufacturer
+		/// 
+		/// SLIDERS (CustomDiState.Sliders[0-7]):
+		/// • [0] = JoystickState.Sliders[0]
+		/// • [1] = JoystickState.Sliders[1]  
+		/// • [2-7] = Additional slider types (acceleration, force, velocity)
+		/// 
+		/// POVs (CustomDiState.POVs[0-3]):
+		/// • Direct copy from JoystickState.PointOfViewControllers[0-3]
+		/// • Degrees 0-35900 or -1 for centered
+		/// 
+		/// IMPLEMENTATION REQUIREMENT FOR ALL INPUT METHODS:
+		/// Each input processor must determine how the physical controller's inputs
+		/// would be mapped by DirectInput, then map to those SAME CustomDiState indices.
+		/// This ensures user configurations remain valid across input methods.
 		/// </remarks>
 		/// <exception cref="InputMethodException">Thrown when the input method encounters an error specific to its limitations</exception>
 		CustomDiState ReadState(UserDevice device);

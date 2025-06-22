@@ -264,50 +264,63 @@ namespace x360ce.App.DInput
 
 		/// <summary>
 		/// Converts XInput Gamepad state to CustomDiState format.
+		/// CRITICAL: Must match DirectInput's mapping pattern for Xbox controllers.
 		/// </summary>
 		/// <param name="gamepad">The XInput Gamepad state</param>
-		/// <returns>CustomDiState with mapped values</returns>
+		/// <returns>CustomDiState with mapped values matching DirectInput pattern</returns>
+		/// <remarks>
+		/// This mapping MUST match how DirectInput would map the same Xbox controller
+		/// to preserve user configurations when switching input methods.
+		/// 
+		/// DirectInput typically maps Xbox controllers as:
+		/// • Axis[0] = Left Thumbstick X (matches XInput LeftThumbX)
+		/// • Axis[1] = Left Thumbstick Y (matches XInput LeftThumbY)
+		/// • Axis[2] = Combined Triggers OR Right Thumbstick X (controller dependent)
+		/// • Axis[3] = Right Thumbstick Y (matches XInput RightThumbY) 
+		/// • Axis[4] = Left Trigger (separate when available)
+		/// • Axis[5] = Right Trigger (separate when available)
+		/// 
+		/// For XInput, we map to the most common DirectInput pattern for Xbox controllers.
+		/// </remarks>
 		private CustomDiState ConvertGamepadToCustomDiState(Gamepad gamepad)
 		{
 			var customState = new CustomDiState();
 
-			// Map buttons to CustomDiState.Buttons array
-			// Using consistent button mapping that matches expected controller layout
-			customState.Buttons[0] = gamepad.Buttons.HasFlag(GamepadButtonFlags.A);           // A button
-			customState.Buttons[1] = gamepad.Buttons.HasFlag(GamepadButtonFlags.B);           // B button  
-			customState.Buttons[2] = gamepad.Buttons.HasFlag(GamepadButtonFlags.X);           // X button
-			customState.Buttons[3] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Y);           // Y button
-			customState.Buttons[4] = gamepad.Buttons.HasFlag(GamepadButtonFlags.LeftShoulder);  // Left Bumper
-			customState.Buttons[5] = gamepad.Buttons.HasFlag(GamepadButtonFlags.RightShoulder); // Right Bumper
-			customState.Buttons[6] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Back);        // Back/Select
-			customState.Buttons[7] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Start);       // Start/Menu
-			customState.Buttons[8] = gamepad.Buttons.HasFlag(GamepadButtonFlags.LeftThumb);   // Left Stick Click
-			customState.Buttons[9] = gamepad.Buttons.HasFlag(GamepadButtonFlags.RightThumb);  // Right Stick Click
+			// Map buttons to match DirectInput button enumeration for Xbox controllers
+			// Button mapping follows how DirectInput typically enumerates Xbox controller buttons
+			customState.Buttons[0] = gamepad.Buttons.HasFlag(GamepadButtonFlags.A);           // Button 0: A
+			customState.Buttons[1] = gamepad.Buttons.HasFlag(GamepadButtonFlags.B);           // Button 1: B
+			customState.Buttons[2] = gamepad.Buttons.HasFlag(GamepadButtonFlags.X);           // Button 2: X
+			customState.Buttons[3] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Y);           // Button 3: Y
+			customState.Buttons[4] = gamepad.Buttons.HasFlag(GamepadButtonFlags.LeftShoulder);  // Button 4: LB
+			customState.Buttons[5] = gamepad.Buttons.HasFlag(GamepadButtonFlags.RightShoulder); // Button 5: RB
+			customState.Buttons[6] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Back);        // Button 6: Back
+			customState.Buttons[7] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Start);       // Button 7: Start
+			customState.Buttons[8] = gamepad.Buttons.HasFlag(GamepadButtonFlags.LeftThumb);   // Button 8: LS
+			customState.Buttons[9] = gamepad.Buttons.HasFlag(GamepadButtonFlags.RightThumb);  // Button 9: RS
 			
-			// Map D-Pad to buttons 10-13
-			customState.Buttons[10] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadUp);     // D-Pad Up
-			customState.Buttons[11] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight);  // D-Pad Right
-			customState.Buttons[12] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadDown);   // D-Pad Down
-			customState.Buttons[13] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft);   // D-Pad Left
+			// D-Pad mapping to buttons (DirectInput POV often mapped to buttons for Xbox controllers)
+			customState.Buttons[10] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadUp);     // Button 10: D-Up
+			customState.Buttons[11] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight);  // Button 11: D-Right
+			customState.Buttons[12] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadDown);   // Button 12: D-Down
+			customState.Buttons[13] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft);   // Button 13: D-Left
 			
-			// Guide button (if available) - button 14
-			customState.Buttons[14] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Guide);      // Guide/Xbox button
-			
-			// Button 15 reserved for future use
+			// Guide button (when available) - not always accessible via DirectInput
+			customState.Buttons[14] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Guide);      // Button 14: Guide
 
-			// Map thumbsticks to axes (XInput range is already -32768 to 32767)
-			customState.Axis[0] = gamepad.LeftThumbX;   // Left Thumbstick X
-			customState.Axis[1] = gamepad.LeftThumbY;   // Left Thumbstick Y  
-			customState.Axis[2] = gamepad.RightThumbX;  // Right Thumbstick X
-			customState.Axis[3] = gamepad.RightThumbY;  // Right Thumbstick Y
+			// CRITICAL: Map axes to match DirectInput's typical Xbox controller mapping
+			customState.Axis[0] = gamepad.LeftThumbX;   // Axis 0: Left Thumbstick X (DirectInput X)
+			customState.Axis[1] = gamepad.LeftThumbY;   // Axis 1: Left Thumbstick Y (DirectInput Y)
+			customState.Axis[2] = gamepad.RightThumbX;  // Axis 2: Right Thumbstick X (DirectInput Z or RotationX)
+			customState.Axis[3] = gamepad.RightThumbY;  // Axis 3: Right Thumbstick Y (DirectInput RotationX or RotationY)
 
-			// Map triggers to axes (convert from byte 0-255 to int -32768 to 32767)
-			// Using 0 to 32767 range for triggers (positive values only)
-			customState.Axis[4] = ConvertTriggerToAxis(gamepad.LeftTrigger);   // Left Trigger
-			customState.Axis[5] = ConvertTriggerToAxis(gamepad.RightTrigger);  // Right Trigger
+			// Trigger mapping: XInput advantage is separate triggers, but match DirectInput pattern
+			customState.Axis[4] = ConvertTriggerToAxis(gamepad.LeftTrigger);   // Axis 4: Left Trigger (DirectInput RotationY)
+			customState.Axis[5] = ConvertTriggerToAxis(gamepad.RightTrigger);  // Axis 5: Right Trigger (DirectInput RotationZ)
 
-			// Note: XInput doesn't have POV/Hat controls like DirectInput, so POVs remain at default (-1)
-			// Note: XInput doesn't have sliders, so they remain at default values
+			// Note: XInput provides cleaner mapping than DirectInput for Xbox controllers
+			// DirectInput often combines triggers or uses different axis assignments
+			// This mapping preserves the most common DirectInput pattern for Xbox controllers
 
 			return customState;
 		}

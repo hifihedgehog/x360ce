@@ -18,6 +18,35 @@ namespace x360ce.App.DInput
 		/// <param name="device">The Xbox-compatible device to process</param>
 		/// <returns>CustomDiState for the device, or null if reading failed</returns>
 		/// <remarks>
+		/// ⚠️ CRITICAL: MUST OUTPUT CONSISTENT CustomDiState FORMAT ⚠️
+		/// 
+		/// CustomDiState is the ONLY format used by the existing UI and mapping system.
+		/// This method MUST map XInput controls to the EXACT SAME CustomDiState indices
+		/// used by DirectInput and other input methods for consistency.
+		/// 
+		/// MANDATORY CUSTOMDISTATE MAPPING (MUST match other input methods):
+		/// • Buttons[0] = A button (primary action)
+		/// • Buttons[1] = B button (secondary action)
+		/// • Buttons[2] = X button (third action)
+		/// • Buttons[3] = Y button (fourth action)
+		/// • Buttons[4] = Left Shoulder (LB)
+		/// • Buttons[5] = Right Shoulder (RB)
+		/// • Buttons[6] = Back/Select button
+		/// • Buttons[7] = Start/Menu button
+		/// • Buttons[8] = Left Thumbstick Click (LS)
+		/// • Buttons[9] = Right Thumbstick Click (RS)
+		/// • Buttons[10] = D-Pad Up
+		/// • Buttons[11] = D-Pad Right
+		/// • Buttons[12] = D-Pad Down
+		/// • Buttons[13] = D-Pad Left
+		/// • Buttons[14] = Guide/Xbox button
+		/// • Axis[0] = Left Thumbstick X (-32768 to 32767)
+		/// • Axis[1] = Left Thumbstick Y (-32768 to 32767)
+		/// • Axis[2] = Right Thumbstick X (-32768 to 32767)
+		/// • Axis[3] = Right Thumbstick Y (-32768 to 32767)
+		/// • Axis[4] = Left Trigger (0 to 32767)
+		/// • Axis[5] = Right Trigger (0 to 32767)
+		/// 
 		/// XINPUT METHOD CAPABILITIES:
 		/// • Xbox controllers CAN be accessed in background (major advantage over DirectInput)
 		/// • Proper trigger separation (LT/RT as separate axes, not combined like DirectInput)
@@ -31,16 +60,6 @@ namespace x360ce.App.DInput
 		/// • Only XInput capable devices (Xbox 360/One controllers)
 		/// • Cannot activate extra 2 rumble motors in Xbox One controller triggers
 		/// • No support for generic gamepads or specialized controllers
-		/// 
-		/// CONTROLLER MAPPING:
-		/// This method maps XInput Gamepad state to CustomDiState as follows:
-		/// • Buttons[0-15]: A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad (4 directions), Guide, unused
-		/// • Axis[0]: Left Thumbstick X (-32768 to 32767)
-		/// • Axis[1]: Left Thumbstick Y (-32768 to 32767) 
-		/// • Axis[2]: Right Thumbstick X (-32768 to 32767)
-		/// • Axis[3]: Right Thumbstick Y (-32768 to 32767)
-		/// • Axis[4]: Left Trigger (0 to 32767, converted from 0-255 byte range)
-		/// • Axis[5]: Right Trigger (0 to 32767, converted from 0-255 byte range)
 		/// </remarks>
 		private CustomDiState ProcessXInputDevice(UserDevice device)
 		{
