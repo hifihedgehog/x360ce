@@ -65,10 +65,7 @@ namespace x360ce.App.DInput
 		private CustomDiState ProcessRawInputDevice(UserDevice device)
 		{
 			if (device == null)
-			{
-				Debug.WriteLine("Raw Input: Device is null");
 				return null;
-			}
 
 			try
 			{
@@ -78,10 +75,7 @@ namespace x360ce.App.DInput
 				// Validate device compatibility
 				var validation = processor.ValidateDevice(device);
 				if (!validation.IsValid)
-				{
-					Debug.WriteLine($"Raw Input validation failed for {device.DisplayName}: {validation.Message}");
 					return null;
-				}
 
 				// Read device state using Raw Input
 				var customState = processor.ReadState(device);
@@ -96,12 +90,20 @@ namespace x360ce.App.DInput
 			}
 			catch (InputMethodException ex)
 			{
-				Debug.WriteLine($"Raw Input error for {device.DisplayName}: {ex.Message}");
+				// Log Raw Input specific errors for debugging
+				var cx = new DInputException($"Raw Input error for {device.DisplayName}", ex);
+				cx.Data.Add("Device", device.DisplayName);
+				cx.Data.Add("InputMethod", "RawInput");
+				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
 				return null;
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"Unexpected Raw Input error for {device.DisplayName}: {ex.Message}");
+				// Log unexpected Raw Input errors for debugging
+				var cx = new DInputException($"Unexpected Raw Input error for {device.DisplayName}", ex);
+				cx.Data.Add("Device", device.DisplayName);
+				cx.Data.Add("InputMethod", "RawInput");
+				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
 				return null;
 			}
 		}

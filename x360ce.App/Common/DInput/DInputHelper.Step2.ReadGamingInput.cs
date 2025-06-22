@@ -40,31 +40,20 @@ namespace x360ce.App.DInput
 		/// </remarks>
 		private CustomDiState ProcessGamingInputDevice(UserDevice device)
 		{
-			Debug.WriteLine($"Gaming Input: ProcessGamingInputDevice called for device {device?.DisplayName ?? "null"}");
-
 			if (device == null)
-			{
-				Debug.WriteLine("Gaming Input: Device is null, returning null");
 				return null;
-			}
 
 			try
 			{
 				if (!IsGamingInputAvailable())
-				{
-					Debug.WriteLine("Gaming Input: Gaming Input not available, returning null");
 					return null;
-				}
 
 				// Get setting related to user device - using same pattern as XInput
 				var setting = SettingsManager.UserSettings.ItemsToArraySynchronized()
 					.FirstOrDefault(x => x.InstanceGuid == device.InstanceGuid);
 
 				if (setting == null || setting.MapTo <= (int)MapTo.None)
-				{
-					Debug.WriteLine($"Gaming Input: Device {device.DisplayName} not mapped or setting is null (MapTo: {setting?.MapTo}), returning null");
 					return null;
-				}
 
 				// Convert MapTo to zero-based gamepad index
 				var gamepadIndex = setting.MapTo - 1;
@@ -72,12 +61,7 @@ namespace x360ce.App.DInput
 				// Get gamepad directly - no caching needed for simple access
 				var gamepads = Gamepad.Gamepads;
 				if (gamepadIndex < 0 || gamepadIndex >= gamepads.Count)
-				{
-					Debug.WriteLine($"Gaming Input: Invalid gamepad index {gamepadIndex} (available gamepads: {gamepads.Count}), returning null");
 					return null;
-				}
-
-				Debug.WriteLine($"Gaming Input: Processing device {device.DisplayName} using gamepad index {gamepadIndex}");
 
 				var gamepad = gamepads[gamepadIndex];
 				var reading = gamepad.GetCurrentReading();
@@ -140,7 +124,11 @@ namespace x360ce.App.DInput
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"Gaming Input: Error processing device {device.DisplayName} - {ex.Message}");
+				// Log Gaming Input processing errors for debugging
+				var cx = new DInputException($"Gaming Input error processing device {device.DisplayName}", ex);
+				cx.Data.Add("Device", device.DisplayName);
+				cx.Data.Add("InputMethod", "GamingInput");
+				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
 				return null;
 			}
 		}
@@ -301,30 +289,21 @@ namespace x360ce.App.DInput
 			{
 				// Check Windows version
 				var osVersion = Environment.OSVersion.Version;
-				Debug.WriteLine($"Gaming Input: Detected OS Version: {osVersion} (Major: {osVersion.Major}, Minor: {osVersion.Minor})");
 				
 				// Windows 10 is version 10.0, Windows 11 is also reported as 10.0 due to compatibility
 				// So we check for Major >= 10, but also need to account for potential version reporting issues
 				var isWindows10Plus = osVersion.Major >= 10 || osVersion.Major == 6 && osVersion.Minor >= 2; // Windows 8+ as fallback
 				
 				if (!isWindows10Plus)
-				{
-					Debug.WriteLine($"Gaming Input: Unsupported Windows version {osVersion}. Requires Windows 10 or later");
 					return false;
-				}
-
-				Debug.WriteLine("Gaming Input: Windows version check passed");
 
 				// Test Gaming Input API accessibility - this is the real test
 				var gamepads = Gamepad.Gamepads; // This will throw if Gaming Input is not available
-				Debug.WriteLine($"Gaming Input: API accessible, found {gamepads.Count} gamepads");
 				
-				Debug.WriteLine("Gaming Input: Available and functional");
 				return true;
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"Gaming Input: Not available - {ex.Message}");
 				return false;
 			}
 		}

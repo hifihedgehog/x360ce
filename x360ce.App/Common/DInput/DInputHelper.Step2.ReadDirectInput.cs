@@ -31,7 +31,6 @@ namespace x360ce.App.DInput
 		private CustomDiState ProcessDirectInputDevice(UserDevice device, DeviceDetector detector, out CustomDiUpdate[] newUpdates)
 		{
 			newUpdates = null;
-			var exceptionData = new StringBuilder();
 
 			bool useData = false;
 			if (options.UseDeviceBufferedData && device.Device.Properties.BufferSize == 0)
@@ -59,10 +58,8 @@ namespace x360ce.App.DInput
 			{
 				var cooperativeLevel = exclusiveRequired ? CooperativeLevel.Exclusive : CooperativeLevel.NonExclusive;
 				// Reacquire device in exclusive or in non exclusive mode (xinput.dll can control force feedback).
-				DeviceExclusiveMode(device, detector, device.Device, exceptionData, cooperativeLevel);
+				DeviceExclusiveMode(device, detector, device.Device, cooperativeLevel);
 			}
-
-			exceptionData.AppendFormat($"device.GetCurrentState() // device.IsExclusiveMode = {device.IsExclusiveMode}").AppendLine();
 
 			// Polling - Retrieves data from polled objects on a DirectInput device.
 			// Some devices require polling (For example original "XBOX Controller S" with XBCD drivers).
@@ -117,7 +114,6 @@ namespace x360ce.App.DInput
 			// Fill device objects force feedback actuator masks.
 			if (device.DeviceObjects == null)
 			{
-				exceptionData.AppendFormat($"AppHelper.GetDeviceObjectsByUsageAndInstanceNumber(device) // device.IsExclusiveMode = {device.IsExclusiveMode}").AppendLine();
 				// var item = AppHelper.GetDeviceObjects(device, device.Device);
 				// device.DeviceObjects = item;
 				//// Update masks.
@@ -139,7 +135,6 @@ namespace x360ce.App.DInput
 			}
 			if (device.DeviceEffects == null)
 			{
-				exceptionData.AppendFormat($"AppHelper.GetDeviceEffects(device.Device) // device.IsExclusiveMode = {device.IsExclusiveMode}").AppendLine();
 				device.DeviceEffects = AppHelper.GetDeviceEffects(device.Device);
 			}
 
@@ -171,14 +166,12 @@ namespace x360ce.App.DInput
 								// var st = device.Device.GetForceFeedbackState();
 								// st == SharpDX.DirectInput.ForceFeedbackState
 								// device.Device.SendForceFeedbackCommand(ForceFeedbackCommand.SetActuatorsOn);
-								exceptionData.AppendFormat("device.FFState.SetDeviceForces(device.Device) // device.IsExclusiveMode = {0}", device.IsExclusiveMode).AppendLine();
 								device.FFState.SetDeviceForces(device, device.Device, ps, vibration);
 							}
 						}
 						else if (device.FFState != null)
 						{
 							// Stop device forces.
-							exceptionData.AppendFormat("device.FFState.StopDeviceForces(device.Device) // device.IsExclusiveMode = {0}", device.IsExclusiveMode).AppendLine();
 							device.FFState.StopDeviceForces(device.Device);
 							device.FFState = null;
 						}
@@ -295,16 +288,11 @@ namespace x360ce.App.DInput
 		/// <param name="ud">User device</param>
 		/// <param name="detector">Device detector</param>
 		/// <param name="device">DirectInput device</param>
-		/// <param name="exceptionData">Exception data for logging</param>
 		/// <param name="cooperationLevel">Cooperative level to set</param>
-		private void DeviceExclusiveMode(UserDevice ud, DeviceDetector detector, Device device, StringBuilder exceptionData, CooperativeLevel cooperationLevel)
+		private void DeviceExclusiveMode(UserDevice ud, DeviceDetector detector, Device device, CooperativeLevel cooperationLevel)
 		{
-			string mode = cooperationLevel == CooperativeLevel.Exclusive ? "Exclusive" : "NonExclusive";
-			exceptionData.AppendLine($"UnAcquire ({mode})...");
 			device.Unacquire();
-			exceptionData.AppendLine($"SetCooperativeLevel ({mode})...");
 			device.SetCooperativeLevel(detector.DetectorForm.Handle, CooperativeLevel.Background | cooperationLevel);
-			exceptionData.AppendLine("Acquire...");
 			device.Acquire();
 			ud.IsExclusiveMode = cooperationLevel == CooperativeLevel.Exclusive;
 		}

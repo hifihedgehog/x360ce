@@ -63,37 +63,30 @@ namespace x360ce.App.DInput
 
 				try
 				{
-					Debug.WriteLine($"UpdateDiStates: Processing device {device.DisplayName}, InputMethod: {device.InputMethod}, Device: {device.Device != null}");
-
 					// Handle test devices (virtual/simulated devices for testing)
 					if (TestDeviceHelper.ProductGuid.Equals(device.ProductGuid))
 					{
-						Debug.WriteLine($"UpdateDiStates: Using test device processor for {device.DisplayName}");
 						newState = ProcessTestDevice(device);
 					}
 					// Handle DirectInput devices using dedicated DirectInput processor
 					// DEFAULT TO DIRECTINPUT for backward compatibility when InputMethod is not set
 					else if ((device.InputMethod == InputMethod.DirectInput || device.InputMethod == 0) && device.Device != null)
 					{
-						Debug.WriteLine($"UpdateDiStates: Using DirectInput processor for {device.DisplayName}");
 						newState = ProcessDirectInputDevice(device, detector, out newUpdates);
 					}
 					// Handle XInput devices using dedicated XInput processor
 					else if (device.InputMethod == InputMethod.XInput)
 					{
-						Debug.WriteLine($"UpdateDiStates: Using XInput processor for {device.DisplayName}");
 						newState = ProcessXInputDevice(device);
 					}
 					// Handle Gaming Input devices using dedicated Gaming Input processor
 					else if (device.InputMethod == InputMethod.GamingInput)
 					{
-						Debug.WriteLine($"UpdateDiStates: Using Gaming Input processor for {device.DisplayName}");
 						newState = ProcessGamingInputDevice(device);
 					}
 					// Handle other input methods using the processor pattern
 					else if (device.InputMethod != InputMethod.DirectInput && device.InputMethod != 0)
 					{
-						Debug.WriteLine($"UpdateDiStates: Using generic processor pattern for {device.DisplayName}");
 						// Use the appropriate input processor based on device's selected input method
 						var processor = GetInputProcessor(device);
 						
@@ -101,7 +94,6 @@ namespace x360ce.App.DInput
 						var validation = processor.ValidateDevice(device);
 						if (!validation.IsValid)
 						{
-							Debug.WriteLine($"Input method validation failed for {device.DisplayName}: {validation.Message}");
 							continue;
 						}
 
@@ -114,15 +106,14 @@ namespace x360ce.App.DInput
 							processor.HandleForceFeedback(device, device.FFState);
 						}
 					}
-					else
-					{
-						Debug.WriteLine($"UpdateDiStates: No processor found for {device.DisplayName} (InputMethod: {device.InputMethod}, Device: {device.Device != null})");
-					}
 				}
 				catch (InputMethodException ex)
 				{
-					// Handle input method specific errors
-					Debug.WriteLine($"Input method error for {device.DisplayName} using {ex.InputMethod}: {ex.Message}");
+					// Log input method specific errors for debugging
+					var cx = new DInputException($"Input method error for {device.DisplayName} using {ex.InputMethod}", ex);
+					cx.Data.Add("Device", device.DisplayName);
+					cx.Data.Add("InputMethod", ex.InputMethod.ToString());
+					JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
 					
 					// For certain errors, mark devices as needing update
 					if (ex.Message.Contains("InputLost") || ex.Message.Contains("NotAcquired"))
@@ -135,8 +126,11 @@ namespace x360ce.App.DInput
 				}
 				catch (NotSupportedException ex)
 				{
-					// Input method not yet implemented
-					Debug.WriteLine($"Input method not supported for {device.DisplayName}: {ex.Message}");
+					// Log unimplemented input methods for debugging
+					var cx = new DInputException($"Input method not supported for {device.DisplayName}", ex);
+					cx.Data.Add("Device", device.DisplayName);
+					cx.Data.Add("InputMethod", device.InputMethod.ToString());
+					JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
 					continue;
 				}
 				catch (Exception ex)
@@ -148,8 +142,6 @@ namespace x360ce.App.DInput
 						 dex.ResultCode == SharpDX.DirectInput.ResultCode.NotAcquired ||
 						 dex.ResultCode == SharpDX.DirectInput.ResultCode.Unplugged))
 					{
-						Debug.WriteLine($"InputLost {DateTime.Now:HH:mm:ss.fff}");
-						Debug.WriteLine($"Device {dex.Descriptor.ApiCode}. DisplayName {device.DisplayName}. ProductId {device.DevProductId}. ProductName {device.ProductName}. InstanceName {device.InstanceName}.");
 						DevicesNeedUpdating = true;
 					}
 					else

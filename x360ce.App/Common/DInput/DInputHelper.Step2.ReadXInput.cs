@@ -64,16 +64,10 @@ namespace x360ce.App.DInput
 		private CustomDiState ProcessXInputDevice(UserDevice device)
 		{
 			if (device == null)
-			{
-				Debug.WriteLine("XInput: Device is null");
 				return null;
-			}
 
 			if (!device.IsXboxCompatible)
-			{
-				Debug.WriteLine($"XInput: Device {device.DisplayName} is not Xbox-compatible");
 				return null;
-			}
 
 			try
 			{
@@ -83,10 +77,7 @@ namespace x360ce.App.DInput
 				// Validate device compatibility
 				var validation = processor.ValidateDevice(device);
 				if (!validation.IsValid)
-				{
-					Debug.WriteLine($"XInput validation failed for {device.DisplayName}: {validation.Message}");
 					return null;
-				}
 
 				// Read device state using XInput
 				var customState = processor.ReadState(device);
@@ -98,7 +89,11 @@ namespace x360ce.App.DInput
 			}
 			catch (InputMethodException ex)
 			{
-				Debug.WriteLine($"XInput error for {device.DisplayName}: {ex.Message}");
+				// Log XInput specific errors for debugging
+				var cx = new DInputException($"XInput error for {device.DisplayName}", ex);
+				cx.Data.Add("Device", device.DisplayName);
+				cx.Data.Add("InputMethod", "XInput");
+				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
 				
 				// For slot limit errors, mark devices as needing update
 				if (ex.Message.Contains("maximum") || ex.Message.Contains("controllers already in use"))
@@ -110,7 +105,11 @@ namespace x360ce.App.DInput
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"Unexpected XInput error for {device.DisplayName}: {ex.Message}");
+				// Log unexpected XInput errors for debugging
+				var cx = new DInputException($"Unexpected XInput error for {device.DisplayName}", ex);
+				cx.Data.Add("Device", device.DisplayName);
+				cx.Data.Add("InputMethod", "XInput");
+				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
 				return null;
 			}
 		}
@@ -158,16 +157,7 @@ namespace x360ce.App.DInput
 							var rightMotorSpeed = (force == null) ? (ushort)0 : ConvertByteToUshort(force.SmallMotor);
 							
 							// Apply XInput vibration
-							var success = processor.ApplyXInputVibration(device, leftMotorSpeed, rightMotorSpeed);
-							
-							if (success)
-							{
-								Debug.WriteLine($"XInput: Applied vibration to {device.DisplayName} - L:{leftMotorSpeed}, R:{rightMotorSpeed}");
-							}
-							else
-							{
-								Debug.WriteLine($"XInput: Failed to apply vibration to {device.DisplayName}");
-							}
+							processor.ApplyXInputVibration(device, leftMotorSpeed, rightMotorSpeed);
 						}
 					}
 					else if (device.FFState != null)
@@ -180,7 +170,6 @@ namespace x360ce.App.DInput
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"XInput force feedback integration error for {device.DisplayName}: {ex.Message}");
 				// Force feedback errors are not critical - continue processing
 			}
 		}
@@ -338,7 +327,6 @@ namespace x360ce.App.DInput
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"XInput availability check failed: {ex.Message}");
 				return false;
 			}
 		}
