@@ -151,7 +151,7 @@
 					<StackPanel
 						Name="DeviceDetails"
 						Grid.Row="4"
-						Margin="3"> 
+						Margin="3">
 						<!--  DataContext="{Binding SelectedDevice, ElementName=PadListControl}"  -->
 						<StackPanel Orientation="Horizontal">
 							<Label>Vendor</Label>
