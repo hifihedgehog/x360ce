@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -227,7 +226,6 @@ namespace x360ce.App.Controls
 		Dictionary<int, (Label, Label, Label)> HSliderDictionary = new Dictionary<int, (Label, Label, Label)>();
 
 		object updateLock = new object();
-		object oldState = null;
 
 		/// <summary>
 		/// Gets the CustomDiState for the specified UserDevice.
