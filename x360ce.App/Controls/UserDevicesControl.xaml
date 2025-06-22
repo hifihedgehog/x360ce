@@ -6,6 +6,7 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:local="clr-namespace:x360ce.App.Controls"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:engine="clr-namespace:x360ce.Engine;assembly=x360ce.Engine"
 	d:DesignHeight="100"
 	d:DesignWidth="720"
 	Background="{StaticResource BackgroundLight}"
@@ -166,6 +167,29 @@
 						EditingElementStyle="{StaticResource TextBoxCell}"
 						ElementStyle="{StaticResource TextBlockCell}"
 						Header="Device" />
+					<DataGridTemplateColumn
+						x:Name="InputMethodColumn"
+						Header="Input Method"
+						SortMemberPath="InputMethod"
+						Width="120">
+						<DataGridTemplateColumn.CellTemplate>
+							<DataTemplate>
+								<TextBlock 
+									Text="{Binding InputMethod}" 
+									Style="{StaticResource TextBlockCell}" />
+							</DataTemplate>
+						</DataGridTemplateColumn.CellTemplate>
+						<DataGridTemplateColumn.CellEditingTemplate>
+							<DataTemplate>
+								<ComboBox SelectedItem="{Binding InputMethod, Mode=TwoWay}">
+									<engine:InputMethod>DirectInput</engine:InputMethod>
+									<engine:InputMethod>XInput</engine:InputMethod>
+									<engine:InputMethod>GamingInput</engine:InputMethod>
+									<engine:InputMethod>RawInput</engine:InputMethod>
+								</ComboBox>
+							</DataTemplate>
+						</DataGridTemplateColumn.CellEditingTemplate>
+					</DataGridTemplateColumn>
 					<DataGridTextColumn
 						Width="*"
 						Binding="{Binding HidDeviceId}"

@@ -218,6 +218,13 @@ namespace x360ce.App.Controls
             set { IsHiddenColumn.Visibility = value ? Visibility.Visible : Visibility.Hidden; }
         }
 
+        [DefaultValue(true), Browsable(true)]
+        public bool IsVisibleInputMethodColumn
+        {
+            get { return InputMethodColumn.Visibility == Visibility.Visible; }
+            set { InputMethodColumn.Visibility = value ? Visibility.Visible : Visibility.Hidden; }
+        }
+
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             if (!ControlsHelper.AllowLoad(this))
