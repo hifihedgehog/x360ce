@@ -22,6 +22,10 @@
 
 		<local:PadListControl x:Name="PadListPanel" />
 		<local:PadItemControl x:Name="PadItemPanel" Grid.Column="1" />
-		<local:PadFootControl x:Name="PadFootPanel" Grid.Row="1" Grid.ColumnSpan="2" />
-		
-	</Grid></UserControl>
+		<local:PadFootControl
+			x:Name="PadFootPanel"
+			Grid.Row="1"
+			Grid.ColumnSpan="2" />
+
+	</Grid>
+</UserControl>

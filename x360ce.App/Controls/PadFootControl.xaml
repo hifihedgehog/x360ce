@@ -41,7 +41,10 @@
 						<Label Content="Remap All" />
 					</StackPanel>
 				</Button>
-				<ComboBox Name="MapNameComboBox" Margin="0,3,3,3" DisplayMemberPath="Name" />
+				<ComboBox
+					Name="MapNameComboBox"
+					Margin="0,3,3,3"
+					DisplayMemberPath="Name" />
 			</StackPanel>
 		</StackPanel>
 		<StackPanel Grid.Column="2" Orientation="Horizontal">
@@ -52,31 +55,46 @@
 					<Label Content="Copy" />
 				</StackPanel>
 			</Button>
-			<Button Name="PasteButton" Margin="0,3,3,3" Click="PasteButton_Click">
+			<Button
+				Name="PasteButton"
+				Margin="0,3,3,3"
+				Click="PasteButton_Click">
 				<StackPanel>
 					<ContentControl Content="{StaticResource Icon_clipboard_paste}" />
 					<Label Content="Paste" />
 				</StackPanel>
 			</Button>
-			<Button Name="LoadButton" Margin="0,3,3,3" Click="LoadButton_Click">
+			<Button
+				Name="LoadButton"
+				Margin="0,3,3,3"
+				Click="LoadButton_Click">
 				<StackPanel>
 					<ContentControl Content="{StaticResource Icon_download}" />
 					<Label Content="Load..." />
 				</StackPanel>
 			</Button>
-			<Button Name="AutoButton" Margin="0,3,3,3" Click="AutoButton_Click">
+			<Button
+				Name="AutoButton"
+				Margin="0,3,3,3"
+				Click="AutoButton_Click">
 				<StackPanel>
 					<ContentControl Content="{StaticResource Icon_window_gear}" />
 					<Label Content="Auto" />
 				</StackPanel>
 			</Button>
-			<Button Name="ClearButton" Margin="0,3,3,3" Click="ClearButton_Click">
+			<Button
+				Name="ClearButton"
+				Margin="0,3,3,3"
+				Click="ClearButton_Click">
 				<StackPanel>
 					<ContentControl Content="{StaticResource Icon_broom}" />
 					<Label Content="Clear" />
 				</StackPanel>
 			</Button>
-			<Button Name="ResetButton" Margin="0,3,3,3" Click="ResetButton_Click">
+			<Button
+				Name="ResetButton"
+				Margin="0,3,3,3"
+				Click="ResetButton_Click">
 				<StackPanel>
 					<ContentControl Content="{StaticResource Icon_Reset}" />
 					<Label Content="Reset" />

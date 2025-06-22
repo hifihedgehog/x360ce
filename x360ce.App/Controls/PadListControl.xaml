@@ -6,8 +6,8 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:local="clr-namespace:x360ce.App.Controls"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	d:Width="270"
 	d:Height="400"
+	d:Width="270"
 	Loaded="UserControl_Loaded"
 	Unloaded="UserControl_Unloaded"
 	mc:Ignorable="d">
@@ -17,7 +17,10 @@
 		<TabItem>
 			<TabItem.Header>
 				<StackPanel Orientation="Horizontal">
-					<ContentControl Name="NormalTab" Margin="0,0,3,0" Content="{StaticResource Icon_gamepad}" />
+					<ContentControl
+						Name="NormalTab"
+						Margin="0,0,3,0"
+						Content="{StaticResource Icon_gamepad}" />
 					<TextBlock Text="CONTROLLERS" />
 				</StackPanel>
 			</TabItem.Header>
@@ -30,60 +33,81 @@
 						<RowDefinition Height="*" />
 						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
-					<!--Help-->
-					<Border Style="{StaticResource BorderDescriptionNormal}" Padding="3,3,3,4" Margin="3,3,3,0">
+					<!--  Help  -->
+					<Border
+						Margin="3,3,3,0"
+						Padding="3,3,3,4"
+						Style="{StaticResource BorderDescriptionNormal}">
 						<Label HorizontalAlignment="Center">STEP 2 - Add and select device to configure.</Label>
 					</Border>
-					<!--Buttons-->
-					<StackPanel Grid.Row="1" Margin="6,0,3,0" Orientation="Horizontal">
-						<Button Name="AddButton" Margin="0,3,3,3" Click="AddButton_Click">
+					<!--  Buttons  -->
+					<StackPanel
+						Grid.Row="1"
+						Margin="6,0,3,0"
+						Orientation="Horizontal">
+						<Button
+							Name="AddButton"
+							Margin="0,3,3,3"
+							Click="AddButton_Click">
 							<StackPanel>
 								<ContentControl Content="{StaticResource Icon_add}" />
 								<Label Content="Add..." />
 							</StackPanel>
 						</Button>
-						<Button Name="RemoveButton" Margin="0,3,3,3" Click="RemoveButton_Click">
+						<Button
+							Name="RemoveButton"
+							Margin="0,3,3,3"
+							Click="RemoveButton_Click">
 							<StackPanel>
 								<ContentControl Content="{StaticResource Icon_remove}" />
 								<Label Content="Remove" />
 							</StackPanel>
 						</Button>
-						<Button Name="RefreshButton" Margin="0,3,0,3" Click="RefreshButton_Click">
+						<Button
+							Name="RefreshButton"
+							Margin="0,3,0,3"
+							Click="RefreshButton_Click">
 							<StackPanel>
 								<ContentControl Content="{StaticResource Icon_Refresh}" />
 								<Label Content="Refresh" />
 							</StackPanel>
 						</Button>
 					</StackPanel>
-					<!--Check-boxes-->
+					<!--  Check-boxes  -->
 					<StackPanel Grid.Row="2" Margin="3">
 						<CheckBox
-						Name="EnabledCheckBox"
-						Click="EnabledCheckBox_Click"
-						Content="Enabled" />
-						<CheckBox Name="UseXInputStateCheckBox" Click="UseXInputStateCheckBox_Click" Content="Use XInput State" />
-						<CheckBox Name="AutoMapCheckBox" Click="AutoMapCheckBox_Click" Content="Auto Map" />
+							Name="EnabledCheckBox"
+							Click="EnabledCheckBox_Click"
+							Content="Enabled" />
+						<CheckBox
+							Name="UseXInputStateCheckBox"
+							Click="UseXInputStateCheckBox_Click"
+							Content="Use XInput State" />
+						<CheckBox
+							Name="AutoMapCheckBox"
+							Click="AutoMapCheckBox_Click"
+							Content="Auto Map" />
 					</StackPanel>
-					<!--Controller List-->
+					<!--  Controller List  -->
 					<DataGrid
-					Grid.Row="3"
-					Name="DevicesDataGrid"
-					AutoGenerateColumns="False"
-					IsReadOnly="True"
-					ScrollViewer.CanContentScroll="True"
-					ScrollViewer.HorizontalScrollBarVisibility="Auto"
-					ScrollViewer.VerticalScrollBarVisibility="Auto"
-					SelectionChanged="MainDataGrid_SelectionChanged"
-					SelectionMode="Single">
+						Name="DevicesDataGrid"
+						Grid.Row="3"
+						AutoGenerateColumns="False"
+						IsReadOnly="True"
+						ScrollViewer.CanContentScroll="True"
+						ScrollViewer.HorizontalScrollBarVisibility="Auto"
+						ScrollViewer.VerticalScrollBarVisibility="Auto"
+						SelectionChanged="MainDataGrid_SelectionChanged"
+						SelectionMode="Single">
 						<DataGrid.Resources>
 							<!--<converters:ChecksumToIdConverter x:Key="_ChecksumToIdConverter" />-->
 							<converters:MapToIntToDescription x:Key="_MapToIntToDescription" />
 							<converters:BoolToImageSourceConverter x:Key="BoolToImageSourceConverter" />
 							<converters:ConnectionClassToImageConverter x:Key="ConnectionClassToImageConverter" />
 							<!--<converters:ItemFormattingConverter x:Key="_MainDataGridFormattingConverter" />-->
-							<Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DataGridColumnHeader_Default}">
-								<Setter Property="Padding" Value="3,0,0,0"/>
-								<!-- Change these numbers for desired padding -->
+							<Style BasedOn="{StaticResource DataGridColumnHeader_Default}" TargetType="DataGridColumnHeader">
+								<Setter Property="Padding" Value="3,0,0,0" />
+								<!--  Change these numbers for desired padding  -->
 							</Style>
 						</DataGrid.Resources>
 
@@ -105,41 +129,45 @@
 						</DataGrid.CellStyle>
 
 						<DataGrid.Columns>
-							<!--Enabled-->
+							<!--  Enabled  -->
 							<DataGridCheckBoxColumn
-							Width="25"
-							x:Name="IsEnabledColumn"
-							Binding="{Binding IsEnabled, IsAsync=True, Mode=TwoWay}"
-							EditingElementStyle="{StaticResource CheckBoxCell_Default}"
-							ElementStyle="{StaticResource CheckBoxCell_Default}"
-							Header="On" />
+								x:Name="IsEnabledColumn"
+								Width="25"
+								Binding="{Binding IsEnabled, IsAsync=True, Mode=TwoWay}"
+								EditingElementStyle="{StaticResource CheckBoxCell_Default}"
+								ElementStyle="{StaticResource CheckBoxCell_Default}"
+								Header="On" />
 
 							<DataGridTextColumn
-							Width="*"
-							Binding="{Binding ProductName}"
-							EditingElementStyle="{StaticResource TextBoxCell}"
-							ElementStyle="{StaticResource TextBlockCell}"
-							Header="Device" />
-																	
+								Width="*"
+								Binding="{Binding ProductName}"
+								EditingElementStyle="{StaticResource TextBoxCell}"
+								ElementStyle="{StaticResource TextBlockCell}"
+								Header="Device" />
+
 						</DataGrid.Columns>
 					</DataGrid>
 
-					<StackPanel Name="DeviceDetails" Grid.Row="4" Margin="3"> <!--DataContext="{Binding SelectedDevice, ElementName=PadListControl}"-->
+					<StackPanel
+						Name="DeviceDetails"
+						Grid.Row="4"
+						Margin="3"> 
+						<!--  DataContext="{Binding SelectedDevice, ElementName=PadListControl}"  -->
 						<StackPanel Orientation="Horizontal">
 							<Label>Vendor</Label>
-							<Label Opacity="0.5" Name="VendorName"/>
+							<Label Name="VendorName" Opacity="0.5" />
 						</StackPanel>
 						<StackPanel Orientation="Horizontal">
 							<Label>ProductName</Label>
-							<Label Opacity="0.5" Name="ProductName"/>
+							<Label Name="ProductName" Opacity="0.5" />
 						</StackPanel>
 						<StackPanel Orientation="Horizontal">
 							<Label>InstanceId</Label>
-							<Label Opacity="0.5" Name="InstanceId"/>
+							<Label Name="InstanceId" Opacity="0.5" />
 						</StackPanel>
 						<StackPanel Orientation="Horizontal">
 							<Label>SID</Label>
-							<Label Opacity="0.5" Name="PadSettingChecksum"/>
+							<Label Name="PadSettingChecksum" Opacity="0.5" />
 						</StackPanel>
 						<StackPanel Orientation="Horizontal">
 							<Label>Connection</Label>
@@ -155,7 +183,7 @@
 						</StackPanel>-->
 						<StackPanel Orientation="Horizontal">
 							<Label>Completion</Label>
-							<Label Opacity="0.5" Name="Completion"/>
+							<Label Name="Completion" Opacity="0.5" />
 						</StackPanel>
 					</StackPanel>
 

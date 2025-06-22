@@ -4,9 +4,9 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:converters="clr-namespace:x360ce.App.Converters"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:engine="clr-namespace:x360ce.Engine;assembly=x360ce.Engine"
 	xmlns:local="clr-namespace:x360ce.App.Controls"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	xmlns:engine="clr-namespace:x360ce.Engine;assembly=x360ce.Engine"
 	d:DesignHeight="100"
 	d:DesignWidth="720"
 	Background="{StaticResource BackgroundLight}"
@@ -26,14 +26,20 @@
 					<Label Content="Hardware" />
 				</StackPanel>
 			</Button>
-			<Button Name="AddDemoDeviceButton" Margin="0,3,3,3" Click="AddDemoDeviceButton_Click">
+			<Button
+				Name="AddDemoDeviceButton"
+				Margin="0,3,3,3"
+				Click="AddDemoDeviceButton_Click">
 				<StackPanel>
 					<ContentControl Content="{StaticResource Icon_joystick}" />
 					<Label Content="Add Demo Device..." />
 				</StackPanel>
 			</Button>
 			<Menu x:Name="HidGuardianMenu" VerticalAlignment="Center">
-				<MenuItem Margin="0,3,0,3" Padding="3" Header="HID Guardian">
+				<MenuItem
+					Margin="0,3,0,3"
+					Padding="3"
+					Header="HID Guardian">
 					<MenuItem.Icon>
 						<ContentControl Content="{StaticResource Icon_shield}" />
 					</MenuItem.Icon>
@@ -67,13 +73,19 @@
 		</StackPanel>
 
 		<StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
-			<Button Name="DeleteButton" Margin="0,3,3,3" Click="DeleteButton_Click">
+			<Button
+				Name="DeleteButton"
+				Margin="0,3,3,3"
+				Click="DeleteButton_Click">
 				<StackPanel>
 					<ContentControl Content="{StaticResource Icon_Delete}" />
 					<Label Content="Delete" />
 				</StackPanel>
 			</Button>
-			<Button Name="RefreshButton" Click="RefreshButton_Click" Margin="0,3,3,3">
+			<Button
+				Name="RefreshButton"
+				Margin="0,3,3,3"
+				Click="RefreshButton_Click">
 				<StackPanel>
 					<ContentControl Content="{StaticResource Icon_Refresh}" />
 					<Label Content="Refresh" />
@@ -86,7 +98,10 @@
 			BorderBrush="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"
 			BorderThickness="1"
 			SnapsToDevicePixels="True" />
-		<Border Grid.Row="2" Background="{StaticResource BackgroundWhite}" CornerRadius="0,0,5,5">
+		<Border
+			Grid.Row="2"
+			Background="{StaticResource BackgroundWhite}"
+			CornerRadius="0,0,5,5">
 			<DataGrid
 				xmlns:local="clr-namespace:x360ce.App.Converters"
 				x:Name="MainDataGrid"
@@ -120,14 +135,20 @@
 
 				<DataGrid.Columns>
 					<!--  First 6 columns are same on: UserSettingMapListControl, UserDevicesControl  -->
-					<DataGridTemplateColumn Header="Active" IsReadOnly="True" SortMemberPath="IsOnline">
+					<DataGridTemplateColumn
+						Header="Active"
+						IsReadOnly="True"
+						SortMemberPath="IsOnline">
 						<DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<ContentControl Content="{Binding IsOnline, Converter={StaticResource BoolToImageSourceConverter}}" Style="{StaticResource ContentControlCell_Default}" />
 							</DataTemplate>
 						</DataGridTemplateColumn.CellTemplate>
 					</DataGridTemplateColumn>
-					<DataGridTemplateColumn Header="Connection" IsReadOnly="True" SortMemberPath="ConnectionClass">
+					<DataGridTemplateColumn
+						Header="Connection"
+						IsReadOnly="True"
+						SortMemberPath="ConnectionClass">
 						<DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Image Source="{Binding ConnectionClass, Converter={StaticResource ConnectionClassToImageConverter}}" Style="{StaticResource ImageCell_Default}" />
@@ -169,14 +190,12 @@
 						Header="Device" />
 					<DataGridTemplateColumn
 						x:Name="InputMethodColumn"
+						Width="120"
 						Header="Input Method"
-						SortMemberPath="InputMethod"
-						Width="120">
+						SortMemberPath="InputMethod">
 						<DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
-								<TextBlock 
-									Text="{Binding InputMethod}" 
-									Style="{StaticResource TextBlockCell}" />
+								<TextBlock Style="{StaticResource TextBlockCell}" Text="{Binding InputMethod}" />
 							</DataTemplate>
 						</DataGridTemplateColumn.CellTemplate>
 						<DataGridTemplateColumn.CellEditingTemplate>
@@ -202,7 +221,10 @@
 						SortMemberPath="IsHidden">
 						<DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
-								<CheckBox IsChecked="{Binding IsHidden}" Style="{StaticResource CheckBoxCell_Default}" Visibility="{Binding AllowHide, Converter={StaticResource _BooleanToVisibilityConverter}}" />
+								<CheckBox
+									IsChecked="{Binding IsHidden}"
+									Style="{StaticResource CheckBoxCell_Default}"
+									Visibility="{Binding AllowHide, Converter={StaticResource _BooleanToVisibilityConverter}}" />
 							</DataTemplate>
 						</DataGridTemplateColumn.CellTemplate>
 					</DataGridTemplateColumn>

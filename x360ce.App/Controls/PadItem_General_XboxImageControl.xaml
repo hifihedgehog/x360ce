@@ -107,7 +107,10 @@
 				HorizontalAlignment="Left"
 				VerticalAlignment="Top"
 				IsHitTestVisible="False">
-				<Border Name="LeftThumbAxisBorder" SnapsToDevicePixels="False" Style="{StaticResource AxisActive}" />
+				<Border
+					Name="LeftThumbAxisBorder"
+					SnapsToDevicePixels="False"
+					Style="{StaticResource AxisActive}" />
 			</Grid>
 			<!--  DPad  -->
 			<Path Name="DPadLeft" Data="m 661.637,1680.664 c 19.531,0 35.433,-15.931 35.433,-35.433 0,-19.531 -15.902,-35.433 -35.433,-35.433 -19.502,0 -35.433,15.902 -35.433,35.433 0,19.502 15.931,35.433 35.433,35.433 z" />
@@ -128,10 +131,19 @@
 				HorizontalAlignment="Left"
 				VerticalAlignment="Top"
 				IsHitTestVisible="False">
-				<Border Name="RightThumbAxisBorder" SnapsToDevicePixels="False" Style="{StaticResource AxisActive}" />
+				<Border
+					Name="RightThumbAxisBorder"
+					SnapsToDevicePixels="False"
+					Style="{StaticResource AxisActive}" />
 			</Grid>
-			<Viewbox Margin="850,0,850,250" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-				<Label Name="HelpTextLabel" Content="Mapping Done" Foreground="{StaticResource NavColorActive}" />
+			<Viewbox
+				Margin="850,0,850,250"
+				HorizontalAlignment="Center"
+				VerticalAlignment="Bottom">
+				<Label
+					Name="HelpTextLabel"
+					Content="Mapping Done"
+					Foreground="{StaticResource NavColorActive}" />
 			</Viewbox>
 		</Grid>
 	</Viewbox>

@@ -17,33 +17,31 @@
 			<RowDefinition Height="*" />
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
-				<Button
-					Name="EditButton"
-					HorizontalAlignment="Left"
-					Click="SettingsEditNoteButton_Click">
-					<StackPanel>
-						<ContentControl Content="{StaticResource Icon_Edit}" />
-						<Label Content="Edit Note" />
-					</StackPanel>
-				</Button>
+		<Button
+			Name="EditButton"
+			HorizontalAlignment="Left"
+			Click="SettingsEditNoteButton_Click">
+			<StackPanel>
+				<ContentControl Content="{StaticResource Icon_Edit}" />
+				<Label Content="Edit Note" />
+			</StackPanel>
+		</Button>
 		<StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
-				<Button
-					Name="DeleteButton"
-					Click="DeleteButton_Click">
-					<StackPanel>
-						<ContentControl Content="{StaticResource Icon_Delete}" />
-						<Label Content="Delete" />
-					</StackPanel>
-				</Button>
-            <Button
-					Margin="0,3,3,3"
-                    Name="RefreshButton"
-					Click="RefreshButton_Click">
-                <StackPanel>
-						<ContentControl Content="{StaticResource Icon_Refresh}" />
-						<Label Content="Refresh" />
-					</StackPanel>
-				</Button>
+			<Button Name="DeleteButton" Click="DeleteButton_Click">
+				<StackPanel>
+					<ContentControl Content="{StaticResource Icon_Delete}" />
+					<Label Content="Delete" />
+				</StackPanel>
+			</Button>
+			<Button
+				Name="RefreshButton"
+				Margin="0,3,3,3"
+				Click="RefreshButton_Click">
+				<StackPanel>
+					<ContentControl Content="{StaticResource Icon_Refresh}" />
+					<Label Content="Refresh" />
+				</StackPanel>
+			</Button>
 		</StackPanel>
 		<Border
 			Grid.Row="1"
