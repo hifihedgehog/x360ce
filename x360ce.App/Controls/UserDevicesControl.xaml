@@ -200,7 +200,7 @@
 						</DataGridTemplateColumn.CellTemplate>
 						<DataGridTemplateColumn.CellEditingTemplate>
 							<DataTemplate>
-								<ComboBox SelectedItem="{Binding InputMethod, Mode=TwoWay}">
+								<ComboBox Name="InputMethodComboBox" SelectedItem="{Binding InputMethod, Mode=TwoWay}">
 									<engine:InputMethod>DirectInput</engine:InputMethod>
 									<engine:InputMethod>XInput</engine:InputMethod>
 									<engine:InputMethod>GamingInput</engine:InputMethod>

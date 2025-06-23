@@ -316,6 +316,33 @@ namespace x360ce.App.Controls
 
 		}
 
+		/// <summary>
+		/// Handles InputMethod ComboBox selection changes and updates the corresponding UserDevice's InputMethod property.
+		/// </summary>
+		private void InputMethodComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			// Get the currently selected UserSetting
+			var selected = DevicesDataGrid.SelectedItem as UserSetting;
+			if (selected == null)
+				return;
+
+			// Get the corresponding UserDevice
+			var ud = SettingsManager.UserDevices.Items.FirstOrDefault(x => x.InstanceGuid == selected.InstanceGuid);
+			if (ud == null)
+				return;
+
+			// Get the selected InputMethod from ComboBox
+			var comboBox = sender as ComboBox;
+			if (comboBox?.SelectedItem is InputMethod newInputMethod)
+			{
+				// Update the UserDevice's InputMethod property
+				ud.InputMethod = newInputMethod;
+				
+				// Save settings to persist the change
+				SettingsManager.Save();
+			}
+		}
+
 		private void MainDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
 			UpdateGridButtons();
@@ -335,6 +362,16 @@ namespace x360ce.App.Controls
 				var ud = SettingsManager.UserDevices.Items.FirstOrDefault(x => x.InstanceGuid == selected.InstanceGuid);
 				VendorName.Content = ud?.DevManufacturer.ToString();
 
+				// Update InputMethod ComboBox
+				if (ud != null)
+				{
+					InputMethodComboBox.SelectedItem = ud.InputMethod;
+				}
+				else
+				{
+					InputMethodComboBox.SelectedItem = InputMethod.DirectInput; // Default fallback
+				}
+
 				var imageSource = ConnectionClassToImageConverter.Convert(selected.InstanceGuid);
 				ConnectionClassImage.Source = imageSource;
 				ConnectionClassImage.ToolTip = imageSource.ToString();
@@ -350,6 +387,7 @@ namespace x360ce.App.Controls
 				PadSettingChecksum.Content = "";
 				ConnectionClassImage.Source = null;
 				Completion.Content = "";
+				InputMethodComboBox.SelectedItem = null;
 			}
 		}
 

@@ -77,7 +77,6 @@
             Margin="3,0,3,0"
             Header="Configuration">
             <StackPanel VerticalAlignment="Top">
-                <CheckBox Name="AutoDetectForegroundWindowCheckBox" Content="Auto switch configuration when game focused" />
                 <CheckBox Name="IncludeProductsCheckBox" Content="Include [Products]" />
                 <StackPanel Orientation="Horizontal">
                     <Label Name="ConfigurationVersionLabel" VerticalAlignment="Center" Content="Version" />

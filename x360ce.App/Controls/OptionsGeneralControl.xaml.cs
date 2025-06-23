@@ -52,7 +52,6 @@ namespace x360ce.App.Controls
 			SettingsManager.LoadAndMonitor(o, nameof(Options.EnableShowFormInfo), ShowFormInfoCheckBox);
 			SettingsManager.LoadAndMonitor(o, nameof(Options.ShowTestButton), ShowTestButtonCheckBox);
 			SettingsManager.LoadAndMonitor(o, nameof(Options.GuideButtonAction), GuideButtonActionTextBox);
-			SettingsManager.LoadAndMonitor(o, nameof(Options.AutoDetectForegroundWindow), AutoDetectForegroundWindowCheckBox);
 			SettingsManager.LoadAndMonitor(o, nameof(Options.IsProcessDPIAware), IsProcessDPIAwareCheckBox);
 			SettingsManager.LoadAndMonitor(o, nameof(Options.MinimizeToTray), MinimizeToTrayCheckBox);
             SettingsManager.LoadAndMonitor(o, nameof(Options.MinimizeOnClose), MinimizeOnClose);
@@ -190,7 +189,6 @@ namespace x360ce.App.Controls
 			SettingsManager.UnLoadMonitor(ShowFormInfoCheckBox);
 			SettingsManager.UnLoadMonitor(ShowTestButtonCheckBox);
 			SettingsManager.UnLoadMonitor(GuideButtonActionTextBox);
-			SettingsManager.UnLoadMonitor(AutoDetectForegroundWindowCheckBox);
 			SettingsManager.UnLoadMonitor(IsProcessDPIAwareCheckBox);
 			SettingsManager.UnLoadMonitor(MinimizeToTrayCheckBox);
 			// Direct Input

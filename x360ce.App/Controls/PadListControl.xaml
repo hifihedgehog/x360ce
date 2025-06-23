@@ -4,6 +4,7 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:converters="clr-namespace:x360ce.App.Converters"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:engine="clr-namespace:x360ce.Engine;assembly=x360ce.Engine"
 	xmlns:local="clr-namespace:x360ce.App.Controls"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	d:Height="400"
@@ -29,8 +30,8 @@
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
-						<RowDefinition Height="Auto" />
 						<RowDefinition Height="*" />
+						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
 					<!--  Help  -->
@@ -73,25 +74,10 @@
 							</StackPanel>
 						</Button>
 					</StackPanel>
-					<!--  Check-boxes  -->
-					<StackPanel Grid.Row="2" Margin="3">
-						<CheckBox
-							Name="EnabledCheckBox"
-							Click="EnabledCheckBox_Click"
-							Content="Enabled" />
-						<CheckBox
-							Name="UseXInputStateCheckBox"
-							Click="UseXInputStateCheckBox_Click"
-							Content="Use XInput State" />
-						<CheckBox
-							Name="AutoMapCheckBox"
-							Click="AutoMapCheckBox_Click"
-							Content="Auto Map" />
-					</StackPanel>
 					<!--  Controller List  -->
 					<DataGrid
 						Name="DevicesDataGrid"
-						Grid.Row="3"
+						Grid.Row="2"
 						AutoGenerateColumns="False"
 						IsReadOnly="True"
 						ScrollViewer.CanContentScroll="True"
@@ -148,30 +134,53 @@
 						</DataGrid.Columns>
 					</DataGrid>
 
-					<StackPanel
-						Name="DeviceDetails"
-						Grid.Row="4"
-						Margin="3">
+                    <!--  Check-boxes  -->
+                    <StackPanel Grid.Row="3" Margin="3">
+                        <CheckBox
+							Name="EnabledCheckBox"
+							Click="EnabledCheckBox_Click"
+							Content="Enabled" />
+                        <CheckBox
+							Name="UseXInputStateCheckBox"
+							Click="UseXInputStateCheckBox_Click"
+							Content="Use XInput State" />
+                        <CheckBox
+							Name="AutoMapCheckBox"
+							Click="AutoMapCheckBox_Click"
+							Content="Auto Map" />
+                    </StackPanel>
+
+                    <GroupBox Margin="3,-3,2,3" Grid.Row="4" Header="Selected Device">
+                    <StackPanel Name="DeviceDetails">
 						<!--  DataContext="{Binding SelectedDevice, ElementName=PadListControl}"  -->
-						<StackPanel Orientation="Horizontal">
-							<Label>Vendor</Label>
-							<Label Name="VendorName" Opacity="0.5" />
+                        <StackPanel Orientation="Horizontal">
+                                <Label Content="Input"/>
+                                <ComboBox Name="InputMethodComboBox" SelectionChanged="InputMethodComboBox_SelectionChanged">
+								<engine:InputMethod>DirectInput</engine:InputMethod>
+								<engine:InputMethod>XInput</engine:InputMethod>
+								<engine:InputMethod>GamingInput</engine:InputMethod>
+								<engine:InputMethod>RawInput</engine:InputMethod>
+							</ComboBox>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                                <Label Content="Vendor"/>
+                                <Label Name="VendorName" Opacity="0.5" />
 						</StackPanel>
 						<StackPanel Orientation="Horizontal">
-							<Label>ProductName</Label>
-							<Label Name="ProductName" Opacity="0.5" />
+                                <Label Content="Product"/>
+                                <Label Name="ProductName" Opacity="0.5" />
 						</StackPanel>
 						<StackPanel Orientation="Horizontal">
-							<Label>InstanceId</Label>
-							<Label Name="InstanceId" Opacity="0.5" />
+                                <Label Content="Instance"/>
+                                <Label Name="InstanceId" Opacity="0.5" />
 						</StackPanel>
 						<StackPanel Orientation="Horizontal">
-							<Label>SID</Label>
-							<Label Name="PadSettingChecksum" Opacity="0.5" />
+                                <Label Content="SID"/>
+                                <Label Name="PadSettingChecksum" Opacity="0.5" />
 						</StackPanel>
 						<StackPanel Orientation="Horizontal">
-							<Label>Connection</Label>
-							<Image Name="ConnectionClassImage" Style="{StaticResource ImageCell_Default}" />
+                                <Label Content="Connection"/>
+                                <Image Name="ConnectionClassImage" Style="{StaticResource ImageCell_Default}" />
 						</StackPanel>
 						<!--<StackPanel Orientation="Horizontal">
 							<Label>Active</Label>
@@ -182,11 +191,11 @@
 							<Label Opacity="0.5" Name="IsEnabled"/>
 						</StackPanel>-->
 						<StackPanel Orientation="Horizontal">
-							<Label>Completion</Label>
-							<Label Name="Completion" Opacity="0.5" />
+                                <Label Content="Completion"/>
+                                <Label Name="Completion" Opacity="0.5" />
 						</StackPanel>
 					</StackPanel>
-
+</GroupBox>
 				</Grid>
 			</ScrollViewer>
 		</TabItem>

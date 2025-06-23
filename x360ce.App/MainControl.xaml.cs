@@ -111,6 +111,7 @@ namespace x360ce.App
 			// Load XML settings into control.
 			var o = SettingsManager.Options;
 			ControlsHelper.SetVisible(TestButton, o.ShowTestButton);
+			SettingsManager.LoadAndMonitor(o, nameof(Options.AutoDetectForegroundWindow), AutoDetectForegroundWindowCheckBox);
 		}
 
 		private void Options_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -227,6 +228,7 @@ namespace x360ce.App
 			GameToCustomizeDataGrid.SelectionChanged -= GameToCustomizeDataGrid_SelectionChanged;
 			GameToCustomizeDataGrid.SelectedItem = null;
 			((BindingListCollectionView)GameToCustomizeDataGrid.ItemsSource)?.DetachFromSourceCollection();
+			SettingsManager.UnLoadMonitor(AutoDetectForegroundWindowCheckBox);
 		}
 	}
 }
