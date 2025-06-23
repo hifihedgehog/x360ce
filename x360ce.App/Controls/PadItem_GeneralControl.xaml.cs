@@ -361,7 +361,7 @@ namespace x360ce.App.Controls
 		List<int> sliders = new List<int>();
 
 		// Runs every time a new DirectInput device becomes available / unaivalble.
-		public void ResetDiMenuStrip(UserDevice ud)
+		public void UpdateDragAndDropMenu(UserDevice ud)
 		{
 			// Clear drag and drop StackPanel children elements in XAML page.
 			DragAndDropStackPanel.Children.Clear();
@@ -382,7 +382,7 @@ namespace x360ce.App.Controls
 
 			if (ud == null || GetCustomDiState(ud) == null) return;
 
-			GetDeviceObjectInstancesByObjectTypeGuid(ud);
+			UpdatePovsAxesButtonsSlidersLists(ud);
 
 			buttons.Sort();
 			povs.Sort();
@@ -424,7 +424,7 @@ namespace x360ce.App.Controls
 		/// </summary>
 		/// <param name="ud">The UserDevice to analyze</param>
 		/// <param name="usage">Optional usage parameter (currently unused)</param>
-		private void GetDeviceObjectInstancesByObjectTypeGuid(UserDevice ud, int usage = 0)
+		private void UpdatePovsAxesButtonsSlidersLists(UserDevice ud, int usage = 0)
 		{
 			// Use device capabilities instead of DirectInput-specific device introspection
 			// This approach works for all input methods (DirectInput, XInput, GamingInput, RawInput)
@@ -478,11 +478,22 @@ namespace x360ce.App.Controls
 			}
 			else
 			{
-				// For non-DirectInput input methods, provide standard slider options
-				// Most game controllers have at least 2 slider-like inputs (triggers)
-				for (int i = 0; i < 2; i++)
+				// For non-DirectInput input methods, handle sliders based on specific input method
+				switch (ud.InputMethod)
 				{
-					sliders.Add(i);
+					case x360ce.Engine.InputMethod.XInput:
+						// XInput doesn't use sliders - triggers are handled as separate axes (axes 4 and 5)
+						// No sliders should be added for XInput to match the reported capabilities
+						break;
+					
+					default:
+						// For other non-DirectInput input methods, provide standard slider options
+						// Most game controllers have at least 2 slider-like inputs (triggers)
+						for (int i = 0; i < 2; i++)
+						{
+							sliders.Add(i);
+						}
+						break;
 				}
 			}
 

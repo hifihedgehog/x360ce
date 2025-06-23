@@ -135,21 +135,21 @@ namespace x360ce.App.Controls
 					//{
 					_InstanceGuid = instanceGuid;
 					_lastInputMethod = currentInputMethod; // Update tracking when device changes
-					GeneralPanel.ResetDiMenuStrip(udNotNull && ud.IsOnline ? ud : null);
+					GeneralPanel.UpdateDragAndDropMenu(udNotNull && ud.IsOnline ? ud : null);
 					//}
 				}
 
 				if (!Equals(_isOnline, isOnline))
 				{
 					_isOnline = isOnline;
-					GeneralPanel.ResetDiMenuStrip(udNotNull && ud.IsOnline ? ud : null);
+					GeneralPanel.UpdateDragAndDropMenu(udNotNull && ud.IsOnline ? ud : null);
 				}
 
 				// Check for InputMethod changes
 				if (!Equals(_lastInputMethod, currentInputMethod))
 				{
 					_lastInputMethod = currentInputMethod;
-					GeneralPanel.ResetDiMenuStrip(udNotNull && ud.IsOnline ? ud : null);
+					GeneralPanel.UpdateDragAndDropMenu(udNotNull && ud.IsOnline ? ud : null);
 				}
 				// Update direct input form and return actions (pressed Buttons/DPads, turned Axis/Sliders).
 				UpdateDirectInputTabPage(ud);

@@ -318,6 +318,7 @@ namespace x360ce.App.Controls
 
 		/// <summary>
 		/// Handles InputMethod ComboBox selection changes and updates the corresponding UserDevice's InputMethod property.
+		/// Also updates device capabilities to match the selected input method.
 		/// </summary>
 		private void InputMethodComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
@@ -338,8 +339,120 @@ namespace x360ce.App.Controls
 				// Update the UserDevice's InputMethod property
 				ud.InputMethod = newInputMethod;
 				
+				// Update device capabilities based on the selected input method
+				UpdateDeviceCapabilitiesForInputMethod(ud, newInputMethod);
+				
 				// Save settings to persist the change
 				SettingsManager.Save();
+				
+				// Refresh the drag-and-drop menu with updated capabilities
+				RefreshPadGeneralControlDragAndDropMenu(ud);
+			}
+		}
+
+		/// <summary>
+		/// Updates UserDevice capabilities based on the selected input method.
+		/// DirectInput uses actual device capabilities when available, XInput uses standard Xbox capabilities.
+		/// </summary>
+		/// <param name="ud">The UserDevice to update capabilities for</param>
+		/// <param name="inputMethod">The selected input method</param>
+		private void UpdateDeviceCapabilitiesForInputMethod(UserDevice ud, InputMethod inputMethod)
+		{
+			if (ud == null)
+				return;
+
+			switch (inputMethod)
+			{
+				case InputMethod.DirectInput:
+					// For DirectInput, try to use actual device capabilities if DirectInput device is available
+					if (ud.Device != null)
+					{
+						try
+						{
+							// Load capabilities from the actual DirectInput device
+							ud.LoadCapabilities(ud.Device.Capabilities);
+							System.Diagnostics.Debug.WriteLine($"INFO: Device '{ud.InstanceName}' InputMethod: DirectInput, " +
+								$"Buttons: {ud.CapButtonCount}, Axes: {ud.CapAxeCount}, POVs: {ud.CapPovCount}, Sliders: 0");
+						}
+						catch (System.Exception ex)
+						{
+							// If DirectInput device access fails, use reasonable defaults
+							System.Diagnostics.Debug.WriteLine($"DirectInput capabilities update failed for {ud.InstanceName}: {ex.Message}");
+							SetDefaultDirectInputCapabilities(ud);
+						}
+					}
+					else
+					{
+						// DirectInput device not available, use reasonable defaults
+						SetDefaultDirectInputCapabilities(ud);
+					}
+					break;
+
+				case InputMethod.XInput:
+					// For XInput, use standard Xbox controller capabilities
+					ud.CapButtonCount = 15;  // A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad (4), Guide
+					ud.CapAxeCount = 6;      // Left Stick X/Y, Right Stick X/Y, Left/Right Triggers  
+					ud.CapPovCount = 0;      // XInput doesn't use POVs (DPad is mapped to buttons)
+					
+					System.Diagnostics.Debug.WriteLine($"XInput: Started tracking input changes for {ud.InstanceGuid.ToString("N").Substring(0, 8)} - {ud.InstanceName} - " +
+						$"Buttons: {ud.CapButtonCount}, Axes: {ud.CapAxeCount} - Initial axis values: [0, 0, 0, 0, 0, 0]");
+					break;
+
+				default:
+					// For other input methods, use reasonable defaults similar to DirectInput
+					SetDefaultDirectInputCapabilities(ud);
+					break;
+			}
+		}
+
+		/// <summary>
+		/// Sets reasonable default capabilities for DirectInput and other input methods.
+		/// </summary>
+		/// <param name="ud">The UserDevice to set default capabilities for</param>
+		private void SetDefaultDirectInputCapabilities(UserDevice ud)
+		{
+			// Use reasonable defaults for most game controllers
+			ud.CapButtonCount = 16;  // Common gamepad button count
+			ud.CapAxeCount = 5;      // X, Y, Z, RotationX, RotationY (typical for gamepads)
+			ud.CapPovCount = 1;      // Most gamepads have 1 POV (D-Pad)
+			
+			System.Diagnostics.Debug.WriteLine($"INFO: Device '{ud.InstanceName}' InputMethod: DirectInput, " +
+				$"Buttons: {ud.CapButtonCount}, Axes: {ud.CapAxeCount}, POVs: {ud.CapPovCount}, Sliders: 0");
+		}
+
+		/// <summary>
+		/// Refreshes the drag-and-drop menu in PadItem_GeneralControl for the specified device.
+		/// This ensures the UI shows the correct buttons/axes/POVs after input method change.
+		/// </summary>
+		/// <param name="ud">The UserDevice that had its capabilities updated</param>
+		private void RefreshPadGeneralControlDragAndDropMenu(UserDevice ud)
+		{
+			if (ud == null)
+				return;
+
+			try
+			{
+				// Find the main window to access the PadItem_GeneralControl
+				var mainWindow = Global._MainWindow;
+				if (mainWindow?.MainBodyPanel?.PadControls != null)
+				{
+					// Find the appropriate pad control and refresh its drag-and-drop menu
+					foreach (var padControl in mainWindow.MainBodyPanel.PadControls)
+					{
+						if (padControl?.PadItemPanel?.GeneralPanel != null)
+						{
+							// Update the drag-and-drop menu with the new capabilities
+							padControl.PadItemPanel.GeneralPanel.UpdateDragAndDropMenu(ud);
+							System.Diagnostics.Debug.WriteLine($"Refreshed drag-and-drop menu for {ud.InstanceName} with InputMethod: {ud.InputMethod}");
+							break; // Only need to update once since all pads will see the device change
+						}
+					}
+				}
+			}
+			catch (System.Exception ex)
+			{
+				// Log the error but don't let it stop the input method change
+				System.Diagnostics.Debug.WriteLine($"Failed to refresh drag-and-drop menu for {ud.InstanceName}: {ex.Message}");
 			}
 		}
 
