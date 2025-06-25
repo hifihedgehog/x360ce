@@ -101,7 +101,7 @@
 						<Setter Property="HorizontalAlignment" Value="Center" />
 						<Setter Property="Padding" Value="7,2,8,3" />
 						<Setter Property="IsHitTestVisible" Value="False" />
-						<Setter Property="Content" Value="Virtual Xbox Controller" />
+						<Setter Property="Content" Value="Virtual Xbox 360 Controller" />
 					</Style>
 					<!--  Drag and Drop menu Title Label  -->
 					<Style x:Key="DragAndDropDInputTitleLabel" TargetType="Label">
@@ -269,7 +269,7 @@
 			Grid.ColumnSpan="3"
 			Width="Auto"
 			Height="400"
-			Margin="0,20,0,0">
+			Margin="0,30,0,0">
 			<local:PadItem_General_XboxImageControl x:Name="XboxImage" VerticalAlignment="Top" />
 		</Viewbox>
 
