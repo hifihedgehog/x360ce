@@ -33,7 +33,7 @@ namespace x360ce.App.DInput
 	/// </remarks>
 	public class DirectInputProcessor
 	{
-		#region IInputProcessor Implementation
+		#region IInputProcessor
 
 		/// <summary>
 		/// Gets the input method supported by this processor.

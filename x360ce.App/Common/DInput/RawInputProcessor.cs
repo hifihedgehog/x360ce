@@ -33,8 +33,9 @@ namespace x360ce.App.DInput
 	/// ✅ **Direct hardware access**
 	/// ✅ **True Raw Input implementation**
 	/// </remarks>
-	public class RawInputProcessor
+	public class RawInputProcessor : IInputProcessor
 	{
+
 		#region Windows Raw Input API
 
 		[DllImport("user32.dll", SetLastError = true)]
@@ -129,7 +130,7 @@ namespace x360ce.App.DInput
 
 		#endregion
 
-		#region IInputProcessor Implementation
+		#region IInputProcessor 
 
 		/// <summary>
 		/// Gets the input method supported by this processor.

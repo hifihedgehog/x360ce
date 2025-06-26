@@ -105,7 +105,7 @@ namespace x360ce.App.DInput
 
 		#endregion
 
-		#region IInputProcessor Implementation
+		#region IInputProcessor
 
 		/// <summary>
 		/// Gets the input method supported by this processor.

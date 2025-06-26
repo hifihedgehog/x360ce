@@ -1,5 +1,5 @@
 using x360ce.Engine;
-using x360ce.Engine.Data;
+//using x360ce.Engine.Data;
 
 namespace x360ce.App.DInput
 {
@@ -12,6 +12,8 @@ namespace x360ce.App.DInput
         /// Gets the input method supported by this processor.
         /// </summary>
         InputMethod SupportedMethod { get; }
+
+        /*
 
         /// <summary>
         /// Determines if this processor can handle the specified device.
@@ -41,5 +43,7 @@ namespace x360ce.App.DInput
         /// <param name="device">The device to validate</param>
         /// <returns>ValidationResult indicating compatibility and any limitations</returns>
         ValidationResult ValidateDevice(UserDevice device);
+
+        */
     }
 }
