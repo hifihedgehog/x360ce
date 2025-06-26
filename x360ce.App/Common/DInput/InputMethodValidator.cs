@@ -38,28 +38,28 @@ namespace x360ce.App.DInput
 		public static SystemCompatibilityResult CheckSystemCompatibility()
 		{
 			var result = new SystemCompatibilityResult();
-			
+
 			try
 			{
 				// Check DirectInput availability
 				result.DirectInputAvailable = CheckDirectInputAvailability();
-				
-        // Check XInput availability and controller count
-        result.XInputAvailable = CheckXInputAvailability();
-        result.XInputControllerCount = XInputProcessor.GetAssignedControllerCount();
-        result.XInputSlotsAvailable = 4 - result.XInputControllerCount;
-				
+
+				// Check XInput availability and controller count
+				result.XInputAvailable = CheckXInputAvailability();
+				result.XInputControllerCount = XInputProcessor.GetAssignedControllerCount();
+				result.XInputSlotsAvailable = 4 - result.XInputControllerCount;
+
 				// Check Gaming Input availability (Windows 10+ requirement)
-				result.GamingInputAvailable = CheckGamingInputAvailability();
+				result.GamingInputAvailable = DInputHelper.Current.gamingInputProcessor.IsGamingInputAvailable();
 				result.WindowsVersion = Environment.OSVersion.Version;
 				result.IsWindows10Plus = result.WindowsVersion.Major >= 10;
-				
+
 				// Check Raw Input availability
 				result.RawInputAvailable = CheckRawInputAvailability();
-				
+
 				// Overall system status
 				result.IsSystemCompatible = result.DirectInputAvailable || result.XInputAvailable;
-				
+
 				Debug.WriteLine($"System Compatibility Check: DirectInput={result.DirectInputAvailable}, XInput={result.XInputAvailable}, GamingInput={result.GamingInputAvailable}, RawInput={result.RawInputAvailable}");
 			}
 			catch (Exception ex)
@@ -68,7 +68,7 @@ namespace x360ce.App.DInput
 				result.SystemError = ex.Message;
 				result.IsSystemCompatible = false;
 			}
-			
+
 			return result;
 		}
 
@@ -103,7 +103,7 @@ namespace x360ce.App.DInput
 						return helper.ValidateXInputDevice(device);
 
 					case InputMethod.GamingInput:
-						return helper.ValidateGamingInputDevice(device);
+						return helper.gamingInputProcessor.ValidateDevice(device);
 
 					case InputMethod.RawInput:
 						return helper.ValidateRawInputDevice(device);
@@ -171,7 +171,7 @@ namespace x360ce.App.DInput
 			};
 
 			// Sort by validation status (Success > Warning > Error)
-			Array.Sort(recommendations, (a, b) => 
+			Array.Sort(recommendations, (a, b) =>
 			{
 				if (a.Validation.Status != b.Validation.Status)
 					return a.Validation.Status.CompareTo(b.Validation.Status);
@@ -217,25 +217,14 @@ namespace x360ce.App.DInput
 			return helper?.IsXInputAvailable() ?? false;
 		}
 
-
-/// <summary>
-/// Checks if Gaming Input API is available on the current system.
-/// </summary>
-/// <returns>True if Gaming Input is available</returns>
-private static bool CheckGamingInputAvailability()
-{
-var helper = DInputHelper.Current;
-return helper?.IsGamingInputAvailable() ?? false;
-}
-
-/// <summary>
-/// Checks if Raw Input API is available on the current system.
-/// </summary>
-/// <returns>True if Raw Input is available</returns>
-private static bool CheckRawInputAvailability()
-{
-return RawInputProcessor.IsRawInputAvailable();
-}
+		/// <summary>
+		/// Checks if Raw Input API is available on the current system.
+		/// </summary>
+		/// <returns>True if Raw Input is available</returns>
+		private static bool CheckRawInputAvailability()
+		{
+			return RawInputProcessor.IsRawInputAvailable();
+		}
 
 		/// <summary>
 		/// Validates DirectInput compatibility for a device.
@@ -255,7 +244,7 @@ return RawInputProcessor.IsRawInputAvailable();
 			{
 				var osVersion = Environment.OSVersion.Version;
 				var isWindows10Plus = osVersion.Major >= 10;
-				
+
 				if (isWindows10Plus)
 				{
 					return ValidationResult.Warning(

@@ -8,6 +8,12 @@ namespace x360ce.App.DInput
 	{
 		#region Input Processor Registry
 
+
+		public DirectInputProcessor directInputProcessor = new DirectInputProcessor();
+		public XInputProcessor xInputProcessor = new XInputProcessor();
+		public GamingInputProcessor gamingInputProcessor = new GamingInputProcessor();
+		public RawInputProcessor rawInputProcessor = new RawInputProcessor();
+
 		/// <summary>
 		/// Validates that a device can be processed with its selected input method.
 		/// </summary>
@@ -41,7 +47,7 @@ namespace x360ce.App.DInput
 					case InputMethod.XInput:
 						return XInputProcessor.ValidateDevice(device);
 					case InputMethod.GamingInput:
-						return GamingInputProcessor.ValidateDevice(device);
+						return gamingInputProcessor.ValidateDevice(device);
 					case InputMethod.RawInput:
 						return RawInputProcessor.ValidateDevice(device);
 					default:

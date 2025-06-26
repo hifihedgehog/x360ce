@@ -1,6 +1,5 @@
 using SharpDX.XInput;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using x360ce.Engine;
 using x360ce.Engine.Data;
@@ -90,13 +89,13 @@ namespace x360ce.App.DInput
 				cx.Data.Add("Device", device.DisplayName);
 				cx.Data.Add("InputMethod", "XInput");
 				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
-				
+
 				// For slot limit errors, mark devices as needing update
 				if (ex.Message.Contains("maximum") || ex.Message.Contains("controllers already in use"))
 				{
 					DevicesNeedUpdating = true;
 				}
-				
+
 				return null;
 			}
 			catch (Exception ex)
@@ -131,7 +130,7 @@ namespace x360ce.App.DInput
 				// Get setting related to user device (same logic as DirectInput)
 				var setting = SettingsManager.UserSettings.ItemsToArraySynchronized()
 					.FirstOrDefault(x => x.InstanceGuid == device.InstanceGuid);
-				
+
 				if (setting != null && setting.MapTo > (int)MapTo.None)
 				{
 					// Get pad setting attached to device
@@ -140,20 +139,20 @@ namespace x360ce.App.DInput
 					{
 						// Initialize force feedback state if needed
 						device.FFState = device.FFState ?? new Engine.ForceFeedbackState();
-						
+
 						// Get force feedback from virtual controllers (same source as DirectInput)
 						var feedbacks = CopyAndClearFeedbacks();
 						var force = feedbacks[setting.MapTo - 1];
-						
+
 						if (force != null || device.FFState.Changed(ps))
 						{
 							// Convert ViGEm feedback values to XInput vibration format
 							// Use same conversion logic as existing DirectInput code
 							var leftMotorSpeed = (force == null) ? (ushort)0 : ConvertByteToUshort(force.LargeMotor);
 							var rightMotorSpeed = (force == null) ? (ushort)0 : ConvertByteToUshort(force.SmallMotor);
-							
+
 							// Apply XInput vibration
-						 XInputProcessor.ApplyXInputVibration(device, leftMotorSpeed, rightMotorSpeed);
+							XInputProcessor.ApplyXInputVibration(device, leftMotorSpeed, rightMotorSpeed);
 						}
 					}
 					else if (device.FFState != null)
@@ -248,11 +247,11 @@ namespace x360ce.App.DInput
 			{
 				// Test XInput availability by creating a controller instance
 				var testController = new Controller(UserIndex.One);
-				
+
 				// Try to get state (will fail gracefully if XInput not available)
 				State testState;
 				testController.GetState(out testState);
-				
+
 				return true;
 			}
 			catch
@@ -274,38 +273,38 @@ namespace x360ce.App.DInput
 		/// 
 		/// Used for diagnostic logs and support information.
 		/// </remarks>
-public string GetXInputDiagnosticInfo()
-{
-var info = new System.Text.StringBuilder();
+		public string GetXInputDiagnosticInfo()
+		{
+			var info = new System.Text.StringBuilder();
 
-try
-{
-info.AppendLine($"XInput Available: {IsXInputAvailable()}");
-info.AppendLine($"Controllers in use: {XInputProcessor.GetAssignedControllerCount()}/4");
+			try
+			{
+				info.AppendLine($"XInput Available: {IsXInputAvailable()}");
+				info.AppendLine($"Controllers in use: {XInputProcessor.GetAssignedControllerCount()}/4");
 
-var assignments = XInputProcessor.GetSlotAssignments();
-if (assignments.Count > 0)
-{
-info.AppendLine("Slot assignments:");
-foreach (var assignment in assignments)
-{
-info.AppendLine($"  Slot {assignment.Value + 1}: {assignment.Key}");
-}
-}
-else
-{
-info.AppendLine("No XInput slot assignments");
-}
+				var assignments = XInputProcessor.GetSlotAssignments();
+				if (assignments.Count > 0)
+				{
+					info.AppendLine("Slot assignments:");
+					foreach (var assignment in assignments)
+					{
+						info.AppendLine($"  Slot {assignment.Value + 1}: {assignment.Key}");
+					}
+				}
+				else
+				{
+					info.AppendLine("No XInput slot assignments");
+				}
 
-info.AppendLine($"Operating System: {Environment.OSVersion}");
-}
-catch (Exception ex)
-{
-info.AppendLine($"Error getting XInput diagnostic info: {ex.Message}");
-}
+				info.AppendLine($"Operating System: {Environment.OSVersion}");
+			}
+			catch (Exception ex)
+			{
+				info.AppendLine($"Error getting XInput diagnostic info: {ex.Message}");
+			}
 
-return info.ToString();
-}
+			return info.ToString();
+		}
 
 		#endregion
 	}
