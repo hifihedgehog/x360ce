@@ -87,6 +87,9 @@ namespace x360ce.App.DInput
 			if (device == null)
 				return ValidationResult.Error("Device is null");
 
+			if (!device.IsOnline)
+				return ValidationResult.Error("Device is offline");
+
 			try
 			{
 				// Get the appropriate processor for validation
@@ -106,7 +109,7 @@ namespace x360ce.App.DInput
 						return helper.gamingInputProcessor.ValidateDevice(device);
 
 					case InputMethod.RawInput:
-						return helper.ValidateRawInputDevice(device);
+						return helper.rawInputProcessor.ValidateDevice(device);
 
 					default:
 						return ValidationResult.Error($"Unknown input method: {inputMethod}");

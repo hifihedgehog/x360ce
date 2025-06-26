@@ -76,11 +76,11 @@ namespace x360ce.App.DInput
 					}
 					else if (device.InputMethod == InputMethod.GamingInput)
 					{
-						newState = gamingInputProcessor.ProcessDevice(device);
+						newState = gamingInputProcessor.GetCustomState(device);
 					}
 					else if (device.InputMethod == InputMethod.RawInput)
 					{
-						newState = ProcessRawInputDevice(device);
+						newState = rawInputProcessor.GetCustomState(device);
 					}
 				}
 				catch (InputMethodException ex)

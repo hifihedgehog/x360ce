@@ -1,0 +1,42 @@
+﻿using System.Windows.Forms;
+
+namespace x360ce.App.RawInput
+{
+	/// <summary>
+	/// Hidden window for receiving Raw Input messages.
+	/// </summary>
+	internal class RawInputWindow : Form
+	{
+		private const int WM_INPUT = 0x00FF;
+
+		public RawInputWindow()
+		{
+			// Create hidden window
+			WindowState = FormWindowState.Minimized;
+			ShowInTaskbar = false;
+			Visible = false;
+			CreateHandle();
+		}
+
+		protected override void WndProc(ref Message m)
+		{
+			if (m.Msg == WM_INPUT)
+			{
+				RawInputProcessor.ProcessRawInput(m.LParam);
+			}
+			base.WndProc(ref m);
+		}
+
+		protected override CreateParams CreateParams
+		{
+			get
+			{
+				CreateParams cp = base.CreateParams;
+				cp.ExStyle |= 0x80; // WS_EX_TOOLWINDOW
+				return cp;
+			}
+		}
+
+
+	}
+}

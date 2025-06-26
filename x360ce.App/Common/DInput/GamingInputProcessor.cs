@@ -74,7 +74,7 @@ namespace x360ce.App.DInput
 			{
 				// Delegate to the existing Gaming Input implementation in DInputHelper
 				// This ensures we use the tested, working Gaming Input code path
-				var result = ProcessDevice(device);
+				var result = GetCustomState(device);
 				
 				if (result == null)
 				{
@@ -226,7 +226,7 @@ namespace x360ce.App.DInput
 		/// 
 		/// CustomDiState mapping matches DirectInput/XInput exactly for UI compatibility.
 		/// </remarks>
-		public CustomDiState ProcessDevice(UserDevice device)
+		public CustomDiState GetCustomState(UserDevice device)
 		{
 			if (device == null)
 				return null;

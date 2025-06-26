@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
+using x360ce.App.DInput;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
-namespace x360ce.App.DInput
+namespace x360ce.App.RawInput
 {
 	/// <summary>
 	/// TRUE Raw Input processor - Uses actual Windows Raw Input API for HID-compliant devices.
@@ -49,7 +49,7 @@ namespace x360ce.App.DInput
 
 		private const uint RIM_TYPEHID = 2;
 		private const uint RID_INPUT = 0x10000003;
-		private const uint RID_HEADER = 0x10000005;
+		//private const uint RID_HEADER = 0x10000005;
 		private const uint RIDI_DEVICEINFO = 0x2000000b;
 		private const uint RIDEV_INPUTSINK = 0x00000100;
 
@@ -735,59 +735,104 @@ namespace x360ce.App.DInput
 		}
 
 		#endregion
-	}
 
-	#region Support Classes
+		#region Raw Input State Processing
 
-	/// <summary>
-	/// Represents information about a Raw Input device.
-	/// </summary>
-	internal class RawInputDeviceInfo
-	{
-		public IntPtr Handle { get; set; }
-		public uint VendorId { get; set; }
-		public uint ProductId { get; set; }
-		public ushort UsagePage { get; set; }
-		public ushort Usage { get; set; }
-		public bool IsXboxController { get; set; }
-		public CustomDiState LastState { get; set; }
-	}
-
-	/// <summary>
-	/// Hidden window for receiving Raw Input messages.
-	/// </summary>
-	internal class RawInputWindow : Form
-	{
-		private const int WM_INPUT = 0x00FF;
-
-		public RawInputWindow()
+		/// <summary>
+		/// Processes devices using Raw Input API for HID-compliant controllers.
+		/// </summary>
+		/// <param name="device">The HID-compliant device to process</param>
+		/// <returns>CustomDiState for the device, or null if reading failed</returns>
+		/// <remarks>
+		/// ⚠️ CRITICAL: MUST OUTPUT CONSISTENT CustomDiState FORMAT ⚠️
+		/// 
+		/// CustomDiState is the ONLY format used by the existing UI and mapping system.
+		/// This method MUST map Raw Input controls to the EXACT SAME CustomDiState indices
+		/// used by DirectInput, XInput, and Gaming Input for consistency.
+		/// 
+		/// MANDATORY CUSTOMDISTATE MAPPING (MUST match other input methods):
+		/// Raw Input uses HID reports, so mapping depends on device-specific HID descriptors.
+		/// However, for common controllers (Xbox, PlayStation), MUST map to:
+		/// • Buttons[0] = Primary action button (A on Xbox, Cross on PlayStation)
+		/// • Buttons[1] = Secondary action button (B on Xbox, Circle on PlayStation)
+		/// • Buttons[2] = Third action button (X on Xbox, Square on PlayStation)
+		/// • Buttons[3] = Fourth action button (Y on Xbox, Triangle on PlayStation)
+		/// • Buttons[4] = Left Shoulder (LB/L1)
+		/// • Buttons[5] = Right Shoulder (RB/R1)
+		/// • Buttons[6] = Back/Select/Share button
+		/// • Buttons[7] = Start/Menu/Options button
+		/// • Buttons[8] = Left Thumbstick Click (LS/L3)
+		/// • Buttons[9] = Right Thumbstick Click (RS/R3)
+		/// • Buttons[10] = D-Pad Up
+		/// • Buttons[11] = D-Pad Right
+		/// • Buttons[12] = D-Pad Down
+		/// • Buttons[13] = D-Pad Left
+		/// • Buttons[14] = Guide/Home button (when available via HID)
+		/// • Axis[0] = Left Thumbstick X (-32768 to 32767)
+		/// • Axis[1] = Left Thumbstick Y (-32768 to 32767)
+		/// • Axis[2] = Right Thumbstick X (-32768 to 32767)
+		/// • Axis[3] = Right Thumbstick Y (-32768 to 32767)
+		/// • Axis[4] = Left Trigger OR Combined Triggers (limitation for some controllers)
+		/// • Axis[5] = Right Trigger (when separate) or unused
+		/// 
+		/// RAW INPUT METHOD CAPABILITIES:
+		/// • Controllers CAN be accessed in the background (major advantage)
+		/// • Unlimited number of controllers
+		/// • Works with any HID-compliant device
+		/// • Low-level access to device data
+		/// • Most direct access to hardware input
+		/// 
+		/// RAW INPUT METHOD LIMITATIONS:
+		/// • Xbox 360/One controllers have triggers on same axis (same as DirectInput)
+		/// • No Guide button access (most HID reports exclude it)
+		/// • NO rumble support (Raw Input is input-only)
+		/// • Requires manual HID report parsing (complex implementation)
+		/// • No built-in controller abstraction (custom profiles needed)
+		/// • Complex setup and device registration required
+		/// </remarks>
+		public CustomDiState GetCustomState(UserDevice device)
 		{
-			// Create hidden window
-			WindowState = FormWindowState.Minimized;
-			ShowInTaskbar = false;
-			Visible = false;
-			CreateHandle();
-		}
-
-		protected override void WndProc(ref Message m)
-		{
-			if (m.Msg == WM_INPUT)
+			if (device == null)
+				return null;
+			try
 			{
-				RawInputProcessor.ProcessRawInput(m.LParam);
-			}
-			base.WndProc(ref m);
-		}
+				// Use the RawInputProcessor for actual processing
+				// Validate device compatibility
+				var validation = ValidateDevice(device);
+				if (!validation.IsValid)
+					return null;
+				// Read device state using Raw Input
+				var customState = ReadState(device);
 
-		protected override CreateParams CreateParams
-		{
-			get
+				// Handle force feedback (Raw Input doesn't support output, just log)
+				if (device.FFState != null)
+				{
+					HandleForceFeedback(device, device.FFState);
+					HandleForceFeedback(device, device.FFState);
+				}
+				return customState;
+			}
+			catch (InputMethodException ex)
 			{
-				CreateParams cp = base.CreateParams;
-				cp.ExStyle |= 0x80; // WS_EX_TOOLWINDOW
-				return cp;
+				// Log Raw Input specific errors for debugging
+				var cx = new DInputException($"Raw Input error for {device.DisplayName}", ex);
+				cx.Data.Add("Device", device.DisplayName);
+				cx.Data.Add("InputMethod", "RawInput");
+				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
+				return null;
+			}
+			catch (Exception ex)
+			{
+				// Log unexpected Raw Input errors for debugging
+				var cx = new DInputException($"Unexpected Raw Input error for {device.DisplayName}", ex);
+				cx.Data.Add("Device", device.DisplayName);
+				cx.Data.Add("InputMethod", "RawInput");
+				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
+				return null;
 			}
 		}
-	}
 
-	#endregion
+
+		#endregion
+	}
 }
