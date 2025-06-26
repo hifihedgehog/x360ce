@@ -44,10 +44,10 @@ namespace x360ce.App.DInput
 				// Check DirectInput availability
 				result.DirectInputAvailable = CheckDirectInputAvailability();
 				
-				// Check XInput availability and controller count
-				result.XInputAvailable = CheckXInputAvailability();
-				result.XInputControllerCount = GetXInputControllerCount();
-				result.XInputSlotsAvailable = 4 - result.XInputControllerCount;
+        // Check XInput availability and controller count
+        result.XInputAvailable = CheckXInputAvailability();
+        result.XInputControllerCount = XInputProcessor.GetAssignedControllerCount();
+        result.XInputSlotsAvailable = 4 - result.XInputControllerCount;
 				
 				// Check Gaming Input availability (Windows 10+ requirement)
 				result.GamingInputAvailable = CheckGamingInputAvailability();
@@ -217,35 +217,25 @@ namespace x360ce.App.DInput
 			return helper?.IsXInputAvailable() ?? false;
 		}
 
-		/// <summary>
-		/// Gets the current number of XInput controllers in use.
-		/// </summary>
-		/// <returns>Number of XInput controllers currently in use (0-4)</returns>
-		private static int GetXInputControllerCount()
-		{
-			var helper = DInputHelper.Current;
-			return helper?.GetXInputControllerCount() ?? 0;
-		}
 
-		/// <summary>
-		/// Checks if Gaming Input API is available on the current system.
-		/// </summary>
-		/// <returns>True if Gaming Input is available</returns>
-		private static bool CheckGamingInputAvailability()
-		{
-			var helper = DInputHelper.Current;
-			return helper?.IsGamingInputAvailable() ?? false;
-		}
+/// <summary>
+/// Checks if Gaming Input API is available on the current system.
+/// </summary>
+/// <returns>True if Gaming Input is available</returns>
+private static bool CheckGamingInputAvailability()
+{
+var helper = DInputHelper.Current;
+return helper?.IsGamingInputAvailable() ?? false;
+}
 
-		/// <summary>
-		/// Checks if Raw Input API is available on the current system.
-		/// </summary>
-		/// <returns>True if Raw Input is available</returns>
-		private static bool CheckRawInputAvailability()
-		{
-			var helper = DInputHelper.Current;
-			return helper?.IsRawInputAvailable() ?? false;
-		}
+/// <summary>
+/// Checks if Raw Input API is available on the current system.
+/// </summary>
+/// <returns>True if Raw Input is available</returns>
+private static bool CheckRawInputAvailability()
+{
+return RawInputProcessor.IsRawInputAvailable();
+}
 
 		/// <summary>
 		/// Validates DirectInput compatibility for a device.

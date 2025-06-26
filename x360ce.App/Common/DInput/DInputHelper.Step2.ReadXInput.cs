@@ -226,71 +226,6 @@ namespace x360ce.App.DInput
 			}
 		}
 
-		/// <summary>
-		/// Gets the current XInput controller slot assignments for monitoring and debugging.
-		/// </summary>
-		/// <returns>Dictionary mapping device GUIDs to XInput slot indices (0-3)</returns>
-		/// <remarks>
-		/// This method provides information about which devices are currently assigned
-		/// to XInput slots. Used for:
-		/// • UI status displays showing "Controller X/4 used"
-		/// • Debugging XInput slot conflicts
-		/// • Monitoring controller capacity
-		/// 
-		/// Slot indices are 0-based (0-3), but displayed to users as 1-based (1-4).
-		/// </remarks>
-		public Dictionary<Guid, int> GetXInputSlotAssignments()
-		{
-			return XInputProcessor.GetSlotAssignments();
-		}
-
-		/// <summary>
-		/// Gets the current number of XInput controllers in use.
-		/// </summary>
-		/// <returns>Number of currently assigned XInput controllers (0-4)</returns>
-		/// <remarks>
-		/// This method returns the count of devices currently using XInput slots.
-		/// Used for UI displays like "XInput Controllers: 2/4" and capacity planning.
-		/// </remarks>
-		public int GetXInputControllerCount()
-		{
-			return XInputProcessor.GetAssignedControllerCount();
-		}
-
-		/// <summary>
-		/// Releases an XInput slot for a specific device.
-		/// </summary>
-		/// <param name="deviceGuid">The device GUID to release from XInput slots</param>
-		/// <returns>True if a slot was released, false if device wasn't using XInput</returns>
-		/// <remarks>
-		/// This method is used when:
-		/// • User changes device from XInput to another input method
-		/// • Device is disconnected or removed
-		/// • Resetting XInput slot assignments
-		/// 
-		/// Releasing slots makes them available for other Xbox controllers.
-		/// </remarks>
-		public bool ReleaseXInputSlot(Guid deviceGuid)
-		{
-			return XInputProcessor.ReleaseSlot(deviceGuid);
-		}
-
-		/// <summary>
-		/// Clears all XInput slot assignments.
-		/// </summary>
-		/// <remarks>
-		/// This method is used for:
-		/// • Resetting all XInput assignments
-		/// • Handling application shutdown
-		/// • Debugging and testing scenarios
-		/// 
-		/// After calling this method, all XInput slots become available and devices
-		/// will be reassigned slots the next time they're processed.
-		/// </remarks>
-		public void ClearAllXInputSlots()
-		{
-			XInputProcessor.ClearAllSlots();
-		}
 
 		/// <summary>
 		/// Checks if XInput is available and functioning on the current system.
@@ -339,38 +274,38 @@ namespace x360ce.App.DInput
 		/// 
 		/// Used for diagnostic logs and support information.
 		/// </remarks>
-		public string GetXInputDiagnosticInfo()
-		{
-			var info = new System.Text.StringBuilder();
-			
-			try
-			{
-				info.AppendLine($"XInput Available: {IsXInputAvailable()}");
-				info.AppendLine($"Controllers in use: {GetXInputControllerCount()}/4");
-				
-				var assignments = GetXInputSlotAssignments();
-				if (assignments.Count > 0)
-				{
-					info.AppendLine("Slot assignments:");
-					foreach (var assignment in assignments)
-					{
-						info.AppendLine($"  Slot {assignment.Value + 1}: {assignment.Key}");
-					}
-				}
-				else
-				{
-					info.AppendLine("No XInput slot assignments");
-				}
-				
-				info.AppendLine($"Operating System: {Environment.OSVersion}");
-			}
-			catch (Exception ex)
-			{
-				info.AppendLine($"Error getting XInput diagnostic info: {ex.Message}");
-			}
-			
-			return info.ToString();
-		}
+public string GetXInputDiagnosticInfo()
+{
+var info = new System.Text.StringBuilder();
+
+try
+{
+info.AppendLine($"XInput Available: {IsXInputAvailable()}");
+info.AppendLine($"Controllers in use: {XInputProcessor.GetAssignedControllerCount()}/4");
+
+var assignments = XInputProcessor.GetSlotAssignments();
+if (assignments.Count > 0)
+{
+info.AppendLine("Slot assignments:");
+foreach (var assignment in assignments)
+{
+info.AppendLine($"  Slot {assignment.Value + 1}: {assignment.Key}");
+}
+}
+else
+{
+info.AppendLine("No XInput slot assignments");
+}
+
+info.AppendLine($"Operating System: {Environment.OSVersion}");
+}
+catch (Exception ex)
+{
+info.AppendLine($"Error getting XInput diagnostic info: {ex.Message}");
+}
+
+return info.ToString();
+}
 
 		#endregion
 	}
