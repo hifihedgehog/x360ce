@@ -134,72 +134,75 @@
 						</DataGrid.Columns>
 					</DataGrid>
 
-                    <!--  Check-boxes  -->
-                    <StackPanel Grid.Row="3" Margin="3">
-                        <CheckBox
+					<!--  Check-boxes  -->
+					<StackPanel Grid.Row="3" Margin="3">
+						<CheckBox
 							Name="EnabledCheckBox"
 							Click="EnabledCheckBox_Click"
 							Content="Enabled" />
-                        <CheckBox
+						<CheckBox
 							Name="UseXInputStateCheckBox"
 							Click="UseXInputStateCheckBox_Click"
 							Content="Use XInput State" />
-                        <CheckBox
+						<CheckBox
 							Name="AutoMapCheckBox"
 							Click="AutoMapCheckBox_Click"
 							Content="Auto Map" />
-                    </StackPanel>
+					</StackPanel>
 
-                    <GroupBox Margin="3,-3,2,3" Grid.Row="4" Header="Selected Device">
-                    <StackPanel Name="DeviceDetails">
-						<!--  DataContext="{Binding SelectedDevice, ElementName=PadListControl}"  -->
-                        <StackPanel Orientation="Horizontal">
-                                <Label Content="Input"/>
-                                <ComboBox Name="InputMethodComboBox" SelectionChanged="InputMethodComboBox_SelectionChanged">
-								<engine:InputMethod>DirectInput</engine:InputMethod>
-								<engine:InputMethod>XInput</engine:InputMethod>
-								<engine:InputMethod>GamingInput</engine:InputMethod>
-								<engine:InputMethod>RawInput</engine:InputMethod>
-							</ComboBox>
-                        </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Label Content="Available"/>
-                                <Label Name="AvailableInputs" Opacity="0.5" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Label Content="Vendor"/>
-                                <Label Name="VendorName" Opacity="0.5" />
-						</StackPanel>
-						<StackPanel Orientation="Horizontal">
-                                <Label Content="Product"/>
-                                <Label Name="ProductName" Opacity="0.5" />
-						</StackPanel>
-						<StackPanel Orientation="Horizontal">
-                                <Label Content="Instance"/>
-                                <Label Name="InstanceId" Opacity="0.5" />
-						</StackPanel>
-						<StackPanel Orientation="Horizontal">
-                                <Label Content="SID"/>
-                                <Label Name="PadSettingChecksum" Opacity="0.5" />
-						</StackPanel>
-						<StackPanel Orientation="Horizontal">
-                                <Label Content="Connection"/>
-                                <Image Name="ConnectionClassImage" Style="{StaticResource ImageCell_Default}" />
-						</StackPanel>
-						<!--<StackPanel Orientation="Horizontal">
+					<GroupBox
+						Grid.Row="4"
+						Margin="3,-3,2,3"
+						Header="Selected Device">
+						<StackPanel Name="DeviceDetails">
+							<!--  DataContext="{Binding SelectedDevice, ElementName=PadListControl}"  -->
+							<StackPanel Orientation="Horizontal">
+								<Label Content="Input" />
+								<ComboBox Name="InputMethodComboBox" SelectionChanged="InputMethodComboBox_SelectionChanged">
+									<engine:InputMethod>DirectInput</engine:InputMethod>
+									<engine:InputMethod>XInput</engine:InputMethod>
+									<engine:InputMethod>GamingInput</engine:InputMethod>
+									<engine:InputMethod>RawInput</engine:InputMethod>
+								</ComboBox>
+							</StackPanel>
+							<StackPanel Orientation="Horizontal">
+								<Label Content="Available" />
+								<Label Name="AvailableInputs" Opacity="0.5" />
+							</StackPanel>
+							<StackPanel Orientation="Horizontal">
+								<Label Content="Vendor" />
+								<Label Name="VendorName" Opacity="0.5" />
+							</StackPanel>
+							<StackPanel Orientation="Horizontal">
+								<Label Content="Product" />
+								<Label Name="ProductName" Opacity="0.5" />
+							</StackPanel>
+							<StackPanel Orientation="Horizontal">
+								<Label Content="Instance" />
+								<Label Name="InstanceId" Opacity="0.5" />
+							</StackPanel>
+							<StackPanel Orientation="Horizontal">
+								<Label Content="SID" />
+								<Label Name="PadSettingChecksum" Opacity="0.5" />
+							</StackPanel>
+							<StackPanel Orientation="Horizontal">
+								<Label Content="Connection" />
+								<Image Name="ConnectionClassImage" Style="{StaticResource ImageCell_Default}" />
+							</StackPanel>
+							<!--<StackPanel Orientation="Horizontal">
 							<Label>Active</Label>
 							<Label Opacity="0.5" Name="Active"/>
 						</StackPanel>-->
-						<!--<StackPanel Orientation="Horizontal">
+							<!--<StackPanel Orientation="Horizontal">
 							<Label>IsEnabled</Label>
 							<Label Opacity="0.5" Name="IsEnabled"/>
 						</StackPanel>-->
-						<StackPanel Orientation="Horizontal">
-                                <Label Content="Completion"/>
-                                <Label Name="Completion" Opacity="0.5" />
+							<StackPanel Orientation="Horizontal">
+								<Label Content="Completion" />
+								<Label Name="Completion" Opacity="0.5" />
+							</StackPanel>
 						</StackPanel>
-					</StackPanel>
-</GroupBox>
+					</GroupBox>
 				</Grid>
 			</ScrollViewer>
 		</TabItem>

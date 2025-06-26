@@ -37,8 +37,9 @@ namespace x360ce.App.DInput
 	/// • Axis[4]: Left Trigger (0 to 32767, converted from 0-255 byte range)
 	/// • Axis[5]: Right Trigger (0 to 32767, converted from 0-255 byte range)
 	/// </remarks>
-	public class XInputProcessor
+	public class XInputProcessor: IInputProcessor
 	{
+
 		#region Static Controller Management
 
 		/// <summary>

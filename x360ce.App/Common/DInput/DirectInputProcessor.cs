@@ -31,7 +31,7 @@ namespace x360ce.App.DInput
 	/// This processor maps DirectInput JoystickState to CustomDiState preserving
 	/// the original x360ce DirectInput behavior and mapping patterns.
 	/// </remarks>
-	public class DirectInputProcessor
+	public class DirectInputProcessor: IInputProcessor
 	{
 		#region IInputProcessor
 
