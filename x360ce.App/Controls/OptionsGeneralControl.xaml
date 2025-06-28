@@ -25,6 +25,7 @@
         <Grid.Resources>
             <Style BasedOn="{StaticResource GroupBox_Default}" TargetType="GroupBox">
                 <Setter Property="Margin" Value="3,0,0,0" />
+                <Setter Property="VerticalAlignment" Value="Stretch" />
             </Style>
         </Grid.Resources>
         <!--  Options  -->
