@@ -116,31 +116,30 @@ namespace x360ce.App.Input.Processors
 
 				return customState;
 			}
-			catch (InputMethodException ex)
-			{
-				// Log XInput specific errors for debugging
-				var cx = new DInputException($"XInput error for {device.DisplayName}", ex);
-				cx.Data.Add("Device", device.DisplayName);
-				cx.Data.Add("InputMethod", "XInput");
-				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
+catch (InputMethodException ex)
+{
+// Add diagnostic data directly to the exception
+ex.Data["Device"] = device.DisplayName;
+ex.Data["InputMethod"] = "XInput";
+JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
 
-				// For slot limit errors, mark devices as needing update
-				if (ex.Message.Contains("maximum") || ex.Message.Contains("controllers already in use"))
-				{
-				  DInputHelper.Current.DevicesNeedUpdating = true;
-				}
+// For slot limit errors, mark devices as needing update
+if (ex.Message.Contains("maximum") || ex.Message.Contains("controllers already in use"))
+{
+  DInputHelper.Current.DevicesNeedUpdating = true;
+}
 
-				return null;
-			}
-			catch (Exception ex)
-			{
-				// Log unexpected XInput errors for debugging
-				var cx = new DInputException($"Unexpected XInput error for {device.DisplayName}", ex);
-				cx.Data.Add("Device", device.DisplayName);
-				cx.Data.Add("InputMethod", "XInput");
-				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
-				return null;
-			}
+return null;
+}
+catch (Exception ex)
+{
+// Add diagnostic data directly to the exception
+ex.Data["Device"] = device.DisplayName;
+ex.Data["InputMethod"] = "XInput";
+ex.Data["ProcessorMethod"] = "ProcessXInputDevice";
+JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
+return null;
+}
 		}
 
 		/// <summary>

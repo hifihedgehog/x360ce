@@ -812,24 +812,23 @@ namespace x360ce.App.Input.Processors
 				}
 				return customState;
 			}
-			catch (InputMethodException ex)
-			{
-				// Log Raw Input specific errors for debugging
-				var cx = new DInputException($"Raw Input error for {device.DisplayName}", ex);
-				cx.Data.Add("Device", device.DisplayName);
-				cx.Data.Add("InputMethod", "RawInput");
-				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
-				return null;
-			}
-			catch (Exception ex)
-			{
-				// Log unexpected Raw Input errors for debugging
-				var cx = new DInputException($"Unexpected Raw Input error for {device.DisplayName}", ex);
-				cx.Data.Add("Device", device.DisplayName);
-				cx.Data.Add("InputMethod", "RawInput");
-				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
-				return null;
-			}
+catch (InputMethodException ex)
+{
+// Add diagnostic data directly to the exception
+ex.Data["Device"] = device.DisplayName;
+ex.Data["InputMethod"] = "RawInput";
+JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
+return null;
+}
+catch (Exception ex)
+{
+// Add diagnostic data directly to the exception
+ex.Data["Device"] = device.DisplayName;
+ex.Data["InputMethod"] = "RawInput";
+ex.Data["ProcessorMethod"] = "GetCustomState";
+JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
+return null;
+}
 		}
 
 

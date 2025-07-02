@@ -84,55 +84,54 @@ namespace x360ce.App.DInput
 						newState = rawInputProcessor.GetCustomState(device);
 					}
 				}
-				catch (InputMethodException ex)
-				{
-					// Log input method specific errors for debugging
-					var cx = new DInputException($"Input method error for {device.DisplayName} using {ex.InputMethod}", ex);
-					cx.Data.Add("Device", device.DisplayName);
-					cx.Data.Add("InputMethod", ex.InputMethod.ToString());
-					JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
-					
-					// For certain errors, mark devices as needing update
-					if (ex.Message.Contains("InputLost") || ex.Message.Contains("NotAcquired"))
-					{
-						DevicesNeedUpdating = true;
-					}
-					
-					// Continue with next device
-					continue;
-				}
-				catch (NotSupportedException ex)
-				{
-					// Log unimplemented input methods for debugging
-					var cx = new DInputException($"Input method not supported for {device.DisplayName}", ex);
-					cx.Data.Add("Device", device.DisplayName);
-					cx.Data.Add("InputMethod", device.InputMethod.ToString());
-					JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
-					continue;
-				}
-				catch (Exception ex)
-				{
-					// Handle DirectInput exceptions (maintaining original behavior for backward compatibility)
-					var dex = ex as SharpDXException;
-					if (dex != null &&
-						(dex.ResultCode == SharpDX.DirectInput.ResultCode.InputLost ||
-						 dex.ResultCode == SharpDX.DirectInput.ResultCode.NotAcquired ||
-						 dex.ResultCode == SharpDX.DirectInput.ResultCode.Unplugged))
-					{
-						DevicesNeedUpdating = true;
-					}
-					else
-					{
-						// Unexpected error
-						var inputMethodName = device.InputMethod.ToString();
-						var cx = new DInputException($"UpdateDiStates Exception using {inputMethodName}", ex);
-						cx.Data.Add("Device", device.DisplayName);
-						cx.Data.Add("InputMethod", inputMethodName);
-						JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
-					}
-					device.IsExclusiveMode = null;
-					continue;
-				}
+catch (InputMethodException ex)
+{
+// Add diagnostic data directly to the exception
+ex.Data["Device"] = device.DisplayName;
+ex.Data["InputMethod"] = ex.InputMethod.ToString();
+ex.Data["OrchestrationMethod"] = "UpdateDiStates";
+JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
+
+// For certain errors, mark devices as needing update
+if (ex.Message.Contains("InputLost") || ex.Message.Contains("NotAcquired"))
+{
+DevicesNeedUpdating = true;
+}
+
+// Continue with next device
+continue;
+}
+catch (NotSupportedException ex)
+{
+// Add diagnostic data directly to the exception
+ex.Data["Device"] = device.DisplayName;
+ex.Data["InputMethod"] = device.InputMethod.ToString();
+ex.Data["OrchestrationMethod"] = "UpdateDiStates";
+JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
+continue;
+}
+catch (Exception ex)
+{
+// Handle DirectInput exceptions (maintaining original behavior for backward compatibility)
+var dex = ex as SharpDXException;
+if (dex != null &&
+(dex.ResultCode == SharpDX.DirectInput.ResultCode.InputLost ||
+ dex.ResultCode == SharpDX.DirectInput.ResultCode.NotAcquired ||
+ dex.ResultCode == SharpDX.DirectInput.ResultCode.Unplugged))
+{
+DevicesNeedUpdating = true;
+}
+else
+{
+// Add diagnostic data directly to the exception
+ex.Data["Device"] = device.DisplayName;
+ex.Data["InputMethod"] = device.InputMethod.ToString();
+ex.Data["OrchestrationMethod"] = "UpdateDiStates";
+JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
+}
+device.IsExclusiveMode = null;
+continue;
+}
 
 				// Update device state if we successfully read it
 				if (newState != null)

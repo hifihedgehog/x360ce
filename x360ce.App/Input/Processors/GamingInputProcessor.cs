@@ -312,15 +312,15 @@ namespace x360ce.App.Input.Processors
 
 				return newState;
 			}
-			catch (Exception ex)
-			{
-				// Log Gaming Input processing errors for debugging
-				var cx = new DInputException($"Gaming Input error processing device {device.DisplayName}", ex);
-				cx.Data.Add("Device", device.DisplayName);
-				cx.Data.Add("InputMethod", "GamingInput");
-				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(cx);
-				return null;
-			}
+catch (Exception ex)
+{
+// Add diagnostic data directly to the exception
+ex.Data["Device"] = device.DisplayName;
+ex.Data["InputMethod"] = "GamingInput";
+ex.Data["ProcessorMethod"] = "GetCustomState";
+JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
+return null;
+}
 		}
 
 		/// <summary>
