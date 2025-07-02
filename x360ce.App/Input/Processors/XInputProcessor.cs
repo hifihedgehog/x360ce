@@ -4,11 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using x360ce.App.DInput;
+using x360ce.App.Input.Processors;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
-namespace x360ce.App.XInput
+namespace x360ce.App.Input.Processors
 {
 	/// <summary>
 	/// XInput processor - Handles Microsoft XInput API for Xbox controllers.

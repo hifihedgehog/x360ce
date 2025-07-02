@@ -1,10 +1,10 @@
 using System;
 using System.Diagnostics;
-using x360ce.App.XInput;
+using x360ce.App.Input.Processors;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
-namespace x360ce.App.DInput
+namespace x360ce.App.Input.Processors
 {
 	/// <summary>
 	/// Centralized validation service for input methods.

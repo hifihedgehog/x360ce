@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using x360ce.App.DInput;
+using x360ce.App.Input.Processors;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
-namespace x360ce.App.RawInput
+namespace x360ce.App.Input.Processors
 {
 	/// <summary>
 	/// TRUE Raw Input processor - Uses actual Windows Raw Input API for HID-compliant devices.

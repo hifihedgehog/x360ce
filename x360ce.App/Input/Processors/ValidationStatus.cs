@@ -1,4 +1,4 @@
-namespace x360ce.App.DInput
+namespace x360ce.App.Input.Processors
 {
     /// <summary>
     /// Validation status levels.

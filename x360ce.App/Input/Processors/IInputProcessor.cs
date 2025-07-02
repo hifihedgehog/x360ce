@@ -2,7 +2,7 @@ using x360ce.Engine;
 using x360ce.Engine.Data;
 //using x360ce.Engine.Data;
 
-namespace x360ce.App.DInput
+namespace x360ce.App.Input.Processors
 {
     /// <summary>
     /// Interface for input processors that handle different input methods (DirectInput, XInput, RawInput, GamingInput).

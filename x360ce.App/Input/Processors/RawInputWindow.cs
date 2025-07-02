@@ -1,6 +1,6 @@
 ﻿using System.Windows.Forms;
 
-namespace x360ce.App.RawInput
+namespace x360ce.App.Input.Processors
 {
 	/// <summary>
 	/// Hidden window for receiving Raw Input messages.

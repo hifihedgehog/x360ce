@@ -1,4 +1,4 @@
-namespace x360ce.App.DInput
+namespace x360ce.App.Input.Processors
 {
     /// <summary>
     /// Represents the result of validating a device with an input method.
