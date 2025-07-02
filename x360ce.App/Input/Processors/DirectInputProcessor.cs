@@ -33,7 +33,7 @@ namespace x360ce.App.Input.Processors
 	/// This processor maps DirectInput JoystickState to CustomDiState preserving
 	/// the original x360ce DirectInput behavior and mapping patterns.
 	/// </remarks>
-	public class DirectInputProcessor: IInputProcessor
+	public class DirectInputProcessor : IInputProcessor
 	{
 		// Shared orchestration methods moved to DInputHelper.Step2.CustomDiStates.cs
 		// XInput processing moved to DInputHelper.Step2.ReadXInput.cs
@@ -462,7 +462,7 @@ namespace x360ce.App.Input.Processors
 			// Force feedback for DirectInput is handled through the main DInputHelper
 			// in the ProcessDirectInputDevice method which calls the existing force feedback logic
 			// This method is called from the main UpdateDiStates coordinator
-			
+
 			Debug.WriteLine($"DirectInput: Force feedback processing delegated to main coordinator for {device.DisplayName}");
 		}
 
@@ -496,7 +496,7 @@ namespace x360ce.App.Input.Processors
 			{
 				var osVersion = Environment.OSVersion.Version;
 				var isWindows10Plus = osVersion.Major >= 10;
-				
+
 				if (isWindows10Plus)
 				{
 					return ValidationResult.Warning(
@@ -547,7 +547,7 @@ namespace x360ce.App.Input.Processors
 			{
 				device.OrgDiState = newState;
 				device.OrgDiStateTime = DateTime.UtcNow.Ticks;
-				
+
 				// Make sure new states have zero values for first reading
 				for (int a = 0; a < newState.Axis.Length; a++)
 					newState.Axis[a] = -short.MinValue;
@@ -556,14 +556,14 @@ namespace x360ce.App.Input.Processors
 			}
 
 			var mouseState = new CustomDeviceState(new JoystickState());
-			
+
 			// Clone button values
 			Array.Copy(newState.Buttons, mouseState.Buttons, mouseState.Buttons.Length);
 
 			// Map mouse position to axis position (good for car wheel controls)
 			CalcMouseMovement(device.OrgDiState.Axis, newState.Axis, mouseState.Axis);
 			CalcMouseMovement(device.OrgDiState.Sliders, newState.Sliders, mouseState.Sliders);
-			
+
 			return mouseState;
 		}
 
@@ -580,12 +580,12 @@ namespace x360ce.App.Input.Processors
 		{
 			// Sensitivity factor for mouse movement conversion
 			var sensitivity = 16;
-			
+
 			for (int a = 0; a < newState.Length; a++)
 			{
 				// Use ConvertHelper for mouse scaling with overflow protection
 				var value = ConvertHelper.ScaleWithSensitivity(newState[a], orgRange[a], sensitivity, ushort.MinValue, ushort.MaxValue);
-				
+
 				// Update original range if value hit limits
 				if (value == ushort.MinValue)
 				{
@@ -595,7 +595,7 @@ namespace x360ce.App.Input.Processors
 				{
 					orgRange[a] = newState[a] - (ushort.MaxValue / sensitivity);
 				}
-				
+
 				mouseState[a] = value;
 			}
 		}
@@ -635,12 +635,12 @@ namespace x360ce.App.Input.Processors
 		public static string GetDirectInputDiagnosticInfo()
 		{
 			var info = new System.Text.StringBuilder();
-			
+
 			try
 			{
 				info.AppendLine($"DirectInput Available: {IsDirectInputAvailable()}");
 				info.AppendLine($"Operating System: {Environment.OSVersion}");
-				
+
 				// Add information about DirectInput version and capabilities
 				using (var directInput = new SharpDX.DirectInput.DirectInput())
 				{
@@ -652,7 +652,7 @@ namespace x360ce.App.Input.Processors
 			{
 				info.AppendLine($"Error getting DirectInput diagnostic info: {ex.Message}");
 			}
-			
+
 			return info.ToString();
 		}
 

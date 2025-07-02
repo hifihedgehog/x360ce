@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using x360ce.App.Input.Processors;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
@@ -356,7 +355,7 @@ namespace x360ce.App.Input.Processors
 					{
 						// Parse device info to determine device type
 						var hidInfo = Marshal.PtrToStructure<RID_DEVICE_INFO_HID>(deviceInfoBuffer);
-						
+
 						var deviceInfo = new RawInputDeviceInfo
 						{
 							Handle = deviceHandle,
@@ -420,7 +419,7 @@ namespace x360ce.App.Input.Processors
 			try
 			{
 				var rawInput = Marshal.PtrToStructure<RAWINPUT>(buffer);
-				
+
 				// Get HID data pointer
 				IntPtr hidDataPtr = IntPtr.Add(buffer, Marshal.SizeOf<RAWINPUTHEADER>() + Marshal.SizeOf<RAWHID>());
 				int hidDataSize = (int)(rawInput.hid.dwSizeHid * rawInput.hid.dwCount);
@@ -510,7 +509,7 @@ namespace x360ce.App.Input.Processors
 
 			// Generic parsing - assume common gamepad structure
 			// FIXED: Most controllers have axes first, then buttons, not buttons first
-			
+
 			// Parse axes first (prevent thumbstick data from being treated as buttons)
 			if (hidData.Length >= 6)
 			{
@@ -520,7 +519,7 @@ namespace x360ce.App.Input.Processors
 				state.Axis[2] = (short)((hidData[2] - 128) * 256); // Right X axis (or Z)
 				state.Axis[3] = (short)((hidData[3] - 128) * 256); // Right Y axis (or RZ)
 			}
-			
+
 			// Parse buttons from later bytes (avoid thumbstick data)
 			// Skip the first 4-6 bytes which are likely axis data
 			int buttonStartByte = ConvertHelper.LimitRange(6, 0, hidData.Length - 2);
@@ -586,8 +585,8 @@ namespace x360ce.App.Input.Processors
 				foreach (var kvp in _trackedDevices)
 				{
 					var deviceInfo = kvp.Value;
-					if (deviceInfo.IsXboxController && 
-						deviceInfo.VendorId == deviceVID && 
+					if (deviceInfo.IsXboxController &&
+						deviceInfo.VendorId == deviceVID &&
 						deviceInfo.ProductId == devicePID)
 					{
 						return kvp.Key;
@@ -654,12 +653,12 @@ namespace x360ce.App.Input.Processors
 		public string GetRawInputDiagnosticInfo()
 		{
 			var info = new System.Text.StringBuilder();
-			
+
 			try
 			{
 				var osVersion = Environment.OSVersion.Version;
 				var isWindowsXPPlus = osVersion.Major >= 5;
-				
+
 				info.AppendLine($"Raw Input Available: {IsAvailable()}");
 				info.AppendLine($"Windows XP+ Required: {isWindowsXPPlus}");
 				info.AppendLine($"Operating System: {Environment.OSVersion}");
@@ -672,7 +671,7 @@ namespace x360ce.App.Input.Processors
 			{
 				info.AppendLine($"Error getting Raw Input diagnostic info: {ex.Message}");
 			}
-			
+
 			return info.ToString();
 		}
 
@@ -688,7 +687,7 @@ namespace x360ce.App.Input.Processors
 			{
 				// Create device objects that match what DirectInput would provide for controllers
 				var deviceObjects = new List<DeviceObjectItem>();
-				
+
 				// Add button objects - assume common controller layout
 				for (int i = 0; i < 16; i++)
 				{
@@ -701,7 +700,7 @@ namespace x360ce.App.Input.Processors
 						$"Button {i}" // name
 					));
 				}
-				
+
 				// Add axis objects - assume common controller axes
 				string[] axisNames = { "X Axis", "Y Axis", "Z Axis", "RZ Axis", "Left Trigger", "Right Trigger" };
 				for (int i = 0; i < axisNames.Length; i++)
@@ -715,17 +714,17 @@ namespace x360ce.App.Input.Processors
 						axisNames[i] // name
 					));
 				}
-				
+
 				device.DeviceObjects = deviceObjects.ToArray();
 			}
-			
+
 			// Set axis mask (which axes are available) - required for UI
 			if (device.DiAxeMask == 0)
 			{
 				// Assume 6 axes are available for most controllers
 				device.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // First 6 axes
 			}
-			
+
 			// Set device effects (required for force feedback UI, even though Raw Input doesn't support it)
 			if (device.DeviceEffects == null)
 			{
@@ -812,23 +811,23 @@ namespace x360ce.App.Input.Processors
 				}
 				return customState;
 			}
-catch (InputMethodException ex)
-{
-// Add diagnostic data directly to the exception
-ex.Data["Device"] = device.DisplayName;
-ex.Data["InputMethod"] = "RawInput";
-JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
-return null;
-}
-catch (Exception ex)
-{
-// Add diagnostic data directly to the exception
-ex.Data["Device"] = device.DisplayName;
-ex.Data["InputMethod"] = "RawInput";
-ex.Data["ProcessorMethod"] = "GetCustomState";
-JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
-return null;
-}
+			catch (InputMethodException ex)
+			{
+				// Add diagnostic data directly to the exception
+				ex.Data["Device"] = device.DisplayName;
+				ex.Data["InputMethod"] = "RawInput";
+				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
+				return null;
+			}
+			catch (Exception ex)
+			{
+				// Add diagnostic data directly to the exception
+				ex.Data["Device"] = device.DisplayName;
+				ex.Data["InputMethod"] = "RawInput";
+				ex.Data["ProcessorMethod"] = "GetCustomState";
+				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
+				return null;
+			}
 		}
 
 

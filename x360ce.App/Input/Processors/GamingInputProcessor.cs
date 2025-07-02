@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Windows.Gaming.Input;
 using x360ce.App.DInput;
-using x360ce.App.Input.Processors;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
@@ -19,7 +18,7 @@ namespace x360ce.App.Input.Processors
 	/// rather than reimplementing the functionality. Gaming Input requires special integration
 	/// with the DInputHelper due to its UWP bridging requirements and device enumeration complexity.
 	/// </remarks>
-	public class GamingInputProcessor: IInputProcessor
+	public class GamingInputProcessor : IInputProcessor
 	{
 		#region IInputProcessor
 
@@ -77,7 +76,7 @@ namespace x360ce.App.Input.Processors
 				// Delegate to the existing Gaming Input implementation in DInputHelper
 				// This ensures we use the tested, working Gaming Input code path
 				var result = GetCustomState(device);
-				
+
 				if (result == null)
 				{
 					// ProcessGamingInputDevice returns null for various reasons:
@@ -312,15 +311,15 @@ namespace x360ce.App.Input.Processors
 
 				return newState;
 			}
-catch (Exception ex)
-{
-// Add diagnostic data directly to the exception
-ex.Data["Device"] = device.DisplayName;
-ex.Data["InputMethod"] = "GamingInput";
-ex.Data["ProcessorMethod"] = "GetCustomState";
-JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
-return null;
-}
+			catch (Exception ex)
+			{
+				// Add diagnostic data directly to the exception
+				ex.Data["Device"] = device.DisplayName;
+				ex.Data["InputMethod"] = "GamingInput";
+				ex.Data["ProcessorMethod"] = "GetCustomState";
+				JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
+				return null;
+			}
 		}
 
 		/// <summary>
