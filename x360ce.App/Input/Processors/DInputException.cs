@@ -2,7 +2,7 @@
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 
-namespace x360ce.App.DInput
+namespace x360ce.App.Input.Processors
 {
 	[Serializable]
 	public class DInputException : Exception

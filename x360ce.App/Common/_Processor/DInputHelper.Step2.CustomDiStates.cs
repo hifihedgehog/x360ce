@@ -2,6 +2,7 @@ using JocysCom.ClassLibrary.IO;
 using SharpDX;
 using System;
 using System.Linq;
+using x360ce.App.Input.Processors;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
