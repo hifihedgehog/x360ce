@@ -247,6 +247,55 @@ This section maps the codebase organization to help developers navigate and unde
 - **Output Type**: Windows Executable (WinExe)
 - **Assembly Name**: x360ce
 - **Key Features**: Controller configuration, mapping interface, cloud synchronization
+- **Input Processing**: Organized input handling through InputOrchestrator and specialized processors
+
+##### Input Processing Architecture
+The x360ce.App project features a sophisticated input processing system organized into:
+
+```
+x360ce.App/Input/
+├── Orchestration/           # Main coordination logic
+│   ├── InputOrchestrator.cs                    # Primary orchestrator class
+│   ├── InputOrchestrator.Step1.UpdateDevices.cs    # Device detection and management
+│   ├── InputOrchestrator.Step2.CustomDiStates.cs   # State processing coordination
+│   ├── InputOrchestrator.Step2.InputProcessor.cs   # Processor registry
+│   ├── InputOrchestrator.Step3.UpdateXiStates.cs   # XInput state conversion
+│   ├── InputOrchestrator.Step4.CombineXiStates.cs  # State combination logic
+│   ├── InputOrchestrator.Step5.VirtualDevices.cs   # Virtual device management
+│   ├── InputOrchestrator.Step6.RetrieveXiStates.cs # State retrieval
+│   ├── InputOrchestrator.XInputLibrary.cs          # XInput library management
+│   └── InputEventArgs.cs                           # Event argument classes
+└── Processors/              # Individual input method handlers
+    ├── DirectInputProcessor.cs     # Microsoft DirectInput API handler
+    ├── XInputProcessor.cs          # Microsoft XInput API handler
+    ├── GamingInputProcessor.cs     # Windows Gaming Input API handler
+    ├── RawInputProcessor.cs        # Windows Raw Input API handler
+    └── IInputProcessor.cs          # Common processor interface
+```
+
+**Key Architectural Decisions:**
+- **Orchestration Pattern**: InputOrchestrator coordinates all input processing while individual processors handle method-specific logic
+- **Step-Based Processing**: Input processing follows a clear 6-step workflow for maintainability
+- **Enforced Interface Compliance**: All input methods implement complete IInputProcessor interface with 7 standardized methods
+- **Namespace Organization**: Clear separation between orchestration (`x360ce.App.Input.Orchestration`) and processing (`x360ce.App.Input.Processors`)
+- **Constructor Standardization**: All processors follow consistent initialization patterns
+- **Constants Organization**: Magic numbers extracted to named constants for maintainability
+
+**IInputProcessor Interface Enforcement:**
+All 4 processors implement identical interface with these methods:
+- `InputMethod SupportedMethod { get; }` - Identifies the input method
+- `bool CanProcess(UserDevice device)` - Determines device compatibility
+- `CustomDeviceState ReadState(UserDevice device)` - Reads controller state
+- `void HandleForceFeedback(UserDevice device, ForceFeedbackState ffState)` - Handles rumble/vibration
+- `bool IsAvailable()` - Checks system availability
+- `string GetDiagnosticInfo()` - Provides diagnostic information
+- `ValidationResult ValidateDevice(UserDevice device)` - Validates device compatibility
+
+**Processor-Specific Patterns:**
+- **DirectInputProcessor**: Lightweight constructor, extracted constants (DefaultBufferSize=128, MouseSensitivity=16)
+- **XInputProcessor**: 4-controller array initialization, organized constants (MaxControllers=4, AxisChangeThreshold=3277)
+- **RawInputProcessor**: Win32 API initialization, comprehensive API constants
+- **GamingInputProcessor**: Lazy initialization for optimal startup performance
 
 #### x360ce.Engine  
 - **Purpose**: Core business logic library shared across all applications
@@ -317,6 +366,45 @@ This section specifies the tools and platforms needed for development work on th
 - **ViGEm Bus Driver**: Virtual gamepad emulation system
 - **HID Guardian**: Optional controller hiding functionality
 - **SharpDX Libraries**: DirectInput wrapper assemblies
+
+## Terminal Environment & Command Syntax
+
+### PowerShell Environment
+- **PowerShell Version**: 7.5.1 Core
+- **Edition**: Core  
+- **Operating System**: Microsoft Windows 10.0.26100 (Windows 11)
+- **Platform**: Win32NT
+- **Default Shell**: C:\Program Files\PowerShell\7\pwsh.exe
+
+### Command Chaining Syntax
+In PowerShell environments, use the semicolon (`;`) for sequential command execution instead of double ampersands (`&&`).
+
+**Correct PowerShell Syntax:**
+```powershell
+cd x360ce.App; dotnet build x360ce.App.csproj
+```
+
+**Incorrect Syntax (avoid):**
+```powershell
+cd x360ce.App && dotnet build x360ce.App.csproj
+```
+
+### Build Commands for x360ce Projects
+When building individual x360ce projects, use this pattern:
+```powershell
+cd {PROJECT_DIRECTORY}; dotnet build {PROJECT_NAME}.csproj
+```
+
+**Examples:**
+- `cd x360ce.App; dotnet build x360ce.App.csproj`
+- `cd x360ce.Engine; dotnet build x360ce.Engine.csproj`
+- `cd x360ce.RemoteController; dotnet build x360ce.RemoteController.csproj`
+
+### PowerShell Command Guidelines
+1. **Sequential Execution**: Use `;` to run commands sequentially regardless of success/failure
+2. **Conditional Execution**: Use `&&` only when you need the second command to run only if the first succeeds (PowerShell 7+ feature)
+3. **Error Handling**: For better error handling, use `if` statements or try-catch blocks
+4. **Developer Certificate**: If certificate is not trusted: `dotnet dev-certs https --trust`
 
 ## Build, CI/CD & Testing
 
@@ -443,6 +531,15 @@ The project uses Entity Framework with code-first approach:
 - **SQL Server Database Project**: Maintains schema through Visual Studio database tools
 - **Entity Framework Models**: Generated from database schema for type safety
 - **Stored Procedures**: Complex business logic implemented in database layer
+
+### Input Processing Architecture Decision
+The project implements a sophisticated orchestration pattern for input processing:
+- **Orchestration Pattern**: `InputOrchestrator` coordinates all input processing while specialized processors handle method-specific logic
+- **Namespace Organization**: Clear separation between orchestration (`x360ce.App.Input.Orchestration`) and processing (`x360ce.App.Input.Processors`)
+- **Step-Based Processing**: Input processing follows a clear 6-step workflow for maintainability
+- **Processor Interface**: All input methods implement `IInputProcessor` for consistent behavior and extensibility
+- **File Organization**: Step-based orchestration files and individual processor classes for logical code organization
+- **Benefits**: Improved maintainability, clearer separation of concerns, easier testing, simplified debugging, enhanced extensibility for new input methods
 
 ### Driver Integration Approach
 The application integrates with system-level drivers through managed wrappers:
