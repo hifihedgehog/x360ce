@@ -184,13 +184,13 @@ return null;
 							var rightMotorSpeed = (force == null) ? (ushort)0 : ConvertByteToUshort(force.SmallMotor);
 
 							// Apply XInput vibration
-							XInputProcessor.ApplyXInputVibration(device, leftMotorSpeed, rightMotorSpeed);
+							ApplyXInputVibration(device, leftMotorSpeed, rightMotorSpeed);
 						}
 					}
 					else if (device.FFState != null)
 					{
 						// Force feedback disabled - stop vibration
-						XInputProcessor.StopVibration(device);
+						StopVibration(device);
 						device.FFState = null;
 					}
 				}
@@ -341,7 +341,7 @@ return null;
 		#endregion
 
 
-		#region Static Controller Management
+		#region Instance Controller Management
 
 		/// <summary>
 		/// Maximum number of XInput controllers supported.
@@ -349,44 +349,44 @@ return null;
 		public const int MaxControllers = 4;
 
 		/// <summary>
-		/// Static array of XInput controllers for the 4 possible slots.
+		/// Instance array of XInput controllers for the 4 possible slots.
 		/// </summary>
-		private static Controller[] _xinputControllers;
+		private Controller[] _xinputControllers;
 
 		/// <summary>
 		/// Tracks which XInput slots are currently assigned to which devices.
 		/// </summary>
-		private static Dictionary<Guid, int> _deviceToSlotMapping = new Dictionary<Guid, int>();
+		private Dictionary<Guid, int> _deviceToSlotMapping = new Dictionary<Guid, int>();
 
 		/// <summary>
 		/// Tracks the last applied vibration values for each device to prevent redundant calls.
 		/// Key: Device GUID, Value: Tuple of (LeftMotorSpeed, RightMotorSpeed)
 		/// </summary>
-		private static Dictionary<Guid, (ushort Left, ushort Right)> _lastVibrationValues = new Dictionary<Guid, (ushort, ushort)>();
+		private Dictionary<Guid, (ushort Left, ushort Right)> _lastVibrationValues = new Dictionary<Guid, (ushort, ushort)>();
 
 		/// <summary>
 		/// Tracks the previous button states for each device to detect changes.
 		/// Key: Device GUID, Value: Array of 15 boolean values for buttons
 		/// </summary>
-		private static Dictionary<Guid, bool[]> _previousButtonStates = new Dictionary<Guid, bool[]>();
+		private Dictionary<Guid, bool[]> _previousButtonStates = new Dictionary<Guid, bool[]>();
 
 		/// <summary>
 		/// Tracks the previous axis values for each device to detect significant changes.
 		/// Key: Device GUID, Value: Array of 6 integer values for axes
 		/// </summary>
-		private static Dictionary<Guid, int[]> _previousAxisValues = new Dictionary<Guid, int[]>();
+		private Dictionary<Guid, int[]> _previousAxisValues = new Dictionary<Guid, int[]>();
 
 		/// <summary>
 		/// Tracks the last PacketNumber for each device to detect if controller is responding.
 		/// Key: Device GUID, Value: Last PacketNumber from XInput
 		/// </summary>
-		private static Dictionary<Guid, uint> _lastPacketNumbers = new Dictionary<Guid, uint>();
+		private Dictionary<Guid, uint> _lastPacketNumbers = new Dictionary<Guid, uint>();
 
 		/// <summary>
 		/// Tracks when each device was first assigned to give controllers time to respond before flagging as unresponsive.
 		/// Key: Device GUID, Value: Environment.TickCount when controller was first assigned
 		/// </summary>
-		private static Dictionary<Guid, int> _controllerStartTimes = new Dictionary<Guid, int>();
+		private Dictionary<Guid, int> _controllerStartTimes = new Dictionary<Guid, int>();
 
 		/// <summary>
 		/// Minimum axis change threshold (10% of axis range) to prevent debug flooding.
@@ -394,9 +394,9 @@ return null;
 		private const int AxisChangeThreshold = 3277; // 10% of 32767
 
 		/// <summary>
-		/// Initialize static XInput controllers.
+		/// Initialize instance XInput controllers.
 		/// </summary>
-		static XInputProcessor()
+		public XInputProcessor()
 		{
 			_xinputControllers = new Controller[MaxControllers];
 			for (int i = 0; i < MaxControllers; i++)
@@ -442,7 +442,7 @@ return null;
 		/// <param name="device">The device to read from</param>
 		/// <returns>CustomDiState representing the current controller state</returns>
 		/// <exception cref="InputMethodException">Thrown when XInput encounters errors</exception>
-		public static CustomDeviceState ReadState(UserDevice device)
+		public CustomDeviceState ReadState(UserDevice device)
 		{
 			if (device == null)
 				throw new InputMethodException(InputMethod.XInput, device, "Device is null");
@@ -558,7 +558,7 @@ return null;
 		/// 
 		/// Called from DInputHelper.Step2.UpdateXiStates.ProcessXInputDevice
 		/// </remarks>
-		public static bool ApplyXInputVibration(UserDevice device, ushort leftMotorSpeed, ushort rightMotorSpeed)
+		public bool ApplyXInputVibration(UserDevice device, ushort leftMotorSpeed, ushort rightMotorSpeed)
 		{
 			if (device == null)
 				return false;
@@ -629,7 +629,7 @@ return null;
 		/// Uses the same change detection mechanism as ApplyXInputVibration
 		/// to prevent redundant XInput API calls and debug message flooding.
 		/// </remarks>
-		public static void StopVibration(UserDevice device)
+		public void StopVibration(UserDevice device)
 		{
 			if (device == null)
 				return;
@@ -729,7 +729,7 @@ return null;
 		/// <param name="device">The device to get/assign a slot for</param>
 		/// <returns>The slot index (0-3)</returns>
 		/// <exception cref="InputMethodException">Thrown when no slots are available</exception>
-		private static int GetOrAssignSlot(UserDevice device)
+		private int GetOrAssignSlot(UserDevice device)
 		{
 			// If device already has a slot, return it
 			if (_deviceToSlotMapping.TryGetValue(device.InstanceGuid, out int existingSlot))
@@ -758,7 +758,7 @@ return null;
 		/// </summary>
 		/// <param name="device">The device to check</param>
 		/// <returns>The slot index if assigned, -1 if not assigned</returns>
-		private static int GetAssignedSlot(UserDevice device)
+		private int GetAssignedSlot(UserDevice device)
 		{
 			return _deviceToSlotMapping.TryGetValue(device.InstanceGuid, out int slot) ? slot : -1;
 		}
@@ -845,7 +845,7 @@ return null;
 		/// </summary>
 		/// <param name="device">The device to track changes for</param>
 		/// <param name="customState">The current CustomDiState to check for changes</param>
-		private static void LogInputChanges(UserDevice device, CustomDeviceState customState)
+		private void LogInputChanges(UserDevice device, CustomDeviceState customState)
 		{
 			if (device?.InstanceGuid == null || customState == null)
 				return;
@@ -933,7 +933,7 @@ return null;
 		/// Gets information about XInput slot assignments.
 		/// </summary>
 		/// <returns>Dictionary mapping device GUIDs to slot indices</returns>
-		public static Dictionary<Guid, int> GetSlotAssignments()
+		public Dictionary<Guid, int> GetSlotAssignments()
 		{
 			return new Dictionary<Guid, int>(_deviceToSlotMapping);
 		}
@@ -944,7 +944,7 @@ return null;
 		/// </summary>
 		/// <param name="deviceGuid">The device GUID to release</param>
 		/// <returns>True if a slot was released, false if device wasn't assigned</returns>
-		public static bool ReleaseSlot(Guid deviceGuid)
+		public bool ReleaseSlot(Guid deviceGuid)
 		{
 			if (_deviceToSlotMapping.Remove(deviceGuid))
 			{
@@ -971,7 +971,7 @@ return null;
 		/// Clears all XInput slot assignments.
 		/// Also clears all vibration tracking and input change tracking.
 		/// </summary>
-		public static void ClearAllSlots()
+		public void ClearAllSlots()
 		{
 			_deviceToSlotMapping.Clear();
 			_lastVibrationValues.Clear();
@@ -1066,7 +1066,7 @@ return null;
 		/// </summary>
 		/// <param name="device">The device to check for unresponsive behavior</param>
 		/// <param name="currentPacketNumber">The current PacketNumber from XInput</param>
-		private static void DetectUnresponsiveXInputController(UserDevice device, int currentPacketNumber)
+		private void DetectUnresponsiveXInputController(UserDevice device, int currentPacketNumber)
 		{
 			var deviceGuid = device.InstanceGuid;
 			var now = Environment.TickCount;
@@ -1104,7 +1104,7 @@ return null;
 		/// <summary>
 		/// Tracks when we last warned about unresponsive controllers to prevent debug spam.
 		/// </summary>
-		private static Dictionary<Guid, int> _lastUnresponsiveWarnings = new Dictionary<Guid, int>();
+		private Dictionary<Guid, int> _lastUnresponsiveWarnings = new Dictionary<Guid, int>();
 
 		/// <summary>
 		/// Gets the number of buttons available on the controller.
