@@ -340,13 +340,21 @@ return null;
 
 		#endregion
 
-
-		#region Instance Controller Management
+		#region Constants
 
 		/// <summary>
 		/// Maximum number of XInput controllers supported.
 		/// </summary>
 		public const int MaxControllers = 4;
+
+		/// <summary>
+		/// Minimum axis change threshold (10% of axis range) to prevent debug flooding.
+		/// </summary>
+		private const int AxisChangeThreshold = 3277; // 10% of 32767
+
+		#endregion
+
+		#region Instance Controller Management
 
 		/// <summary>
 		/// Instance array of XInput controllers for the 4 possible slots.
@@ -387,11 +395,6 @@ return null;
 		/// Key: Device GUID, Value: Environment.TickCount when controller was first assigned
 		/// </summary>
 		private Dictionary<Guid, int> _controllerStartTimes = new Dictionary<Guid, int>();
-
-		/// <summary>
-		/// Minimum axis change threshold (10% of axis range) to prevent debug flooding.
-		/// </summary>
-		private const int AxisChangeThreshold = 3277; // 10% of 32767
 
 		/// <summary>
 		/// Initialize instance XInput controllers.

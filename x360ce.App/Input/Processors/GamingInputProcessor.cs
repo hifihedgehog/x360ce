@@ -20,6 +20,24 @@ namespace x360ce.App.Input.Processors
 	/// </remarks>
 	public class GamingInputProcessor : IInputProcessor
 	{
+		#region Constructor
+
+		/// <summary>
+		/// Initializes a new instance of the GamingInputProcessor.
+		/// </summary>
+		/// <remarks>
+		/// Gaming Input processor initialization includes checking Windows 10+ availability
+		/// and Gaming Input API accessibility. The processor delegates to existing
+		/// Gaming Input implementation for compatibility.
+		/// </remarks>
+		public GamingInputProcessor()
+		{
+			// Gaming Input initialization is handled through Windows.Gaming.Input API
+			// Actual initialization occurs on first use to avoid startup delays
+		}
+
+		#endregion
+
 		#region IInputProcessor
 
 		/// <summary>

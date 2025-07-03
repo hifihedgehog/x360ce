@@ -40,6 +40,37 @@ namespace x360ce.App.Input.Processors
 		// Gaming Input processing moved to DInputHelper.Step2.ReadGamingInput.cs
 		// Raw Input processing moved to DInputHelper.Step2.ReadRawInput.cs
 
+		#region Constructor
+
+		/// <summary>
+		/// Initializes a new instance of the DirectInputProcessor.
+		/// </summary>
+		/// <remarks>
+		/// DirectInput processor initialization is lightweight since it relies on
+		/// the existing DirectInput infrastructure already established in the application.
+		/// </remarks>
+		public DirectInputProcessor()
+		{
+			// DirectInput initialization is handled by the existing DInputHelper infrastructure
+			// No specific initialization required for this processor
+		}
+
+		#endregion
+
+		#region Constants
+
+		/// <summary>
+		/// Default buffer size for DirectInput buffered data.
+		/// </summary>
+		private const int DefaultBufferSize = 128;
+
+		/// <summary>
+		/// Mouse sensitivity factor for coordinate conversion.
+		/// </summary>
+		private const int MouseSensitivity = 16;
+
+		#endregion
+
 		#region DirectInput-Specific Processing
 
 		/// <summary>
