@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security;
 using x360ce.App;
-using x360ce.App.DInput;
 using x360ce.App.Issues;
 using System.Linq;
+using x360ce.App.Input.Orchestration;
 
 namespace Nefarius.ViGEm.Client
 {

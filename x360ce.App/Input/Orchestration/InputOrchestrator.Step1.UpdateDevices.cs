@@ -198,7 +198,7 @@ public partial class InputOrchestrator
 			do
 			{
 				current = devInfos.FirstOrDefault(x => x.DeviceId == current.ParentDeviceId);
-				if (current != null && DInput.VirtualDriverInstaller.ViGEmBusHardwareIds.Any(
+				if (current != null && VirtualDriverInstaller.ViGEmBusHardwareIds.Any(
 					id => string.Equals(current.HardwareIds, id, StringComparison.OrdinalIgnoreCase)))
 				{
 					return true;

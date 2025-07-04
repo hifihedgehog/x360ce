@@ -1,4 +1,5 @@
 ﻿using System.Windows.Forms;
+using x360ce.App.Input.Orchestration;
 
 namespace x360ce.App
 {
@@ -50,12 +51,12 @@ namespace x360ce.App
 			// ------------------------------------------------
 			if (ic.Parameters.ContainsKey(AdminCommand.InstallViGEmBus.ToString()))
 			{
-				DInput.VirtualDriverInstaller.InstallViGEmBus();
+				VirtualDriverInstaller.InstallViGEmBus();
 				return true;
 			}
 			if (ic.Parameters.ContainsKey(AdminCommand.UninstallViGEmBus.ToString()))
 			{
-				DInput.VirtualDriverInstaller.UninstallViGEmBus();
+				VirtualDriverInstaller.UninstallViGEmBus();
 				return true;
 			}
             //if (ic.Parameters.ContainsKey(AdminCommand.InstallHidHide.ToString()))
@@ -70,18 +71,18 @@ namespace x360ce.App
             //}
             if (ic.Parameters.ContainsKey(AdminCommand.InstallHidGuardian.ToString()))
 			{
-				DInput.VirtualDriverInstaller.InstallHidGuardian();
+				VirtualDriverInstaller.InstallHidGuardian();
 				return true;
 			}
 			if (ic.Parameters.ContainsKey(AdminCommand.UninstallHidGuardian.ToString()))
 			{
-				DInput.VirtualDriverInstaller.UninstallHidGuardian();
+				VirtualDriverInstaller.UninstallHidGuardian();
 				return true;
 			}
 			if (ic.Parameters.ContainsKey(AdminCommand.UninstallDevice.ToString()))
 			{
 				var hwid = ic.Parameters[AdminCommand.UninstallDevice.ToString()];
-				DInput.VirtualDriverInstaller.UnInstallDevice(hwid);
+				VirtualDriverInstaller.UnInstallDevice(hwid);
 				return true;
 			}
 			return false;

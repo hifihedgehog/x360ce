@@ -4,6 +4,8 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
+using x360ce.App.Input.Orchestration;
+
 
 //using System.Windows.Documents;
 using x360ce.Engine;
@@ -89,7 +91,7 @@ namespace x360ce.App.Controls
 			var ts = new System.Threading.ThreadStart(delegate ()
 			{
 				// Get Virtual Bus and HID Guardian status.
-				var bus = DInput.VirtualDriverInstaller.GetViGemBusDriverInfo();
+				var bus = VirtualDriverInstaller.GetViGemBusDriverInfo();
 				ControlsHelper.BeginInvoke(() =>
 				{
 					// Update Bus status.

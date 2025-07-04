@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using x360ce.Engine;
 
-namespace x360ce.App
+namespace x360ce.App.Input.Orchestration
 {
 	public class Recorder : IDisposable
 	{
@@ -29,7 +29,7 @@ namespace x360ce.App
 			{
 				// Make image flash: 250 ms - ON, 250 ms - OFF.
 				var milliseconds = (int)DateTime.Now.Subtract(RecordingStarted).TotalMilliseconds;
-				var show = (milliseconds / 250) % 2 == 0;
+				var show = milliseconds / 250 % 2 == 0;
 				return Recording && show;
 			}
 		}
@@ -50,7 +50,7 @@ namespace x360ce.App
 				RecordingStarted = DateTime.Now;
 				Recording = true;
 				recordingSnapshot = null;
-				Global._MainWindow.MainPanel.StatusTimerLabel.Content = (CurrentMap?.Code == MapCode.DPad)
+				Global._MainWindow.MainPanel.StatusTimerLabel.Content = CurrentMap?.Code == MapCode.DPad
 					 ? "Recording - press any D-Pad button on your direct input device. Press ESC to cancel..."
 					 : "Recording - press button, move axis or slider on your direct input device. Press ESC to cancel...";
 			}
@@ -92,7 +92,7 @@ namespace x360ce.App
 					var actions = state == null
 						  ? Array.Empty<string>()
 						  // Get actions by comparing initial snapshot with current state.
-						  : Recorder.CompareTo(recordingSnapshot, state, map.Code);
+						  : CompareTo(recordingSnapshot, state, map.Code);
 					// if recording and at least one action was recorded then...
 					if (!stop && actions.Length > 0)
 					{
@@ -245,13 +245,13 @@ namespace x360ce.App
 				var diff = newValues[i] - oldValue;
 				var prefix = "";
 				// If differ by more than 10%.
-				if (ConvertHelper.SafeAbs(diff) > (ushort.MaxValue / 10))
+				if (ConvertHelper.SafeAbs(diff) > ushort.MaxValue / 10)
 				{
 					// If value is negative then add "I" prefix.
 					if (diff < 0)
 						prefix += "I";
 					// if starting point is located in the middle then...
-					if ((oldValue > (ushort.MaxValue / 4)) && oldValue < (ushort.MaxValue * 3 / 4))
+					if (oldValue > ushort.MaxValue / 4 && oldValue < ushort.MaxValue * 3 / 4)
 					{
 						// Note: Mapping wheel, which is centered in the middle, to the humb will use full axis.
 						var thumb =

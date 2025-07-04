@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace x360ce.App
+namespace x360ce.App.Input.Orchestration
 {
 	public enum VirtualError
 	{

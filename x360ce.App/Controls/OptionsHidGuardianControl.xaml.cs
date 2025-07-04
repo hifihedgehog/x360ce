@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
+using x360ce.App.Input.Orchestration;
 
 namespace x360ce.App.Controls
 {
@@ -87,8 +88,8 @@ namespace x360ce.App.Controls
 			var ts = new System.Threading.ThreadStart(delegate ()
 			{
 				// Get Virtual Bus, HidGuardian, and HidHide status.
-				var hidGuardian = DInput.VirtualDriverInstaller.GetHidGuardianDriverInfo();
-                var hidHide = DInput.VirtualDriverInstaller.GetHideDriverInfo();
+				var hidGuardian = VirtualDriverInstaller.GetHidGuardianDriverInfo();
+                var hidHide = VirtualDriverInstaller.GetHideDriverInfo();
                 ControlsHelper.BeginInvoke(() =>
 				{
 					// Update HidGuardian status.

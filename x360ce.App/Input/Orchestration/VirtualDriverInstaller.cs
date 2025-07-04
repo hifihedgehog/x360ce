@@ -7,7 +7,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 
-namespace x360ce.App.DInput
+namespace x360ce.App.Input.Orchestration
 {
 	public class VirtualDriverInstaller
 	{
@@ -206,7 +206,7 @@ namespace x360ce.App.DInput
 			// Look for the desired file.
 			foreach (ZipStorer.ZipFileEntry entry in dir)
 			{
-				var fileName = System.IO.Path.Combine(target, entry.FilenameInZip.Replace("/", "\\"));
+				var fileName = Path.Combine(target, entry.FilenameInZip.Replace("/", "\\"));
 				zip.ExtractFile(entry, fileName);
 			}
 			zip.Close();

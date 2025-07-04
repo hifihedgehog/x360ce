@@ -1,6 +1,7 @@
 ﻿using JocysCom.ClassLibrary.Controls;
 using JocysCom.ClassLibrary.Controls.IssuesControl;
 using System.Linq;
+using x360ce.App.Input.Orchestration;
 using x360ce.Engine;
 
 namespace x360ce.App.Issues
@@ -24,7 +25,7 @@ namespace x360ce.App.Issues
 				SetSeverity(IssueSeverity.None);
 				return;
 			}
-			var hid = DInput.VirtualDriverInstaller.GetHidGuardianDriverInfo();
+			var hid = VirtualDriverInstaller.GetHidGuardianDriverInfo();
 			if (hid.DriverVersion == 0)
 			{
 				SetSeverity(IssueSeverity.Moderate, 0, "Optional: Install HID Guardian if you want to hide DirectInput controllers.");
