@@ -124,9 +124,13 @@
                     <ListBox
 						Margin="3,0,3,3"
                         Name="GameScanLocationsListBox"
-                        Grid.Row="1"
-                        MinHeight="330">
-                        <ListBox.OpacityMask>
+                        Grid.Row="1">
+                        <ListBox.Resources>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource ListBoxItem_Default}">
+                                <Setter Property="Padding" Value="3"/>
+                            </Style> 
+                        </ListBox.Resources>
+                        <!--<ListBox.OpacityMask>
                             <VisualBrush>
                                 <VisualBrush.Visual>
                                     <Border
@@ -136,7 +140,7 @@
                                         CornerRadius="0,0,5,5" />
                                 </VisualBrush.Visual>
                             </VisualBrush>
-                        </ListBox.OpacityMask>
+                        </ListBox.OpacityMask>-->
                     </ListBox>
                 </Grid>
             </TabItem>
