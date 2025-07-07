@@ -50,10 +50,8 @@
 					Content="Errors Folder" />
 				<TextBox
 					x:Name="ErrorsFolderTextBox"
-					Grid.Row="0"
 					Grid.Column="1"
 					VerticalAlignment="Center"
-					Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
 					IsReadOnly="True" />
 				<Button
 					x:Name="OpenErrorsFolder"
@@ -80,7 +78,7 @@
 					Grid.Row="2"
 					Grid.Column="0"
 					VerticalAlignment="Center"
-					Content="Email From (Optional)" />
+					Content="Email From · Optional" />
 				<TextBox
 					x:Name="FromEmailTextBox"
 					Grid.Row="2"
@@ -97,7 +95,6 @@
 					Grid.Row="3"
 					Grid.Column="1"
 					VerticalAlignment="Center"
-					Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
 					IsReadOnly="True"
 					Text="support@x360ce.com" />
 				<Button
