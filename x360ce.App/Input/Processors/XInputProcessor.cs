@@ -686,6 +686,75 @@ return null;
 		}
 
 		/// <summary>
+		/// Gets human-readable capability information for XInput devices.
+		/// </summary>
+		/// <param name="device">The device to get capability information for</param>
+		/// <returns>String containing detailed XInput capability information</returns>
+		public string GetCapabilitiesInfo(UserDevice device)
+		{
+			if (device == null)
+				return "Device is null";
+
+			var info = new System.Text.StringBuilder();
+			
+			try
+			{
+				info.AppendLine("=== XInput Capabilities ===");
+				info.AppendLine($"Device: {device.DisplayName}");
+				info.AppendLine($"Input Method: XInput (Microsoft XInput API)");
+				info.AppendLine();
+				
+				info.AppendLine("Standard Xbox Controller Layout:");
+				info.AppendLine($"  Buttons: {device.CapButtonCount} (A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad×4, Guide)");
+				info.AppendLine($"  Axes: {device.CapAxeCount} (Left Stick X/Y, Right Stick X/Y, Left/Right Triggers)");
+				info.AppendLine($"  POVs: {device.CapPovCount} (DPad mapped to buttons, not POV)");
+				info.AppendLine();
+				
+				info.AppendLine("XInput Features:");
+				info.AppendLine("  ✅ Background access (major advantage over DirectInput)");
+				info.AppendLine("  ✅ Separate trigger axes (LT/RT independent)");
+				info.AppendLine("  ✅ Guide button access");
+				info.AppendLine("  ✅ Reliable vibration support");
+				info.AppendLine("  ✅ No cooperative level conflicts");
+				info.AppendLine();
+				
+				info.AppendLine("XInput Limitations:");
+				info.AppendLine("  ⚠️ Maximum 4 controllers only");
+				info.AppendLine("  ⚠️ Xbox controllers only (no generic gamepad support)");
+				info.AppendLine("  ⚠️ No Xbox One trigger rumble activation");
+				info.AppendLine();
+				
+				// Add slot information
+				var slotIndex = GetAssignedSlot(device);
+				if (slotIndex >= 0)
+				{
+					info.AppendLine($"XInput Slot: {slotIndex + 1}/4 (assigned)");
+				}
+				else
+				{
+					var assignedCount = GetAssignedControllerCount();
+					info.AppendLine($"XInput Slot: Not assigned ({assignedCount}/4 slots in use)");
+				}
+				
+				if (device.DeviceObjects != null)
+				{
+					info.AppendLine($"Device Objects: {device.DeviceObjects.Length} total");
+				}
+				
+				if (device.DeviceEffects != null)
+				{
+					info.AppendLine($"Force Feedback Effects: {device.DeviceEffects.Length}");
+				}
+			}
+			catch (Exception ex)
+			{
+				info.AppendLine($"Error getting capability info: {ex.Message}");
+			}
+			
+			return info.ToString();
+		}
+
+		/// <summary>
 		/// Validates if the device can be used with XInput.
 		/// </summary>
 		/// <param name="device">The device to validate</param>
@@ -987,64 +1056,110 @@ return null;
 		}
 
 		/// <summary>
+		/// Loads device capabilities specific to XInput Xbox controllers.
+		/// Populates standard Xbox controller capabilities for UI drag-and-drop functionality.
+		/// </summary>
+		/// <param name="device">The device to load capabilities for</param>
+		/// <remarks>
+		/// XInput capabilities are standardized for Xbox controllers:
+		/// • 15 Buttons: A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad (4 directions), Guide
+		/// • 6 Axes: Left Stick X/Y, Right Stick X/Y, Left/Right Triggers
+		/// • 0 POVs: DPad mapped to buttons, not POV
+		/// • Force Feedback: Standard XInput vibration support
+		///
+		/// This method ensures UI shows accurate capabilities for Xbox controllers
+		/// regardless of DirectInput device availability.
+		/// </remarks>
+		public void LoadCapabilities(UserDevice device)
+		{
+			if (device == null)
+				return;
+
+			try
+			{
+				// Set standard XInput capability counts first
+				device.CapButtonCount = 15;  // A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad (4), Guide
+				device.CapAxeCount = 6;      // Left Stick X/Y, Right Stick X/Y, Left/Right Triggers
+				device.CapPovCount = 0;      // XInput doesn't use POVs (DPad is mapped to buttons)
+
+				// Create Xbox controller device objects that match what DirectInput would provide
+				if (device.DeviceObjects == null)
+				{
+					var deviceObjects = new List<DeviceObjectItem>();
+
+					// Add button objects (A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad, Guide)
+					for (int i = 0; i < 15; i++)
+					{
+						deviceObjects.Add(new DeviceObjectItem(
+							i * 4, // offset
+							ObjectGuid.Button, // guid
+							ObjectAspect.Position, // aspect
+							DeviceObjectTypeFlags.PushButton, // type
+							i, // instance
+							GetXboxButtonName(i) // name
+						));
+					}
+
+					// Add axis objects (Left Stick X/Y, Right Stick X/Y, Left Trigger, Right Trigger)
+					string[] axisNames = { "Left Stick X", "Left Stick Y", "Right Stick X", "Right Stick Y", "Left Trigger", "Right Trigger" };
+					for (int i = 0; i < 6; i++)
+					{
+						deviceObjects.Add(new DeviceObjectItem(
+							64 + i * 4, // offset
+							ObjectGuid.XAxis, // guid (simplified)
+							ObjectAspect.Position, // aspect
+							DeviceObjectTypeFlags.AbsoluteAxis, // type
+							i, // instance
+							axisNames[i] // name
+						));
+					}
+
+					device.DeviceObjects = deviceObjects.ToArray();
+				}
+
+				// Set axis mask (which axes are available) - required for UI
+				if (device.DiAxeMask == 0)
+				{
+					// XInput Xbox controllers have 6 axes: Left Stick X/Y, Right Stick X/Y, Left/Right Triggers
+					device.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // First 6 axes
+				}
+
+				// Set device effects (required for force feedback UI)
+				if (device.DeviceEffects == null)
+				{
+					// XInput supports basic vibration effects
+					device.DeviceEffects = new DeviceEffectItem[]
+					{
+						new DeviceEffectItem { Name = "XInput Vibration" }
+					};
+				}
+
+				Debug.WriteLine($"XInput: Loaded capabilities for {device.DisplayName} - Buttons: {device.CapButtonCount}, Axes: {device.CapAxeCount}, POVs: {device.CapPovCount}");
+			}
+			catch (Exception ex)
+			{
+				// Set safe defaults if capability loading fails
+				device.CapButtonCount = 15;
+				device.CapAxeCount = 6;
+				device.CapPovCount = 0;
+				device.DeviceObjects = device.DeviceObjects ?? new DeviceObjectItem[0];
+				device.DeviceEffects = device.DeviceEffects ?? new DeviceEffectItem[0];
+
+				Debug.WriteLine($"XInput: Capability loading failed for {device.DisplayName}, using defaults: {ex.Message}");
+			}
+		}
+
+		/// <summary>
 		/// Ensures device has the properties required for the UI to display mapping controls.
 		/// This populates the same properties that DirectInput sets so the PAD UI works.
 		/// </summary>
 		/// <param name="device">The device to ensure properties for</param>
 		private static void EnsureDevicePropertiesForUI(UserDevice device)
 		{
-			// Set device objects if not already set (required for UI to show button/axis mapping)
-			if (device.DeviceObjects == null)
-			{
-				// Create Xbox controller device objects that match what DirectInput would provide
-				var deviceObjects = new List<DeviceObjectItem>();
-
-				// Add button objects (A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad, Guide)
-				for (int i = 0; i < 15; i++)
-				{
-					deviceObjects.Add(new DeviceObjectItem(
-						i * 4, // offset
-						ObjectGuid.Button, // guid
-						ObjectAspect.Position, // aspect
-						DeviceObjectTypeFlags.PushButton, // type
-						i, // instance
-						GetXboxButtonName(i) // name
-					));
-				}
-
-				// Add axis objects (Left Stick X/Y, Right Stick X/Y, Left Trigger, Right Trigger)
-				string[] axisNames = { "Left Stick X", "Left Stick Y", "Right Stick X", "Right Stick Y", "Left Trigger", "Right Trigger" };
-				for (int i = 0; i < 6; i++)
-				{
-					deviceObjects.Add(new DeviceObjectItem(
-						64 + i * 4, // offset
-						ObjectGuid.XAxis, // guid (simplified)
-						ObjectAspect.Position, // aspect
-						DeviceObjectTypeFlags.AbsoluteAxis, // type
-						i, // instance
-						axisNames[i] // name
-					));
-				}
-
-				device.DeviceObjects = deviceObjects.ToArray();
-			}
-
-			// Set axis mask (which axes are available) - required for UI
-			if (device.DiAxeMask == 0)
-			{
-				// XInput Xbox controllers have 6 axes: Left Stick X/Y, Right Stick X/Y, Left/Right Triggers
-				device.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // First 6 axes
-			}
-
-			// Set device effects (required for force feedback UI)
-			if (device.DeviceEffects == null)
-			{
-				// XInput supports basic vibration effects
-				device.DeviceEffects = new DeviceEffectItem[]
-				{
-					new DeviceEffectItem { Name = "XInput Vibration" }
-				};
-			}
+			// Note: This method now delegates to LoadCapabilities for consistency
+			// Create a processor instance to call the non-static LoadCapabilities method
+			var processor = new XInputProcessor();
+			processor.LoadCapabilities(device);
 		}
 
 		/// <summary>

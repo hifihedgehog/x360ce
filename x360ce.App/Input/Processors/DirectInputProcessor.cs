@@ -532,6 +532,119 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
+		/// Gets human-readable capability information for DirectInput devices.
+		/// </summary>
+		/// <param name="device">The device to get capability information for</param>
+		/// <returns>String containing detailed DirectInput capability information</returns>
+		public string GetCapabilitiesInfo(UserDevice device)
+		{
+			if (device == null)
+				return "Device is null";
+
+			var info = new System.Text.StringBuilder();
+			
+			try
+			{
+				info.AppendLine("=== DirectInput Capabilities ===");
+				info.AppendLine($"Device: {device.DisplayName}");
+				info.AppendLine($"Input Method: DirectInput (Microsoft DirectInput API)");
+				info.AppendLine();
+				
+				if (device.DirectInputDevice != null)
+				{
+					var caps = device.DirectInputDevice.Capabilities;
+					var deviceInfo = device.DirectInputDevice.Information;
+					
+					info.AppendLine("Hardware Capabilities (from DirectInput API):");
+					info.AppendLine($"  Buttons: {caps.ButtonCount}");
+					info.AppendLine($"  Axes: {caps.AxeCount}");
+					info.AppendLine($"  POVs: {caps.PovCount}");
+					info.AppendLine($"  Device Type: {deviceInfo.Type}");
+					info.AppendLine($"  Subtype: {caps.Subtype}");
+					info.AppendLine($"  Force Feedback: {(caps.Flags.HasFlag(DeviceFlags.ForceFeedback) ? "✅ Supported" : "❌ Not supported")}");
+					info.AppendLine();
+				}
+				else
+				{
+					info.AppendLine("Estimated Capabilities (DirectInput device not available):");
+					info.AppendLine($"  Buttons: {device.CapButtonCount}");
+					info.AppendLine($"  Axes: {device.CapAxeCount}");
+					info.AppendLine($"  POVs: {device.CapPovCount}");
+					info.AppendLine();
+				}
+				
+				info.AppendLine("DirectInput Features:");
+				info.AppendLine("  ✅ Universal compatibility (all controller types)");
+				info.AppendLine("  ✅ Unlimited device count");
+				info.AppendLine("  ✅ Comprehensive device information");
+				info.AppendLine("  ✅ Mature, stable API");
+				info.AppendLine("  ✅ Generic controllers work perfectly");
+				info.AppendLine();
+				
+				info.AppendLine("DirectInput Limitations:");
+				info.AppendLine("  ⚠️ Xbox controllers: background access issues on Windows 10+");
+				info.AppendLine("  ⚠️ Xbox controllers: triggers combined on same axis");
+				info.AppendLine("  ⚠️ No Guide button access");
+				info.AppendLine("  ❌ No rumble for Xbox controllers (use XInput instead)");
+				info.AppendLine("  ⚠️ Microsoft no longer recommends DirectInput (deprecated)");
+				info.AppendLine("  ❌ Windows Store Apps cannot use DirectInput");
+				info.AppendLine();
+				
+				// Add device-specific warnings
+				if (device.IsXboxCompatible)
+				{
+					var osVersion = Environment.OSVersion.Version;
+					var isWindows10Plus = osVersion.Major >= 10;
+					
+					if (isWindows10Plus)
+					{
+						info.AppendLine("⚠️ CRITICAL WARNING for Xbox Controller:");
+						info.AppendLine("  Input will be LOST when window loses focus on Windows 10+");
+						info.AppendLine("  Strongly consider using XInput method instead");
+					}
+					else
+					{
+						info.AppendLine("⚠️ Xbox Controller Limitations:");
+						info.AppendLine("  Consider XInput method for full features");
+					}
+					info.AppendLine();
+				}
+				
+				// Add detailed device object information if available
+				if (device.DeviceObjects != null && device.DeviceObjects.Length > 0)
+				{
+					info.AppendLine($"Device Objects: {device.DeviceObjects.Length} total");
+					info.AppendLine($"  Buttons: {device.DeviceObjects.Count(o => o.Flags.HasFlag(DeviceObjectTypeFlags.Button) || o.Flags.HasFlag(DeviceObjectTypeFlags.PushButton))}");
+					info.AppendLine($"  Axes: {device.DeviceObjects.Count(o => o.Flags.HasFlag(DeviceObjectTypeFlags.Axis) || o.Flags.HasFlag(DeviceObjectTypeFlags.AbsoluteAxis) || o.Flags.HasFlag(DeviceObjectTypeFlags.RelativeAxis))}");
+					info.AppendLine($"  POVs: {device.DeviceObjects.Count(o => o.Flags.HasFlag(DeviceObjectTypeFlags.PointOfViewController))}");
+				}
+				
+				if (device.DeviceEffects != null)
+				{
+					info.AppendLine($"Force Feedback Effects: {device.DeviceEffects.Length}");
+				}
+				
+				// Add axis mask information
+				if (device.DiAxeMask != 0)
+				{
+					int axisCount = 0;
+					for (int i = 0; i < 32; i++)
+					{
+						if ((device.DiAxeMask & (1 << i)) != 0)
+							axisCount++;
+					}
+					info.AppendLine($"Axis Mask: 0x{device.DiAxeMask:X8} ({axisCount} axes detected)");
+				}
+			}
+			catch (Exception ex)
+			{
+				info.AppendLine($"Error getting capability info: {ex.Message}");
+			}
+			
+			return info.ToString();
+		}
+
+		/// <summary>
 		/// Loads all DirectInput capabilities for the specified device.
 		/// Consolidates capability detection logic previously scattered across multiple classes.
 		/// </summary>

@@ -232,6 +232,105 @@ namespace x360ce.App.Input.Processors
 			return info.ToString();
 		}
 
+		/// <summary>
+		/// Loads device capabilities specific to Gaming Input API.
+		/// Populates standard Gaming Input gamepad capabilities for UI drag-and-drop functionality.
+		/// </summary>
+		/// <param name="device">The device to load capabilities for</param>
+		/// <remarks>
+		/// Gaming Input capabilities are standardized for modern gamepads:
+		/// • 16 Buttons: Standard gamepad button set (supports more than XInput's 15)
+		/// • 6 Axes: Left Stick X/Y, Right Stick X/Y, Left/Right Triggers
+		/// • 1 POV: D-Pad as POV (also mapped to buttons for compatibility)
+		/// • Force Feedback: Advanced vibration including trigger rumble (Xbox One+)
+		///
+		/// This method ensures UI shows accurate capabilities for Gaming Input devices
+		/// and provides proper drag-and-drop interface functionality.
+		/// </remarks>
+		public void LoadCapabilities(UserDevice device)
+		{
+			if (device == null)
+				return;
+
+			try
+			{
+				// Set standard Gaming Input capability counts first
+				device.CapButtonCount = 16;  // Gaming Input supports up to 16 buttons
+				device.CapAxeCount = 6;      // 6 axes: LX, LY, RX, RY, LT, RT
+				device.CapPovCount = 1;      // 1 D-Pad POV
+
+				// Create minimal device objects to satisfy UI requirements
+				if (device.DeviceObjects == null)
+				{
+					var deviceObjects = new List<DeviceObjectItem>();
+
+					// Add buttons (UI needs these for button mapping)
+					for (int i = 0; i < 16; i++)
+					{
+						deviceObjects.Add(new DeviceObjectItem
+						{
+							Type = ObjectGuid.Button,
+							Flags = DeviceObjectTypeFlags.Button,
+							Instance = i,
+							Name = $"Button {i}",
+							Offset = i
+						});
+					}
+
+					// Add axes (UI needs these for axis mapping)
+					var axisGuids = new[] { ObjectGuid.XAxis, ObjectGuid.YAxis, ObjectGuid.ZAxis, ObjectGuid.RxAxis, ObjectGuid.RyAxis, ObjectGuid.RzAxis };
+					var axisNames = new[] { "X Axis", "Y Axis", "Z Axis", "Rx Axis", "Ry Axis", "Rz Axis" };
+					for (int i = 0; i < axisNames.Length; i++)
+					{
+						deviceObjects.Add(new DeviceObjectItem
+						{
+							Type = axisGuids[i],
+							Flags = DeviceObjectTypeFlags.Axis,
+							Instance = i,
+							Name = axisNames[i],
+							Offset = i + 100 // Offset buttons
+						});
+					}
+
+					device.DeviceObjects = deviceObjects.ToArray();
+				}
+
+				// Set axis and slider masks (which axes are available) - required for UI
+				if (device.DiAxeMask == 0)
+				{
+					device.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // All 6 axes
+				}
+				if (device.DiSliderMask == 0)
+				{
+					device.DiSliderMask = 0; // Gaming Input doesn't typically use sliders
+				}
+
+				// Set device effects (required for force feedback UI)
+				if (device.DeviceEffects == null)
+				{
+					// Gaming Input supports advanced vibration effects including trigger rumble
+					device.DeviceEffects = new DeviceEffectItem[]
+					{
+						new DeviceEffectItem { Name = "Gaming Input Vibration" },
+						new DeviceEffectItem { Name = "Gaming Input Trigger Rumble" }
+					};
+				}
+
+				System.Diagnostics.Debug.WriteLine($"Gaming Input: Loaded capabilities for {device.DisplayName} - Buttons: {device.CapButtonCount}, Axes: {device.CapAxeCount}, POVs: {device.CapPovCount}");
+			}
+			catch (Exception ex)
+			{
+				// Set safe defaults if capability loading fails
+				device.CapButtonCount = 16;
+				device.CapAxeCount = 6;
+				device.CapPovCount = 1;
+				device.DeviceObjects = device.DeviceObjects ?? new DeviceObjectItem[0];
+				device.DeviceEffects = device.DeviceEffects ?? new DeviceEffectItem[0];
+
+				System.Diagnostics.Debug.WriteLine($"Gaming Input: Capability loading failed for {device.DisplayName}, using defaults: {ex.Message}");
+			}
+		}
+
 		#region Gaming Input State Processing (Windows.Gaming.Input)
 
 		/// <summary>
@@ -273,52 +372,8 @@ namespace x360ce.App.Input.Processors
 				var gamepad = gamepads[gamepadIndex];
 				var reading = gamepad.GetCurrentReading();
 
-				// Initialize device objects and capabilities if needed (CRITICAL for UI drag/drop functionality)
-				if (device.DeviceObjects == null)
-				{
-					// Create minimal device objects to satisfy UI requirements
-					// The UI needs device objects to show drag/drop interface
-					var deviceObjects = new List<DeviceObjectItem>();
-
-					// Add buttons (UI needs these for button mapping)
-					for (int i = 0; i < 16; i++)
-					{
-						deviceObjects.Add(new DeviceObjectItem
-						{
-							Type = ObjectGuid.Button,
-							Flags = DeviceObjectTypeFlags.Button,
-							Instance = i,
-							Name = $"Button {i}",
-							Offset = i
-						});
-					}
-
-					// Add axes (UI needs these for axis mapping)
-					var axisGuids = new[] { ObjectGuid.XAxis, ObjectGuid.YAxis, ObjectGuid.ZAxis, ObjectGuid.RxAxis, ObjectGuid.RyAxis, ObjectGuid.RzAxis };
-					var axisNames = new[] { "X Axis", "Y Axis", "Z Axis", "Rx Axis", "Ry Axis", "Rz Axis" };
-					for (int i = 0; i < axisNames.Length; i++)
-					{
-						deviceObjects.Add(new DeviceObjectItem
-						{
-							Type = axisGuids[i],
-							Flags = DeviceObjectTypeFlags.Axis,
-							Instance = i,
-							Name = axisNames[i],
-							Offset = i + 100 // Offset buttons
-						});
-					}
-
-					device.DeviceObjects = deviceObjects.ToArray();
-					device.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // All 6 axes
-					device.DiSliderMask = 0;
-
-					// Set capability counts (CRITICAL for UI drag/drop interface)
-					// Gaming Input provides standard gamepad capabilities
-					device.CapButtonCount = 16;  // Gaming Input supports up to 16 buttons
-					device.CapAxeCount = 6;      // 6 axes: LX, LY, RX, RY, LT, RT
-					device.CapPovCount = 1;      // 1 D-Pad POV
-				}
-				device.DeviceEffects = device.DeviceEffects ?? new DeviceEffectItem[0];
+				// Load capabilities if needed (CRITICAL for UI drag/drop functionality)
+				LoadCapabilities(device);
 
 				// Create and populate CustomDeviceState
 				var newState = new CustomDeviceState();
@@ -434,6 +489,82 @@ namespace x360ce.App.Input.Processors
 			if (up && left) return 31500;             // North-West
 
 			return -1; // Centered/No direction
+		}
+
+		/// <summary>
+		/// Gets human-readable capability information for Gaming Input devices.
+		/// </summary>
+		/// <param name="device">The device to get capability information for</param>
+		/// <returns>String containing detailed Gaming Input capability information</returns>
+		public string GetCapabilitiesInfo(UserDevice device)
+		{
+			if (device == null)
+				return "Device is null";
+
+			var info = new System.Text.StringBuilder();
+			
+			try
+			{
+				info.AppendLine("=== Gaming Input Capabilities ===");
+				info.AppendLine($"Device: {device.DisplayName}");
+				info.AppendLine($"Input Method: Gaming Input (Windows.Gaming.Input API)");
+				info.AppendLine();
+				
+				info.AppendLine("Gaming Input Layout:");
+				info.AppendLine($"  Buttons: {device.CapButtonCount} (supports more buttons than XInput)");
+				info.AppendLine($"  Axes: {device.CapAxeCount} (Left Stick X/Y, Right Stick X/Y, Left/Right Triggers)");
+				info.AppendLine($"  POVs: {device.CapPovCount} (D-Pad as POV + buttons for compatibility)");
+				info.AppendLine();
+				
+				info.AppendLine("Gaming Input Features:");
+				info.AppendLine("  ✅ Windows 10+ modern API");
+				info.AppendLine("  ✅ Advanced vibration (including trigger rumble on Xbox One+)");
+				info.AppendLine("  ✅ Separate trigger axes");
+				info.AppendLine("  ✅ Enhanced controller support");
+				info.AppendLine("  ✅ UWP and Win32 compatibility");
+				info.AppendLine();
+				
+				info.AppendLine("Gaming Input Limitations:");
+				info.AppendLine("  ⚠️ Windows 10+ required");
+				info.AppendLine("  ⚠️ No background access (UWP restriction)");
+				info.AppendLine("  ⚠️ No Guide button access");
+				info.AppendLine();
+				
+				// Add system compatibility info
+				var osVersion = Environment.OSVersion.Version;
+				var isWindows10Plus = osVersion.Major >= 10;
+				info.AppendLine($"System Compatibility: Windows {osVersion} ({(isWindows10Plus ? "✅ Compatible" : "❌ Requires Windows 10+")})");
+				info.AppendLine($"API Available: {IsAvailable()}");
+				
+				if (IsAvailable())
+				{
+					try
+					{
+						var gamepads = Windows.Gaming.Input.Gamepad.Gamepads;
+						info.AppendLine($"Connected Gamepads: {gamepads.Count}");
+					}
+					catch (Exception ex)
+					{
+						info.AppendLine($"Error enumerating gamepads: {ex.Message}");
+					}
+				}
+				
+				if (device.DeviceObjects != null)
+				{
+					info.AppendLine($"Device Objects: {device.DeviceObjects.Length} total");
+				}
+				
+				if (device.DeviceEffects != null)
+				{
+					info.AppendLine($"Force Feedback Effects: {device.DeviceEffects.Length}");
+				}
+			}
+			catch (Exception ex)
+			{
+				info.AppendLine($"Error getting capability info: {ex.Message}");
+			}
+			
+			return info.ToString();
 		}
 
 		/// <summary>

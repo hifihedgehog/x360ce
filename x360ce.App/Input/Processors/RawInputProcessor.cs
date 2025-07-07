@@ -196,6 +196,83 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
+		/// Gets human-readable capability information for Raw Input devices.
+		/// </summary>
+		/// <param name="device">The device to get capability information for</param>
+		/// <returns>String containing detailed Raw Input capability information</returns>
+		public string GetCapabilitiesInfo(UserDevice device)
+		{
+			if (device == null)
+				return "Device is null";
+
+			var info = new System.Text.StringBuilder();
+			
+			try
+			{
+				info.AppendLine("=== Raw Input Capabilities ===");
+				info.AppendLine($"Device: {device.DisplayName}");
+				info.AppendLine($"Input Method: Raw Input (Windows Raw Input API)");
+				info.AppendLine();
+				
+				info.AppendLine("Raw Input Layout (HID-based):");
+				info.AppendLine($"  Buttons: {device.CapButtonCount} (varies by HID descriptor)");
+				info.AppendLine($"  Axes: {device.CapAxeCount} (X, Y, Z, RZ, triggers - device dependent)");
+				info.AppendLine($"  POVs: {device.CapPovCount} (D-Pad when available via HID)");
+				info.AppendLine();
+				
+				info.AppendLine("Raw Input Features:");
+				info.AppendLine("  ✅ Background access (major advantage)");
+				info.AppendLine("  ✅ Unlimited number of controllers");
+				info.AppendLine("  ✅ Works with any HID-compliant device");
+				info.AppendLine("  ✅ Direct hardware access");
+				info.AppendLine("  ✅ True raw input implementation");
+				info.AppendLine("  ✅ Available on Windows XP+");
+				info.AppendLine();
+				
+				info.AppendLine("Raw Input Limitations:");
+				info.AppendLine("  ⚠️ Triggers combined on same axis (HID limitation)");
+				info.AppendLine("  ⚠️ No Guide button access (excluded from HID reports)");
+				info.AppendLine("  ❌ NO rumble support (input-only API)");
+				info.AppendLine("  ⚠️ Requires manual HID report parsing");
+				info.AppendLine("  ⚠️ Complex device-specific implementation");
+				info.AppendLine();
+				
+				// Add system info
+				var osVersion = Environment.OSVersion.Version;
+				var isWindowsXPPlus = osVersion.Major >= 5;
+				info.AppendLine($"System Compatibility: Windows {osVersion} ({(isWindowsXPPlus ? "✅ Compatible" : "❌ Requires Windows XP+")})");
+				info.AppendLine($"API Available: {IsAvailable()}");
+				info.AppendLine($"Initialization Status: {_isInitialized}");
+				info.AppendLine($"Tracked Devices: {_trackedDevices.Count}");
+				
+				// Add device-specific info if available
+				if (device.IsXboxCompatible)
+				{
+					info.AppendLine();
+					info.AppendLine("Xbox Controller via Raw Input:");
+					info.AppendLine("  ⚠️ Consider XInput for full features including rumble");
+					info.AppendLine("  ✅ Background access advantage over DirectInput");
+				}
+				
+				if (device.DeviceObjects != null)
+				{
+					info.AppendLine($"Device Objects: {device.DeviceObjects.Length} total");
+				}
+				
+				if (device.DeviceEffects != null)
+				{
+					info.AppendLine($"Force Feedback Effects: {device.DeviceEffects.Length} (Raw Input doesn't support output)");
+				}
+			}
+			catch (Exception ex)
+			{
+				info.AppendLine($"Error getting capability info: {ex.Message}");
+			}
+			
+			return info.ToString();
+		}
+
+		/// <summary>
 		/// Validates if the device can use Raw Input.
 		/// </summary>
 		/// <param name="device">The device to validate</param>
@@ -679,61 +756,107 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
+		/// Loads device capabilities specific to Raw Input HID devices.
+		/// Populates HID-based capabilities for UI drag-and-drop functionality.
+		/// </summary>
+		/// <param name="device">The device to load capabilities for</param>
+		/// <remarks>
+		/// Raw Input capabilities are based on HID descriptors when available:
+		/// • 16 Buttons: Common gamepad button count (can vary by device)
+		/// • 6 Axes: X, Y, Z, RZ, Left Trigger, Right Trigger (typical layout)
+		/// • 1 POV: D-Pad as POV (when available via HID)
+		/// • No Force Feedback: Raw Input is input-only API
+		///
+		/// This method ensures UI shows reasonable capabilities for Raw Input devices
+		/// even though actual HID parsing may reveal different button/axis counts.
+		/// </remarks>
+		public void LoadCapabilities(UserDevice device)
+		{
+			if (device == null)
+				return;
+
+			try
+			{
+				// Set Raw Input capability counts based on common HID controller patterns
+				device.CapButtonCount = 16;  // Common gamepad button count
+				device.CapAxeCount = 6;      // X, Y, Z, RZ, LT, RT (typical for gamepads)
+				device.CapPovCount = 1;      // Most gamepads have 1 POV (D-Pad)
+
+				// Create device objects that match what DirectInput would provide for controllers
+				if (device.DeviceObjects == null)
+				{
+					var deviceObjects = new List<DeviceObjectItem>();
+
+					// Add button objects - assume common controller layout
+					for (int i = 0; i < 16; i++)
+					{
+						deviceObjects.Add(new DeviceObjectItem(
+							i * 4, // offset
+							ObjectGuid.Button, // guid
+							ObjectAspect.Position, // aspect
+							DeviceObjectTypeFlags.PushButton, // type
+							i, // instance
+							$"Button {i}" // name
+						));
+					}
+
+					// Add axis objects - assume common controller axes
+					string[] axisNames = { "X Axis", "Y Axis", "Z Axis", "RZ Axis", "Left Trigger", "Right Trigger" };
+					for (int i = 0; i < axisNames.Length; i++)
+					{
+						deviceObjects.Add(new DeviceObjectItem(
+							64 + (i * 4), // offset
+							ObjectGuid.XAxis, // guid (simplified)
+							ObjectAspect.Position, // aspect
+							DeviceObjectTypeFlags.AbsoluteAxis, // type
+							i, // instance
+							axisNames[i] // name
+						));
+					}
+
+					device.DeviceObjects = deviceObjects.ToArray();
+				}
+
+				// Set axis mask (which axes are available) - required for UI
+				if (device.DiAxeMask == 0)
+				{
+					// Assume 6 axes are available for most controllers
+					device.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // First 6 axes
+				}
+
+				// Set device effects (required for force feedback UI, even though Raw Input doesn't support it)
+				if (device.DeviceEffects == null)
+				{
+					// Raw Input doesn't support effects, but set empty array for UI compatibility
+					device.DeviceEffects = new DeviceEffectItem[0];
+				}
+
+				Debug.WriteLine($"Raw Input: Loaded capabilities for {device.DisplayName} - Buttons: {device.CapButtonCount}, Axes: {device.CapAxeCount}, POVs: {device.CapPovCount}");
+			}
+			catch (Exception ex)
+			{
+				// Set safe defaults if capability loading fails
+				device.CapButtonCount = 16;
+				device.CapAxeCount = 6;
+				device.CapPovCount = 1;
+				device.DeviceObjects = device.DeviceObjects ?? new DeviceObjectItem[0];
+				device.DeviceEffects = device.DeviceEffects ?? new DeviceEffectItem[0];
+
+				Debug.WriteLine($"Raw Input: Capability loading failed for {device.DisplayName}, using defaults: {ex.Message}");
+			}
+		}
+
+		/// <summary>
 		/// Ensures device has the properties required for the UI to display mapping controls.
 		/// This populates the same properties that DirectInput sets so the PAD UI works.
 		/// </summary>
 		/// <param name="device">The device to ensure properties for</param>
 		private static void EnsureDevicePropertiesForUI(UserDevice device)
 		{
-			// Set device objects if not already set (required for UI to show button/axis mapping)
-			if (device.DeviceObjects == null)
-			{
-				// Create device objects that match what DirectInput would provide for controllers
-				var deviceObjects = new List<DeviceObjectItem>();
-
-				// Add button objects - assume common controller layout
-				for (int i = 0; i < 16; i++)
-				{
-					deviceObjects.Add(new DeviceObjectItem(
-						i * 4, // offset
-						ObjectGuid.Button, // guid
-						ObjectAspect.Position, // aspect
-						DeviceObjectTypeFlags.PushButton, // type
-						i, // instance
-						$"Button {i}" // name
-					));
-				}
-
-				// Add axis objects - assume common controller axes
-				string[] axisNames = { "X Axis", "Y Axis", "Z Axis", "RZ Axis", "Left Trigger", "Right Trigger" };
-				for (int i = 0; i < axisNames.Length; i++)
-				{
-					deviceObjects.Add(new DeviceObjectItem(
-						64 + (i * 4), // offset
-						ObjectGuid.XAxis, // guid (simplified)
-						ObjectAspect.Position, // aspect
-						DeviceObjectTypeFlags.AbsoluteAxis, // type
-						i, // instance
-						axisNames[i] // name
-					));
-				}
-
-				device.DeviceObjects = deviceObjects.ToArray();
-			}
-
-			// Set axis mask (which axes are available) - required for UI
-			if (device.DiAxeMask == 0)
-			{
-				// Assume 6 axes are available for most controllers
-				device.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // First 6 axes
-			}
-
-			// Set device effects (required for force feedback UI, even though Raw Input doesn't support it)
-			if (device.DeviceEffects == null)
-			{
-				// Raw Input doesn't support effects, but set empty array for UI compatibility
-				device.DeviceEffects = new DeviceEffectItem[0];
-			}
+			// Note: This method now delegates to LoadCapabilities for consistency
+			// Create a processor instance to call the non-static LoadCapabilities method
+			var processor = new RawInputProcessor();
+			processor.LoadCapabilities(device);
 		}
 
 		#endregion
