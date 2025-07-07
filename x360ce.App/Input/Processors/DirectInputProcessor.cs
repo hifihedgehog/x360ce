@@ -30,12 +30,12 @@ namespace x360ce.App.Input.Processors
 	/// ✅ Comprehensive device information
 	/// 
 	/// CONTROLLER MAPPING:
-	/// This processor maps DirectInput JoystickState to CustomDiState preserving
+	/// This processor maps DirectInput JoystickState to CustomDeviceState preserving
 	/// the original x360ce DirectInput behavior and mapping patterns.
 	/// </remarks>
 	public class DirectInputProcessor : IInputProcessor
 	{
-		// Shared orchestration methods moved to DInputHelper.Step2.CustomDiStates.cs
+		// Shared orchestration methods moved to DInputHelper.Step2.CustomDeviceStates.cs
 		// XInput processing moved to DInputHelper.Step2.ReadXInput.cs
 		// Gaming Input processing moved to DInputHelper.Step2.ReadGamingInput.cs
 		// Raw Input processing moved to DInputHelper.Step2.ReadRawInput.cs
@@ -80,7 +80,7 @@ namespace x360ce.App.Input.Processors
 		/// <param name="device">The DirectInput device to process</param>
 		/// <param name="detector">Device detector for acquisition</param>
 		/// <param name="newUpdates">Output parameter for buffered updates</param>
-		/// <returns>CustomDiState for the device</returns>
+		/// <returns>CustomDeviceState for the device</returns>
 		public CustomDeviceState ProcessDirectInputDevice(UserDevice device, DeviceDetector detector, Options options, out CustomDeviceUpdate[] newUpdates)
 		{
 			newUpdates = null;
@@ -296,7 +296,7 @@ namespace x360ce.App.Input.Processors
 		/// Gets buffered updates for DirectInput devices when buffered data is enabled.
 		/// </summary>
 		/// <param name="device">The device to get buffered data for</param>
-		/// <returns>Array of CustomDiUpdate objects, or null if no buffered data</returns>
+		/// <returns>Array of CustomDeviceUpdate objects, or null if no buffered data</returns>
 		/// <remarks>
 		/// This method provides access to DirectInput's buffered data feature for
 		/// applications that need to process individual input events rather than
@@ -390,7 +390,7 @@ namespace x360ce.App.Input.Processors
 		/// Reads the current state from the device using DirectInput.
 		/// </summary>
 		/// <param name="device">The device to read from</param>
-		/// <returns>CustomDiState representing the current controller state</returns>
+		/// <returns>CustomDeviceState representing the current controller state</returns>
 		/// <exception cref="InputMethodException">Thrown when DirectInput encounters errors</exception>
 		/// <remarks>
 		/// This method preserves the original x360ce DirectInput behavior including:
@@ -560,7 +560,7 @@ namespace x360ce.App.Input.Processors
 		/// </summary>
 		/// <param name="device">The mouse device</param>
 		/// <param name="newState">The current mouse state</param>
-		/// <returns>Processed CustomDiState with converted coordinates</returns>
+		/// <returns>Processed CustomDeviceState with converted coordinates</returns>
 		/// <remarks>
 		/// This method implements the original x360ce mouse coordinate processing:
 		/// • Stores original state for delta calculation

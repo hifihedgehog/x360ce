@@ -162,8 +162,11 @@
     <Compile Include="..\x360ce.Engine\Common\ConvertHelper.cs">
       <Link>Engine\ConvertHelper.cs</Link>
     </Compile>
-    <Compile Include="..\x360ce.Engine\Common\CustomDiUpdate.cs">
-      <Link>Engine\CustomDiUpdate.cs</Link>
+    <Compile Include="..\x360ce.Engine\Common\CustomDeviceState.cs">
+      <Link>Engine\CustomDeviceState.cs</Link>
+    </Compile>
+    <Compile Include="..\x360ce.Engine\Common\CustomDeviceUpdate.cs">
+      <Link>Engine\CustomDeviceUpdate.cs</Link>
     </Compile>
     <Compile Include="..\x360ce.Engine\Common\DatabaseHelper.cs">
       <Link>Engine\DatabaseHelper.cs</Link>

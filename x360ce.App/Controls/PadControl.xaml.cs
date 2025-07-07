@@ -216,13 +216,13 @@ namespace x360ce.App.Controls
 			// Return if controller is not connected.
 			if (newConnected)
 			{
-				var customDiState = GeneralPanel.GetCustomDiState(CurrentUserDevice);
+				var customDeviceState = GeneralPanel.GetCustomDeviceState(CurrentUserDevice);
 				
 				// Process all buttons and axis. ------------------------------------------------------------------------------------------------------
 				foreach (var ii in imageInfos)
 				{
-					//SetLabelDIContent(customDiState, ii.Type, (StackPanel)ii.ControlStackPanel);
-					_PadControlImager.DrawState(ii, newState.Gamepad, customDiState);
+					//SetLabelDIContent(customDeviceState, ii.Type, (StackPanel)ii.ControlStackPanel);
+					_PadControlImager.DrawState(ii, newState.Gamepad, customDeviceState);
 				}
 			}
 
@@ -258,7 +258,7 @@ namespace x360ce.App.Controls
 			oldConnected = newConnected;
 		}
 
-		//private void SetLabelDIContent(CustomDiState customDiState, TargetType targetType, StackPanel sp)
+		//private void SetLabelDIContent(CustomDeviceState customDeviceState, TargetType targetType, StackPanel sp)
 		//{
 			
 		//	Map map = CurrentPadSetting.Maps.FirstOrDefault(x => x.Target == targetType);
@@ -269,15 +269,15 @@ namespace x360ce.App.Controls
 		//	var i = map.Index - 1;
 		//	if (map.IsAxis || map.IsHalf || map.IsInverted)
 		//	{
-		//		((Label)sp.Children[1]).Content = customDiState.Axis[i];
+		//		((Label)sp.Children[1]).Content = customDeviceState.Axis[i];
 		//	}
 		//	else if (map.IsButton)
 		//	{
-		//		((Label)sp.Children[1]).Content = customDiState.Buttons[i] ? 1 : 0;
+		//		((Label)sp.Children[1]).Content = customDeviceState.Buttons[i] ? 1 : 0;
 		//	}
 		//	else if (map.IsSlider)
 		//	{
-		//		((Label)sp.Children[1]).Content = customDiState.Sliders[i];
+		//		((Label)sp.Children[1]).Content = customDeviceState.Sliders[i];
 		//	}
 		//}
 

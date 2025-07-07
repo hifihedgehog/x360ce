@@ -228,18 +228,18 @@ namespace x360ce.App.Controls
 		object updateLock = new object();
 
 		/// <summary>
-		/// Gets the CustomDiState for the specified UserDevice.
+		/// Gets the CustomDeviceState for the specified UserDevice.
 		/// This method now uses the existing DiState property that should be populated 
 		/// by all input methods (DirectInput, XInput, GamingInput, RawInput) rather than 
-		/// trying to create a new CustomDiState from DirectInput-specific DeviceState.
+		/// trying to create a new CustomDeviceState from DirectInput-specific DeviceState.
 		/// This ensures drag and drop buttons are visible regardless of InputMethod.
 		/// </summary>
-		/// <param name="ud">The UserDevice to get the CustomDiState from</param>
-		/// <returns>The CustomDiState if available, null otherwise</returns>
-		public CustomDeviceState GetCustomDiState(UserDevice ud)
+		/// <param name="ud">The UserDevice to get the CustomDeviceState from</param>
+		/// <returns>The CustomDeviceState if available, null otherwise</returns>
+		public CustomDeviceState GetCustomDeviceState(UserDevice ud)
 		{
 			// Use the existing DiState property that should be populated by all input methods
-			// instead of trying to create a new CustomDiState from DirectInput-specific DeviceState
+			// instead of trying to create a new CustomDeviceState from DirectInput-specific DeviceState
 			return ud?.DiState;
 		}
 
@@ -380,7 +380,7 @@ namespace x360ce.App.Controls
 			axes.Clear();
 			sliders.Clear();
 
-			if (ud == null || GetCustomDiState(ud) == null) return;
+			if (ud == null || GetCustomDeviceState(ud) == null) return;
 
 			UpdatePovsAxesButtonsSlidersLists(ud);
 
@@ -511,7 +511,7 @@ namespace x360ce.App.Controls
 			return "Unknown";
 		}
 
-		//private void SetLabelDIContent(int axisLength, CustomDiState customDiState, TargetType targetType, Label label)
+		//private void SetLabelDIContent(int axisLength, CustomDeviceState customDeviceState, TargetType targetType, Label label)
 		//{
 		//	Map map = _padSetting.Maps.FirstOrDefault(x => x.Target == targetType);
 
@@ -521,44 +521,44 @@ namespace x360ce.App.Controls
 		//	var i = map.Index - 1;
 		//	if (map.IsAxis || map.IsHalf || map.IsInverted)
 		//	{
-		//		label.Content = customDiState.Axis[i];
+		//		label.Content = customDeviceState.Axis[i];
 		//	}
 		//	else if (map.IsButton)
 		//	{
-		//		label.Content = customDiState.Buttons[i] ? 1 : 0;
+		//		label.Content = customDeviceState.Buttons[i] ? 1 : 0;
 		//	}
 		//	else if (map.IsSlider)
 		//	{
-		//		label.Content = customDiState.Sliders[i];
+		//		label.Content = customDeviceState.Sliders[i];
 		//	}
 		//}
 
 		// Update DragAndDrop menu labels.
 		public void DragAndDropMenuLabels_Update(UserDevice ud)
 		{
-			// var customDiState = GetCustomDiState(ud);
-			// if (customDiState == null) return;
+			// var customDeviceState = GetCustomDeviceState(ud);
+			// if (customDeviceState == null) return;
 
 			// int axisLength = ud.DiState.Axis.Length;
 
 			//// Trigger.
-			// SetLabelDIContent(axisLength, customDiState, TargetType.LeftTrigger, TriggerLLabelDI);
-			// SetLabelDIContent(axisLength, customDiState, TargetType.RightTrigger, TriggerRLabelDI);
+			// SetLabelDIContent(axisLength, customDeviceState, TargetType.LeftTrigger, TriggerLLabelDI);
+			// SetLabelDIContent(axisLength, customDeviceState, TargetType.RightTrigger, TriggerRLabelDI);
 			// TriggerLLabelDZ.Content = _padSetting.LeftTriggerDeadZone;
 			// TriggerRLabelDZ.Content = _padSetting.RightTriggerDeadZone;
 
 			//// Buttons.
-			// SetLabelDIContent(axisLength, customDiState, TargetType.Button, BumperLLabelDI);
+			// SetLabelDIContent(axisLength, customDeviceState, TargetType.Button, BumperLLabelDI);
 
 			//// Stick Left.
-			// SetLabelDIContent(axisLength, customDiState, TargetType.LeftThumbX, StickLAxisXLabelDI);
-			// SetLabelDIContent(axisLength, customDiState, TargetType.LeftThumbY, StickLAxisYLabelDI);
+			// SetLabelDIContent(axisLength, customDeviceState, TargetType.LeftThumbX, StickLAxisXLabelDI);
+			// SetLabelDIContent(axisLength, customDeviceState, TargetType.LeftThumbY, StickLAxisYLabelDI);
 			// StickLAxisXLabelDZ.Content = _padSetting.LeftThumbDeadZoneX;
 			// StickLAxisYLabelDZ.Content = _padSetting.LeftThumbDeadZoneY;
 
 			//// Stick Right.
-			// SetLabelDIContent(axisLength, customDiState, TargetType.RightThumbX, StickRAxisXLabelDI);
-			// SetLabelDIContent(axisLength, customDiState, TargetType.RightThumbY, StickRAxisYLabelDI);
+			// SetLabelDIContent(axisLength, customDeviceState, TargetType.RightThumbX, StickRAxisXLabelDI);
+			// SetLabelDIContent(axisLength, customDeviceState, TargetType.RightThumbY, StickRAxisYLabelDI);
 			// StickRAxisXLabelDZ.Content = _padSetting.RightThumbDeadZoneX;
 			// StickRAxisYLabelDZ.Content = _padSetting.RightThumbDeadZoneY;
 
@@ -697,10 +697,10 @@ namespace x360ce.App.Controls
         //		{
         //			mi = new MenuItem() { Header = "Axes" };
         //			DiMenuStrip.Add(mi);
-        //			CreateItems(mi, "Inverted", "IAxis {0}", "a-{0}", CustomDiState.MaxAxis, ud.DiAxeMask);
-        //			CreateItems(mi, "Inverted Half", "IHAxis {0}", "x-{0}", CustomDiState.MaxAxis, ud.DiAxeMask);
-        //			CreateItems(mi, "Half", "HAxis {0}", "x{0}", CustomDiState.MaxAxis, ud.DiAxeMask);
-        //			CreateItems(mi, "Axis {0}", "a{0}", CustomDiState.MaxAxis, ud.DiAxeMask);
+        //			CreateItems(mi, "Inverted", "IAxis {0}", "a-{0}", CustomDeviceState.MaxAxis, ud.DiAxeMask);
+        //			CreateItems(mi, "Inverted Half", "IHAxis {0}", "x-{0}", CustomDeviceState.MaxAxis, ud.DiAxeMask);
+        //			CreateItems(mi, "Half", "HAxis {0}", "x{0}", CustomDeviceState.MaxAxis, ud.DiAxeMask);
+        //			CreateItems(mi, "Axis {0}", "a{0}", CustomDeviceState.MaxAxis, ud.DiAxeMask);
         //		}
         //		Add Sliders. 
         //		if (ud.DiSliderMask > 0)
@@ -708,10 +708,10 @@ namespace x360ce.App.Controls
         //			mi = new MenuItem() { Header = "Sliders" };
         //			DiMenuStrip.Add(mi);
         //			// 2 x Sliders, 2 x AccelerationSliders, 2 x bDS.ForceSliders, 2 x VelocitySliders
-        //			CreateItems(mi, "Inverted", "ISlider {0}", "s-{0}", CustomDiState.MaxSliders, ud.DiSliderMask);
-        //			CreateItems(mi, "Inverted Half", "IHSlider {0}", "h-{0}", CustomDiState.MaxSliders, ud.DiSliderMask);
-        //			CreateItems(mi, "Half", "HSlider {0}", "h{0}", CustomDiState.MaxSliders, ud.DiSliderMask);
-        //			CreateItems(mi, "Slider {0}", "s{0}", CustomDiState.MaxSliders, ud.DiSliderMask);
+        //			CreateItems(mi, "Inverted", "ISlider {0}", "s-{0}", CustomDeviceState.MaxSliders, ud.DiSliderMask);
+        //			CreateItems(mi, "Inverted Half", "IHSlider {0}", "h-{0}", CustomDeviceState.MaxSliders, ud.DiSliderMask);
+        //			CreateItems(mi, "Half", "HSlider {0}", "h{0}", CustomDeviceState.MaxSliders, ud.DiSliderMask);
+        //			CreateItems(mi, "Slider {0}", "s{0}", CustomDeviceState.MaxSliders, ud.DiSliderMask);
         //		}
         //		// Add D-Pads.
         //		if (ud.CapPovCount > 0)

@@ -3,7 +3,18 @@
     <ProjectGuid>{95297B3A-B8F1-49DC-89AF-863A6F8BE5B3}</ProjectGuid>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="*.*" Exclude="*.sln;*.slnx;UpgradeLog*.*" />
+    <None Include=".editorconfig" />
+    <None Include=".gitattributes" />
+    <None Include=".gitignore" />
+    <None Include=".gitmodules" />
+    <None Include=".runsettings" />
+    <None Include="README.MD" />
+    <None Include="SECURITY.md" />
+    <None Include="Solution_Cleanup.ps1" />
+    <None Include="TODO.md" />
+    <None Include="TODO_MultipleInputMethods.md" />
+    <None Include="x360ce.slnx.vsspell" />
+    <None Include="_Solution Items.csproj" />
     <None Include=".ai/*.*" />
     <None Include=".github/*.*" />
     <None Include=".clinerules/*.*" />
@@ -12,8 +23,7 @@
     <None Include="Resources/*.*" />
   </ItemGroup>
   <!-- prevents NU1503 -->
-  <Target Name="_IsProjectRestoreSupported"
-          Returns="@(_ValidProjectsForRestore)">
+  <Target Name="_IsProjectRestoreSupported" Returns="@(_ValidProjectsForRestore)">
     <ItemGroup>
       <_ValidProjectsForRestore Include="$(MSBuildProjectFullPath)" />
     </ItemGroup>

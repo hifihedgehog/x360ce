@@ -19,7 +19,7 @@ public partial class InputOrchestrator
 
 		#endregion
 
-		#region CustomDiState Orchestration (Shared Across All Input Methods)
+		#region CustomDeviceState Orchestration (Shared Across All Input Methods)
 
 		/// <summary>
 		/// Updates device states using the appropriate input methods based on each device's selected input method.
@@ -31,7 +31,7 @@ public partial class InputOrchestrator
 		/// MULTI-INPUT METHOD ARCHITECTURE:
 		/// • Each device can use a different input method (DirectInput, XInput, Gaming Input, Raw Input)
 		/// • No automatic fallbacks - user must manually select appropriate input method
-		/// • All methods produce consistent CustomDiState output for UI compatibility
+		/// • All methods produce consistent CustomDeviceState output for UI compatibility
 		/// • Input-specific processors handle method limitations and provide clear error messages
 		/// </remarks>
 		void UpdateDiStates(UserGame game, DeviceDetector detector)
@@ -146,7 +146,7 @@ continue;
 		/// This method is shared across all input methods (DirectInput, XInput, Gaming Input, Raw Input).
 		/// </summary>
 		/// <param name="device">The device to update</param>
-		/// <param name="newState">The new CustomDiState read from the device</param>
+		/// <param name="newState">The new CustomDeviceState read from the device</param>
 		/// <param name="newUpdates">Buffered updates (if available, typically from DirectInput)</param>
 		/// <remarks>
 		/// This method handles:
@@ -188,10 +188,10 @@ continue;
 		/// This method is shared and not specific to any input method.
 		/// </summary>
 		/// <param name="device">The test device to process</param>
-		/// <returns>CustomDiState for the test device</returns>
+		/// <returns>CustomDeviceState for the test device</returns>
 		/// <remarks>
 		/// Test devices provide simulated controller input for testing purposes.
-		/// They generate consistent CustomDiState output without requiring physical hardware.
+		/// They generate consistent CustomDeviceState output without requiring physical hardware.
 		/// </remarks>
 		private CustomDeviceState ProcessTestDevice(UserDevice device)
 		{

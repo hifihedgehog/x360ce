@@ -68,12 +68,12 @@ namespace x360ce.App.Input.Processors
 		/// Reads the current state from a Gaming Input device.
 		/// </summary>
 		/// <param name="device">The device to read from</param>
-		/// <returns>CustomDiState representing the current controller state</returns>
+		/// <returns>CustomDeviceState representing the current controller state</returns>
 		/// <exception cref="InputMethodException">Thrown when Gaming Input encounters errors</exception>
 		/// <remarks>
 		/// This method delegates to DInputHelper.ProcessGamingInputDevice() which handles:
 		/// • Gaming Input API calls and GamepadReading conversion
-		/// • CustomDiState population via ConvertGamingInputToCustomDiState()
+		/// • CustomDeviceState population via ConvertGamingInputToCustomDeviceState()
 		/// • Device object initialization for UI compatibility
 		/// • Error handling and device state management
 		/// 
@@ -238,12 +238,12 @@ namespace x360ce.App.Input.Processors
 		/// Processes Gaming Input devices using direct method (same performance pattern as DirectInput/XInput).
 		/// </summary>
 		/// <param name="device">The Gaming Input device to process</param>
-		/// <returns>CustomDiState for the device</returns>
+		/// <returns>CustomDeviceState for the device</returns>
 		/// <remarks>
 		/// OPTIMIZED FOR 1000Hz POLLING - No caching, no LINQ, minimal allocations.
 		/// Uses same direct access pattern as DirectInput and XInput for consistent performance.
 		/// 
-		/// CustomDiState mapping matches DirectInput/XInput exactly for UI compatibility.
+		/// CustomDeviceState mapping matches DirectInput/XInput exactly for UI compatibility.
 		/// </remarks>
 		public CustomDeviceState GetCustomState(UserDevice device)
 		{
@@ -320,9 +320,9 @@ namespace x360ce.App.Input.Processors
 				}
 				device.DeviceEffects = device.DeviceEffects ?? new DeviceEffectItem[0];
 
-				// Create and populate CustomDiState
+				// Create and populate CustomDeviceState
 				var newState = new CustomDeviceState();
-				ConvertGamingInputToCustomDiState(reading, newState);
+				ConvertGamingInputToCustomDeviceState(reading, newState);
 
 				// Store the reading as device state for debugging/monitoring
 				device.DeviceState = reading;
@@ -341,14 +341,14 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
-		/// Convert Windows.Gaming.Input GamepadReading to x360ce CustomDiState format.
+		/// Convert Windows.Gaming.Input GamepadReading to x360ce CustomDeviceState format.
 		/// Ensures exact mapping consistency with DirectInput and XInput processors.
 		/// </summary>
-		private void ConvertGamingInputToCustomDiState(GamepadReading reading, CustomDeviceState diState)
+		private void ConvertGamingInputToCustomDeviceState(GamepadReading reading, CustomDeviceState diState)
 		{
 			if (diState == null) return;
 
-			// Convert buttons - Gaming.Input uses flags, CustomDiState uses bool array
+			// Convert buttons - Gaming.Input uses flags, CustomDeviceState uses bool array
 			// CRITICAL: These indices MUST match DirectInput and XInput implementations
 			diState.Buttons[0] = reading.Buttons.HasFlag(GamepadButtons.A);
 			diState.Buttons[1] = reading.Buttons.HasFlag(GamepadButtons.B);
@@ -370,14 +370,14 @@ namespace x360ce.App.Input.Processors
 			// Guide button (if available - Gaming.Input doesn't typically expose this)
 			diState.Buttons[14] = false; // Not available in Windows.Gaming.Input
 
-			// Convert analog sticks - Gaming.Input uses -1.0 to 1.0, CustomDiState uses 0-65535
+			// Convert analog sticks - Gaming.Input uses -1.0 to 1.0, CustomDeviceState uses 0-65535
 			// CRITICAL: These indices MUST match DirectInput and XInput implementations
 			diState.Axis[0] = ConvertAnalogToAxis(reading.LeftThumbstickX);   // Left stick X
 			diState.Axis[1] = ConvertAnalogToAxis(-reading.LeftThumbstickY);  // Left stick Y (invert for DirectInput compatibility)
 			diState.Axis[2] = ConvertAnalogToAxis(reading.RightThumbstickX);  // Right stick X  
 			diState.Axis[3] = ConvertAnalogToAxis(-reading.RightThumbstickY); // Right stick Y (invert for DirectInput compatibility)
 
-			// Convert triggers - Gaming.Input uses 0.0 to 1.0, CustomDiState uses 0-65535
+			// Convert triggers - Gaming.Input uses 0.0 to 1.0, CustomDeviceState uses 0-65535
 			// ADVANTAGE: Gaming.Input provides separate trigger axes (unlike DirectInput)
 			diState.Axis[4] = ConvertTriggerToAxis(reading.LeftTrigger);  // Left trigger
 			diState.Axis[5] = ConvertTriggerToAxis(reading.RightTrigger); // Right trigger
@@ -390,7 +390,7 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
-		/// Convert Gaming.Input analog value (-1.0 to 1.0) to CustomDiState axis format (0-65535).
+		/// Convert Gaming.Input analog value (-1.0 to 1.0) to CustomDeviceState axis format (0-65535).
 		/// </summary>
 		private int ConvertAnalogToAxis(double analogValue)
 		{
@@ -401,7 +401,7 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
-		/// Convert Gaming.Input trigger value (0.0 to 1.0) to CustomDiState axis format (0-65535).
+		/// Convert Gaming.Input trigger value (0.0 to 1.0) to CustomDeviceState axis format (0-65535).
 		/// </summary>
 		private int ConvertTriggerToAxis(double triggerValue)
 		{
@@ -412,7 +412,7 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
-		/// Convert Gaming.Input D-Pad flags to CustomDiState POV format.
+		/// Convert Gaming.Input D-Pad flags to CustomDeviceState POV format.
 		/// Returns DirectInput-compatible POV values in hundredths of degrees.
 		/// </summary>
 		private int ConvertDPadToPOV(GamepadButtons buttons)

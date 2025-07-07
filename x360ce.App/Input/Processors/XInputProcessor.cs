@@ -29,7 +29,7 @@ namespace x360ce.App.Input.Processors
 	/// • No cooperative level conflicts
 	/// 
 	/// CONTROLLER MAPPING:
-	/// This processor maps XInput Gamepad state to CustomDiState as follows:
+	/// This processor maps XInput Gamepad state to CustomDeviceState as follows:
 	/// • Buttons[0-15]: A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad (4 directions), Guide, unused
 	/// • Axis[0]: Left Thumbstick X (-32768 to 32767)
 	/// • Axis[1]: Left Thumbstick Y (-32768 to 32767) 
@@ -47,12 +47,12 @@ namespace x360ce.App.Input.Processors
 		/// Processes devices using XInput API for Xbox controllers.
 		/// </summary>
 		/// <param name="device">The Xbox-compatible device to process</param>
-		/// <returns>CustomDiState for the device, or null if reading failed</returns>
+		/// <returns>CustomDeviceState for the device, or null if reading failed</returns>
 		/// <remarks>
-		/// ⚠️ CRITICAL: MUST OUTPUT CONSISTENT CustomDiState FORMAT ⚠️
+		/// ⚠️ CRITICAL: MUST OUTPUT CONSISTENT CustomDeviceState FORMAT ⚠️
 		/// 
-		/// CustomDiState is the ONLY format used by the existing UI and mapping system.
-		/// This method MUST map XInput controls to the EXACT SAME CustomDiState indices
+		/// CustomDeviceState is the ONLY format used by the existing UI and mapping system.
+		/// This method MUST map XInput controls to the EXACT SAME CustomDeviceState indices
 		/// used by DirectInput and other input methods for consistency.
 		/// 
 		/// MANDATORY CUSTOMDISTATE MAPPING (MUST match other input methods):
@@ -443,7 +443,7 @@ return null;
 		/// Reads the current state from the device using XInput.
 		/// </summary>
 		/// <param name="device">The device to read from</param>
-		/// <returns>CustomDiState representing the current controller state</returns>
+		/// <returns>CustomDeviceState representing the current controller state</returns>
 		/// <exception cref="InputMethodException">Thrown when XInput encounters errors</exception>
 		public CustomDeviceState ReadState(UserDevice device)
 		{
@@ -495,8 +495,8 @@ return null;
 					}
 				}
 
-				// Convert XInput Gamepad to CustomDiState
-				var customState = ConvertGamepadToCustomDiState(xinputState.Gamepad, device);
+				// Convert XInput Gamepad to CustomDeviceState
+				var customState = ConvertGamepadToCustomDeviceState(xinputState.Gamepad, device);
 
 				// Log input changes for debugging
 				LogInputChanges(device, customState);
@@ -767,12 +767,12 @@ return null;
 		}
 
 		/// <summary>
-		/// Converts XInput Gamepad state to CustomDiState format.
+		/// Converts XInput Gamepad state to CustomDeviceState format.
 		/// CRITICAL: Must match DirectInput's mapping pattern for Xbox controllers.
 		/// </summary>
 		/// <param name="gamepad">The XInput Gamepad state</param>
 		/// <param name="device">The device for debug logging (optional)</param>
-		/// <returns>CustomDiState with mapped values matching DirectInput pattern</returns>
+		/// <returns>CustomDeviceState with mapped values matching DirectInput pattern</returns>
 		/// <remarks>
 		/// This mapping MUST match how DirectInput would map the same Xbox controller
 		/// to preserve user configurations when switching input methods.
@@ -787,7 +787,7 @@ return null;
 		/// 
 		/// For XInput, we map to the most common DirectInput pattern for Xbox controllers.
 		/// </remarks>
-		private static CustomDeviceState ConvertGamepadToCustomDiState(Gamepad gamepad, UserDevice device = null)
+		private static CustomDeviceState ConvertGamepadToCustomDeviceState(Gamepad gamepad, UserDevice device = null)
 		{
 			var customState = new CustomDeviceState();
 
@@ -847,7 +847,7 @@ return null;
 		/// Only logs when values actually change to prevent debug output flooding.
 		/// </summary>
 		/// <param name="device">The device to track changes for</param>
-		/// <param name="customState">The current CustomDiState to check for changes</param>
+		/// <param name="customState">The current CustomDeviceState to check for changes</param>
 		private void LogInputChanges(UserDevice device, CustomDeviceState customState)
 		{
 			if (device?.InstanceGuid == null || customState == null)

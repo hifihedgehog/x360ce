@@ -159,7 +159,7 @@ namespace x360ce.App.Input.Processors
 		/// OPTIMIZED FOR HIGH-FREQUENCY CALLING (up to 1000Hz).
 		/// </summary>
 		/// <param name="device">The device to read from</param>
-		/// <returns>CustomDiState representing the current controller state</returns>
+		/// <returns>CustomDeviceState representing the current controller state</returns>
 		/// <exception cref="InputMethodException">Thrown when Raw Input encounters errors</exception>
 		public CustomDeviceState ReadState(UserDevice device)
 		{
@@ -411,12 +411,12 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
-		/// Parses HID report data into CustomDiState.
+		/// Parses HID report data into CustomDeviceState.
 		/// </summary>
 		/// <param name="deviceInfo">Device information</param>
 		/// <param name="buffer">Raw input buffer</param>
 		/// <param name="bufferSize">Buffer size</param>
-		/// <returns>CustomDiState or null if parsing failed</returns>
+		/// <returns>CustomDeviceState or null if parsing failed</returns>
 		private static CustomDeviceState ParseHidReport(RawInputDeviceInfo deviceInfo, IntPtr buffer, uint bufferSize)
 		{
 			try
@@ -458,7 +458,7 @@ namespace x360ce.App.Input.Processors
 		/// Parses Xbox controller HID report.
 		/// </summary>
 		/// <param name="hidData">HID report data</param>
-		/// <param name="state">CustomDiState to populate</param>
+		/// <param name="state">CustomDeviceState to populate</param>
 		private static void ParseXboxHidReport(byte[] hidData, CustomDeviceState state)
 		{
 			if (hidData.Length < 14)
@@ -504,7 +504,7 @@ namespace x360ce.App.Input.Processors
 		/// FIXED: Corrected to prevent thumbstick data from being mapped to buttons.
 		/// </summary>
 		/// <param name="hidData">HID report data</param>
-		/// <param name="state">CustomDiState to populate</param>
+		/// <param name="state">CustomDeviceState to populate</param>
 		private static void ParseGenericHidReport(byte[] hidData, CustomDeviceState state)
 		{
 			if (hidData.Length < 6)
@@ -744,12 +744,12 @@ namespace x360ce.App.Input.Processors
 		/// Processes devices using Raw Input API for HID-compliant controllers.
 		/// </summary>
 		/// <param name="device">The HID-compliant device to process</param>
-		/// <returns>CustomDiState for the device, or null if reading failed</returns>
+		/// <returns>CustomDeviceState for the device, or null if reading failed</returns>
 		/// <remarks>
-		/// ⚠️ CRITICAL: MUST OUTPUT CONSISTENT CustomDiState FORMAT ⚠️
+		/// ⚠️ CRITICAL: MUST OUTPUT CONSISTENT CustomDeviceState FORMAT ⚠️
 		/// 
-		/// CustomDiState is the ONLY format used by the existing UI and mapping system.
-		/// This method MUST map Raw Input controls to the EXACT SAME CustomDiState indices
+		/// CustomDeviceState is the ONLY format used by the existing UI and mapping system.
+		/// This method MUST map Raw Input controls to the EXACT SAME CustomDeviceState indices
 		/// used by DirectInput, XInput, and Gaming Input for consistency.
 		/// 
 		/// MANDATORY CUSTOMDISTATE MAPPING (MUST match other input methods):

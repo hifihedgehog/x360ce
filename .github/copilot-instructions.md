@@ -257,7 +257,7 @@ x360ce.App/Input/
 ├── Orchestration/           # Main coordination logic
 │   ├── InputOrchestrator.cs                    # Primary orchestrator class
 │   ├── InputOrchestrator.Step1.UpdateDevices.cs    # Device detection and management
-│   ├── InputOrchestrator.Step2.CustomDiStates.cs   # State processing coordination
+│   ├── InputOrchestrator.Step2.CustomDeviceStates.cs   # State processing coordination
 │   ├── InputOrchestrator.Step2.InputProcessor.cs   # Processor registry
 │   ├── InputOrchestrator.Step3.UpdateXiStates.cs   # XInput state conversion
 │   ├── InputOrchestrator.Step4.CombineXiStates.cs  # State combination logic
