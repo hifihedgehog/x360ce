@@ -360,30 +360,9 @@ namespace x360ce.App.Controls
 		{
 			if (ud == null)
 				return;
-
 			var previousMethod = ud.InputMethod;
-			
 			// Update the input method first
 			ud.InputMethod = inputMethod;
-
-			try
-			{
-				// Use centralized capability loading from InputOrchestrator
-				// This handles all input methods (DirectInput, XInput, GamingInput, RawInput) consistently
-				InputOrchestrator.Current.LoadDeviceCapabilities(ud);
-				
-				// Notify InputOrchestrator that input method changed (for future use)
-				InputOrchestrator.Current.OnInputMethodChanged(ud, previousMethod);
-				
-				System.Diagnostics.Debug.WriteLine($"Updated capabilities for {ud.InstanceName}: {inputMethod} - " +
-					$"Buttons: {ud.CapButtonCount}, Axes: {ud.CapAxeCount}, POVs: {ud.CapPovCount}");
-			}
-			catch (System.Exception ex)
-			{
-				// Log error but don't crash the UI
-				System.Diagnostics.Debug.WriteLine($"Capability update failed for {ud.InstanceName} ({inputMethod}): {ex.Message}");
-				// InputOrchestrator.LoadDeviceCapabilities already handles clearing values on failure
-			}
 		}
 
 		/// <summary>

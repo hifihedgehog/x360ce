@@ -131,10 +131,45 @@ namespace x360ce.Engine.Data
 		}
 
 		#region Ignored properties used by application to store various device states.
-
+	
 		[XmlIgnore, NonSerialized]
 		public bool DeviceChanged;
-
+	
+		/// <summary>
+		/// Flag indicating that device capabilities need to be loaded in the next orchestrator cycle.
+		/// Set during device initialization and when input method changes.
+		/// </summary>
+		[XmlIgnore, NonSerialized]
+		public bool CapabilitiesNeedLoading = true;
+	
+		/// <summary>
+		/// Flag indicating that the input method has changed and capabilities need to be reloaded.
+		/// Set when InputMethod property changes via UI or configuration.
+		/// </summary>
+		[XmlIgnore, NonSerialized]
+		public bool InputMethodChanged = false;
+	
+		/// <summary>
+		/// Raw input state data read from the device in Step3, before conversion to CustomDeviceState.
+		/// Contains the native state object from the specific input method (JoystickState, XInput.State, etc.).
+		/// </summary>
+		[XmlIgnore, NonSerialized]
+		public object RawInputState;
+	
+		/// <summary>
+		/// Raw input updates (buffered data) from DirectInput devices.
+		/// Contains timing and sequence information for precise input analysis.
+		/// </summary>
+		[XmlIgnore, NonSerialized]
+		public CustomDeviceUpdate[] RawInputUpdates;
+	
+		/// <summary>
+		/// Timestamp when raw input state was read in Step3.
+		/// Used for input timing analysis and synchronization.
+		/// </summary>
+		[XmlIgnore, NonSerialized]
+		public long RawStateReadTime;
+	
 		/// <summary>DInput Device State.</summary>
 		[XmlIgnore, NonSerialized]
 		public Device DirectInputDevice;
@@ -204,14 +239,23 @@ namespace x360ce.Engine.Data
 		/// • XInput: Xbox controllers only, max 4, works in background
 		/// • Gaming Input: Windows 10+ only, no background access, best Xbox support
 		/// • Raw Input: All controllers, works in background, complex setup
-		/// 
+		///
 		/// Default value is DirectInput for backward compatibility.
 		/// User must manually select appropriate method based on their needs.
 		/// </remarks>
 		public InputMethod InputMethod
 		{
 			get { return _InputMethod; }
-			set { _InputMethod = value; ReportPropertyChanged(x => x.InputMethod); }
+			set
+			{
+				if (_InputMethod != value)
+				{
+					_InputMethod = value;
+					InputMethodChanged = true;
+					CapabilitiesNeedLoading = true;
+					ReportPropertyChanged(x => x.InputMethod);
+				}
+			}
 		}
 		InputMethod _InputMethod;
 

@@ -23,37 +23,31 @@ namespace x360ce.App.Input.Orchestration
 	{
 
 		// --------------------------------------------------------------------------------------------
-		// DESCRIPTION
+		// DESCRIPTION - 8-STEP INPUT ORCHESTRATION ARCHITECTURE
 		// --------------------------------------------------------------------------------------------
 		// Monitor (WM_DEVICECHANGE) device (HID, Keyboard, Mouse) interface events (DEV_BROADCAST_DEVICEINTERFACE).
-		// On detection, set DevicesNeedUpdating = true (also, set 'true' on 'InputLost' error in 'InputOrchestrator.Step2.UpdateDiStates.cs' > UpdateDiStates()).
+		// On detection, set DevicesNeedUpdating = true (also, set 'true' on 'InputLost' error during state reading).
 		// Build a list of SharpDX.DirectInput.DeviceInstance objects (DeviceClass.GameControl, DeviceClass.Keyboard, DeviceClass.Pointer).
 		// The list holds each Win32_PnPEntity.DeviceID prefix, created from SharpDX.DirectInput.DeviceInstance.ProductGuid.
 		// For example: 6f1d2b60-d5a0-11cf-bfc7-444553540000 > HID\VID_2B60&PID_6F1D.
 		// Win32_PnPEntity.DeviceID prefix'es are used to select Win32_PnPEntity entities existing as SharpDX.DirectInput.DeviceInstance's.
 
-		// Where the current DInput device state is stored:
+		// 8-STEP SERIAL EXECUTION ORDER (1000Hz main loop):
 		//
-		//    UserDevice.Device - DirectInput Device (Joystick)
-		//    UserDevice.State - DirectInput Device (JoystickState)
+		// Step 1: UpdateDevices - Device detection and initialization
+		// Step 2: LoadCapabilities - Flag-based capability loading
+		// Step 3: ReadDeviceStates - Raw input state reading (4 input methods)
+		// Step 4: ConvertToCustomStates - Convert to unified CustomDeviceState format
+		// Step 5: UpdateXiStates - Convert CustomDeviceState to XInput states
+		// Step 6: CombineXiStates - Combine multiple controller states
+		// Step 7: UpdateVirtualDevices - Update ViGEm virtual devices
+		// Step 8: RetrieveXiStates - Retrieve XInput controller states
 		//
-		// Process 1 is limited to [125, 250, 500, 1000Hz]
-		// Lock
-		// {
-		//    Acquire:
-		//    DiDevices - when a device is detected.
-		//	  DiCapabilities - when a device is detected.
-		//	  JoStates - from mapped devices.
-		//	  DiStates - from converted JoStates.
-		//	  XiStates - from converted DiStates
-		// }
+		// Process 1 is limited to [125, 250, 500, 1000Hz] - Main orchestration loop
+		// Lock { All 8 steps execute serially to ensure thread safety }
 		//
-		// Process 2 is limited to [30Hz] (only when visible).
-		// Lock
-		// {
-		//	  DiDevices, DiCapabilities, DiStates, XiStates
-		//	  Update DInput and XInput forms.
-		// }
+		// Process 2 is limited to [30Hz] (only when visible) - UI updates
+		// Lock { Read orchestration results for UI display }
 
 
 		// Constructor
@@ -254,15 +248,27 @@ namespace x360ce.App.Input.Orchestration
 					}
 					else
 					{
-						// Update JoystickStates from devices.
-						UpdateCustomDeviceStates(game, detector);
-						// Update XInput states from Custom DirectInput states.
+						// NEW 8-STEP ARCHITECTURE - Execute steps in serial order
+						
+						// Step 2: Load device capabilities (flag-based)
+						LoadDeviceCapabilities(game);
+						
+						// Step 3: Read raw device states
+						ReadDeviceStates(game, detector);
+						
+						// Step 4: Convert raw states to CustomDeviceState
+						ConvertToCustomStates(game);
+						
+						// Step 5: Update XInput states from Custom DirectInput states
 						UpdateXiStates(game);
-						// Combine XInput states of controllers.
+						
+						// Step 6: Combine XInput states of controllers
 						CombineXiStates();
-						// Update virtual devices from combined states.
+						
+						// Step 7: Update virtual devices from combined states
 						UpdateVirtualDevices(game);
-						// Retrieve XInput states from XInput controllers.
+						
+						// Step 8: Retrieve XInput states from XInput controllers
 						RetrieveXiStates(getXInputStates);
 					}
 				}

@@ -264,9 +264,9 @@ public partial class InputOrchestrator
 					userDevice.DirectInputDevice = new Joystick(manager, instance.InstanceGuid);
 					userDevice.IsExclusiveMode = null;
 					
-					// Load capabilities using centralized method that handles all input methods
-					// This ensures capabilities are loaded based on the device's configured input method
-					LoadDeviceCapabilities(userDevice);
+					// Flag device for capability loading in Step2
+					// This ensures capabilities are loaded in the proper serial execution order
+					userDevice.CapabilitiesNeedLoading = true;
 				}
 				catch (Exception ex)
 				{
