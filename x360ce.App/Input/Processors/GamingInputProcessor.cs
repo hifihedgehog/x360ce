@@ -372,9 +372,6 @@ namespace x360ce.App.Input.Processors
 				var gamepad = gamepads[gamepadIndex];
 				var reading = gamepad.GetCurrentReading();
 
-				// Load capabilities if needed (CRITICAL for UI drag/drop functionality)
-				LoadCapabilities(device);
-
 				// Create and populate CustomDeviceState
 				var newState = new CustomDeviceState();
 				ConvertGamingInputToCustomDeviceState(reading, newState);

@@ -165,12 +165,6 @@ namespace x360ce.App.Input.Processors
 					throw new Exception($"Unknown device: {device.DirectInputDevice}");
 			}
 
-			// Load capabilities once if any are missing
-			if (device.DeviceObjects == null || device.DeviceEffects == null)
-			{
-				LoadCapabilities(device);
-			}
-
 			// Handle force feedback if supported.
 			if (hasForceFeedback)
 			{
