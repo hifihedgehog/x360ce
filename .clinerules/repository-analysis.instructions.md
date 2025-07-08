@@ -153,21 +153,22 @@ This section maps the codebase organization to help developers navigate and unde
 - **Input Processing**: Organized input handling through InputOrchestrator and specialized processors
 
 ##### Input Processing Architecture
-The x360ce.App project features a sophisticated input processing system organized into:
+The x360ce.App project features a sophisticated input processing system organized into an 8-step serial execution architecture:
 
 ```
 x360ce.App/Input/
 ├── Orchestration/           # Main coordination logic
-│   ├── InputOrchestrator.cs                    # Primary orchestrator class
-│   ├── InputOrchestrator.Step1.UpdateDevices.cs    # Device detection and management
-│   ├── InputOrchestrator.Step2.CustomDeviceStates.cs   # State processing coordination
-│   ├── InputOrchestrator.Step2.InputProcessor.cs   # Processor registry
-│   ├── InputOrchestrator.Step3.UpdateXiStates.cs   # XInput state conversion
-│   ├── InputOrchestrator.Step4.CombineXiStates.cs  # State combination logic
-│   ├── InputOrchestrator.Step5.VirtualDevices.cs   # Virtual device management
-│   ├── InputOrchestrator.Step6.RetrieveXiStates.cs # State retrieval
-│   ├── InputOrchestrator.XInputLibrary.cs          # XInput library management
-│   └── InputEventArgs.cs                           # Event argument classes
+│   ├── InputOrchestrator.cs                         # Primary orchestrator class
+│   ├── InputOrchestrator.Step1.UpdateDevices.cs     # Device detection and initialization
+│   ├── InputOrchestrator.Step2.LoadCapabilities.cs  # Flag-based capability loading
+│   ├── InputOrchestrator.Step3.ReadDeviceStates.cs  # Raw state reading from all input methods
+│   ├── InputOrchestrator.Step4.ConvertToCustomStates.cs # Convert to unified CustomDeviceState
+│   ├── InputOrchestrator.Step5.UpdateXiStates.cs    # Convert CustomDeviceState to XInput
+│   ├── InputOrchestrator.Step6.CombineXiStates.cs   # Combine multiple controller states
+│   ├── InputOrchestrator.Step7.VirtualDevices.cs    # Update ViGEm virtual devices
+│   ├── InputOrchestrator.Step8.RetrieveXiStates.cs  # Retrieve XInput controller states
+│   ├── InputOrchestrator.XInputLibrary.cs           # XInput library management
+│   └── InputEventArgs.cs                            # Event argument classes
 └── Processors/              # Individual input method handlers
     ├── DirectInputProcessor.cs     # Microsoft DirectInput API handler
     ├── XInputProcessor.cs          # Microsoft XInput API handler
@@ -177,12 +178,22 @@ x360ce.App/Input/
 ```
 
 **Key Architectural Decisions:**
+- **8-Step Serial Execution**: Input processing follows a clear 8-step workflow executed serially at 1000Hz for thread safety and maintainability
+- **Flag-Based Capability Loading**: Capabilities are loaded only when needed using device flags (`CapabilitiesNeedLoading`, `InputMethodChanged`)
 - **Orchestration Pattern**: InputOrchestrator coordinates all input processing while individual processors handle method-specific logic
-- **Step-Based Processing**: Input processing follows a clear 6-step workflow for maintainability
-- **Enforced Interface Compliance**: All input methods implement complete IInputProcessor interface with 7 standardized methods
+- **Thread Safety**: All device operations execute in the main orchestrator thread, eliminating threading conflicts
+- **Clear Data Flow**: Each step has single responsibility with predictable input/output relationships
 - **Namespace Organization**: Clear separation between orchestration (`x360ce.App.Input.Orchestration`) and processing (`x360ce.App.Input.Processors`)
-- **Constructor Standardization**: All processors follow consistent initialization patterns
-- **Constants Organization**: Magic numbers extracted to named constants for maintainability
+
+**8-Step Serial Execution Workflow:**
+1. **Step 1 - UpdateDevices**: Device detection, enumeration, and initialization with capability loading flags
+2. **Step 2 - LoadCapabilities**: Flag-based capability loading for devices that need it (initialization or input method changes)
+3. **Step 3 - ReadDeviceStates**: Raw state reading from all mapped devices using their configured input methods
+4. **Step 4 - ConvertToCustomStates**: Convert raw states to unified CustomDeviceState format with button analysis
+5. **Step 5 - UpdateXiStates**: Convert CustomDeviceState to XInput states with mapping configuration
+6. **Step 6 - CombineXiStates**: Combine multiple controller states for multi-device scenarios
+7. **Step 7 - VirtualDevices**: Update ViGEm virtual devices for game compatibility
+8. **Step 8 - RetrieveXiStates**: Retrieve XInput controller states for display and diagnostics
 
 **IInputProcessor Interface Enforcement:**
 All 4 processors implement identical interface with these methods:
@@ -437,11 +448,13 @@ The project uses Entity Framework with code-first approach:
 
 ### Input Processing Architecture Decision
 The project implements a sophisticated orchestration pattern for input processing:
+- **8-Step Serial Execution**: Input processing follows a clear 8-step workflow executed serially at 1000Hz for thread safety and maintainability
+- **Flag-Based Capability Loading**: Capabilities are loaded only when needed using device flags, eliminating redundant processing
 - **Orchestration Pattern**: `InputOrchestrator` coordinates all input processing while specialized processors handle method-specific logic
 - **Namespace Organization**: Clear separation between orchestration (`x360ce.App.Input.Orchestration`) and processing (`x360ce.App.Input.Processors`)
-- **Step-Based Processing**: Input processing follows a clear 6-step workflow for maintainability
 - **Processor Interface**: All input methods implement `IInputProcessor` for consistent behavior and extensibility
-- **File Organization**: Step-based orchestration files and individual processor classes for logical code organization
+- **Thread Safety**: All device operations execute in the main orchestrator thread, eliminating threading conflicts
+- **Single Responsibility**: Each step has a clearly defined purpose with predictable input/output relationships
 - **Benefits**: Improved maintainability, clearer separation of concerns, easier testing, simplified debugging, enhanced extensibility for new input methods
 
 ### Driver Integration Approach
