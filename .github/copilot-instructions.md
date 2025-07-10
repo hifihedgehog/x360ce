@@ -330,9 +330,42 @@ All 4 processors implement identical interface with these methods:
 ###### UI Update Throttling (Performance Optimization)
 - **File**: `x360ce.App/MainWindow.xaml.cs`, **Method**: `DHelper_UpdateCompleted()` (lines 615-652)
 - **Foreground FPS**: 20Hz (`interfaceUpdateForegroundFps = 20`) - Active window gets 50ms intervals
-- **Background FPS**: 5Hz (`interfaceUpdateBackgroundFps = 5`) - Inactive window gets 200ms intervals  
+- **Background FPS**: 5Hz (`interfaceUpdateBackgroundFps = 5`) - Inactive window gets 200ms intervals
 - **Purpose**: All input processors (DirectInput/XInput/RawInput/GamingInput) use same throttling to maintain smooth interface
 - **RawInput Issue**: Uses cached states from WM_INPUT message queue, causing 2-3s delay after input stops due to message buffering
+
+## ⚠️ **CRITICAL PERFORMANCE WARNING - HIGH-FREQUENCY LOOPS**
+
+**🚨 NEVER ADD PERFORMANCE-KILLING CODE TO INPUT PROCESSING LOOPS 🚨**
+
+### **Input Processing Frequency**
+- **Input processing runs at 1000Hz or higher** - Code in the main processing loop executes 1000+ times per second
+- **Any expensive operation WILL destroy application performance**
+- **Files with 1000Hz execution**: `InputOrchestrator.cs`, `RawInputProcessor.cs`, `DirectInputProcessor.cs`, `XInputProcessor.cs`, `GamingInputProcessor.cs`
+
+### **ABSOLUTELY FORBIDDEN in High-Frequency Loops**
+- ❌ **Debug.WriteLine()** - Will generate millions of debug messages per minute
+- ❌ **Console.WriteLine()** - Will flood console and kill performance
+- ❌ **String.Format()** or string interpolation in hot paths
+- ❌ **File I/O operations** - Any file reading/writing
+- ❌ **Network calls** - HTTP requests, web service calls
+- ❌ **Database operations** - SQL queries, Entity Framework calls
+- ❌ **Exception logging** - Try/catch with logging in hot paths
+- ❌ **Thread.Sleep()** or any blocking operations
+- ❌ **Memory allocations** - Large object creation in loops
+- ❌ **Complex string operations** - StringBuilder, regex, etc.
+
+### **Performance Guidelines**
+- ✅ **Use conditional compilation** for debug code: `#if DEBUG`
+- ✅ **Cache expensive calculations** outside the loop
+- ✅ **Use primitive types** and avoid boxing/unboxing
+- ✅ **Minimize object allocations** in hot paths
+- ✅ **Use ref/out parameters** instead of return objects when possible
+- ✅ **Pre-allocate arrays and collections** outside loops
+
+### **Rule**: If it's called from the main input processing loop, it must be ultra-lightweight and fast
+
+**Exception**: Slow operations are allowed in the device detection path (`UpdateDiDevices`) which runs only when new devices are connected/disconnected. This path is designed to gather complete device information, and performance is less critical here.
 
 #### x360ce.Engine  
 - **Purpose**: Core business logic library shared across all applications

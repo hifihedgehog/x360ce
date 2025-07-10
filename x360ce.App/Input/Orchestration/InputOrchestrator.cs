@@ -40,6 +40,34 @@ namespace x360ce.App.Input.Orchestration
 		// Process 2 is limited to [30Hz] (only when visible) - UI updates
 		// Lock { Read orchestration results for UI display }
 
+		// ⚠️⚠️⚠️ CRITICAL PERFORMANCE WARNING - TWO EXECUTION PATHS ⚠️⚠️⚠️
+		//
+		// THIS CODE HAS TWO DISTINCT EXECUTION PATHS WITH DIFFERENT PERFORMANCE RULES:
+		//
+		// 🐌 **DEVICE DETECTION PATH** (Lines 304-322) - SLOW OPERATIONS ALLOWED:
+		//    - Runs ONLY when DevicesNeedUpdating=true (new device connected/disconnected)
+		//    - ✅ WMI queries, device enumeration, file I/O are acceptable here
+		//    - ✅ Debug.WriteLine, logging, complex operations allowed
+		//    - ✅ UpdateDiDevices(), DeviceDetector.GetDevices(), GetInterfaces()
+		//    - Purpose: Gather complete device information during hardware changes
+		//
+		// ⚡ **HIGH-FREQUENCY PATH** (Lines 325-347) - ULTRA-FAST REQUIRED:
+		//    - Runs at 1000Hz+ continuously during normal operation
+		//    - ❌ Debug.WriteLine() - Will flood output and destroy performance
+		//    - ❌ Console.WriteLine() - Will kill console performance
+		//    - ❌ String.Format() or string interpolation
+		//    - ❌ File I/O operations, network calls, database operations
+		//    - ❌ Exception logging, Thread.Sleep(), blocking operations
+		//    - ❌ Large object allocations, complex string operations
+		//    - ❌ LINQ in hot paths, reflection, heavy computations
+		//    - Covers: Step 2-8 (LoadCapabilities through RetrieveXiStates)
+		//
+		// **RULE FOR AI AGENTS**:
+		// - Device detection path (`UpdateDiDevices`) = Slow operations are allowed as an exception.
+		// - High-frequency path (Steps 2-8) = Must be ultra-lightweight microsecond execution.
+		// - Check which execution path before adding any expensive operations!
+		// ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+
 
 		// Constructor
 		public InputOrchestrator()
