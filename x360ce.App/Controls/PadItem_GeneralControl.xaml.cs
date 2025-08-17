@@ -14,6 +14,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Common;
 
 namespace x360ce.App.Controls
 {
@@ -380,8 +381,53 @@ namespace x360ce.App.Controls
 			axes.Clear();
 			sliders.Clear();
 
-			if (ud == null || GetCustomDeviceState(ud) == null) return;
+			// Update the input method status indicator first
+			UpdateInputMethodStatus(ud);
 
+			// Check if device is available and input method is supported
+			if (ud == null || GetCustomDeviceState(ud) == null)
+			{
+				// Show "No Device" message in drag and drop area
+				var noDeviceLabel = new Label
+				{
+					Content = "No device detected",
+					HorizontalAlignment = HorizontalAlignment.Center,
+					Opacity = 0.5,
+					Margin = new Thickness(0, 20, 0, 0)
+				};
+				DragAndDropStackPanel.Children.Add(noDeviceLabel);
+				return;
+			}
+
+			// Check if current input method is supported
+			bool inputMethodSupported = IsInputMethodSupported(ud, ud.InputMethod);
+			if (!inputMethodSupported)
+			{
+				// Show "Input Method Not Supported" message instead of drag and drop controls
+				var unsupportedLabel = new Label
+				{
+					Content = $"{ud.InputMethod} not supported for this device",
+					HorizontalAlignment = HorizontalAlignment.Center,
+					Foreground = colorRecord,
+					Margin = new Thickness(0, 20, 0, 0),
+					FontWeight = FontWeights.Bold
+				};
+				
+				var availableMethods = InputMethodDetector.GetAvailableInputMethodsText(ud);
+				var suggestionLabel = new Label
+				{
+					Content = $"Available: {availableMethods}",
+					HorizontalAlignment = HorizontalAlignment.Center,
+					Opacity = 0.7,
+					Margin = new Thickness(0, 5, 0, 0)
+				};
+
+				DragAndDropStackPanel.Children.Add(unsupportedLabel);
+				DragAndDropStackPanel.Children.Add(suggestionLabel);
+				return;
+			}
+
+			// Input method is supported - proceed with normal drag and drop menu creation
 			UpdatePovsAxesButtonsSlidersLists(ud);
 
 			buttons.Sort();
@@ -411,7 +457,7 @@ namespace x360ce.App.Controls
 			{
 				DragAndDropMenuLabels_Create(PovDictionary, povs, "POV", "POV", "Icon_DragAndDrop_POV");
 				var povButtons = new List<int>();
-				// Add 4 buttons (Up, Right, Bottom, Left) for each POV. 
+				// Add 4 buttons (Up, Right, Bottom, Left) for each POV.
 				for (int i = 0; i < povs.Count * 4; i++) { povButtons.Add(i); }
 				DragAndDropMenuLabels_Create(PovBDictionary, povButtons, "POVB", "POV · BUTTON", "Icon_DragAndDrop_POV");
 			}
@@ -536,31 +582,12 @@ namespace x360ce.App.Controls
 		// Update DragAndDrop menu labels.
 		public void DragAndDropMenuLabels_Update(UserDevice ud)
 		{
-			// var customDeviceState = GetCustomDeviceState(ud);
-			// if (customDeviceState == null) return;
+			// Update the input method status indicator
+			UpdateInputMethodStatus(ud);
 
-			// int axisLength = ud.DiState.Axis.Length;
-
-			//// Trigger.
-			// SetLabelDIContent(axisLength, customDeviceState, TargetType.LeftTrigger, TriggerLLabelDI);
-			// SetLabelDIContent(axisLength, customDeviceState, TargetType.RightTrigger, TriggerRLabelDI);
-			// TriggerLLabelDZ.Content = _padSetting.LeftTriggerDeadZone;
-			// TriggerRLabelDZ.Content = _padSetting.RightTriggerDeadZone;
-
-			//// Buttons.
-			// SetLabelDIContent(axisLength, customDeviceState, TargetType.Button, BumperLLabelDI);
-
-			//// Stick Left.
-			// SetLabelDIContent(axisLength, customDeviceState, TargetType.LeftThumbX, StickLAxisXLabelDI);
-			// SetLabelDIContent(axisLength, customDeviceState, TargetType.LeftThumbY, StickLAxisYLabelDI);
-			// StickLAxisXLabelDZ.Content = _padSetting.LeftThumbDeadZoneX;
-			// StickLAxisYLabelDZ.Content = _padSetting.LeftThumbDeadZoneY;
-
-			//// Stick Right.
-			// SetLabelDIContent(axisLength, customDeviceState, TargetType.RightThumbX, StickRAxisXLabelDI);
-			// SetLabelDIContent(axisLength, customDeviceState, TargetType.RightThumbY, StickRAxisYLabelDI);
-			// StickRAxisXLabelDZ.Content = _padSetting.RightThumbDeadZoneX;
-			// StickRAxisYLabelDZ.Content = _padSetting.RightThumbDeadZoneY;
+			// Return early if device state is not available
+			if (ud?.DeviceState == null)
+				return;
 
 			// Buttons.
 			foreach (var kvp in ButtonDictionary)
@@ -655,7 +682,243 @@ namespace x360ce.App.Controls
 				}
 			}
 		}
-        #endregion
+
+		/// <summary>
+		/// Updates the input method status indicator to show whether the current input method is supported for the device.
+		/// Uses InputMethodDetector to ensure same source of truth as the "Available Inputs" label.
+		/// Provides clear feedback when unsupported input methods are selected.
+		/// </summary>
+		/// <param name="ud">The UserDevice to check compatibility for</param>
+		public void UpdateInputMethodStatus(UserDevice ud)
+		{
+			if (ud == null)
+			{
+				InputMethodStatusLabel.Content = "No Device";
+				InputMethodStatusBorder.Background = (SolidColorBrush)new BrushConverter().ConvertFrom("#FFCCCCCC");
+				UpdateXILabelsVisibility(null);
+				return;
+			}
+
+			var currentMethod = ud.InputMethod;
+			var deviceState = ud.DeviceState;
+			bool hasActiveInput = deviceState != null;
+			bool isSupported = IsInputMethodSupported(ud, currentMethod);
+
+			if (!isSupported)
+			{
+				// Input method is not supported - show error state
+				InputMethodStatusLabel.Content = $"{currentMethod} Not Supported";
+				InputMethodStatusBorder.Background = colorRecord;
+				UpdateInputMethodTooltip(ud, currentMethod, false);
+			}
+			else
+			{
+				// Input method is supported - show status
+				var statusText = hasActiveInput ? $"{currentMethod} - Active" : $"{currentMethod} - Ready";
+				InputMethodStatusLabel.Content = statusText;
+				InputMethodStatusBorder.Background = hasActiveInput ? colorActive : colorNormal;
+				UpdateInputMethodTooltip(ud, currentMethod, true);
+			}
+
+			// Update XI labels visibility based on XInput support
+			UpdateXILabelsVisibility(ud);
+		}
+
+		/// <summary>
+		/// Checks if the specified input method is supported for the given device using InputMethodDetector.
+		/// This ensures consistency with the "Available Inputs" label.
+		/// </summary>
+		/// <param name="ud">The UserDevice to check</param>
+		/// <param name="inputMethod">The input method to check</param>
+		/// <returns>True if the input method is supported</returns>
+		private bool IsInputMethodSupported(UserDevice ud, Engine.InputMethod inputMethod)
+		{
+			if (ud == null)
+				return false;
+
+			switch (inputMethod)
+			{
+				case Engine.InputMethod.DirectInput:
+					return InputMethodDetector.SupportsDirectInput(ud);
+				case Engine.InputMethod.XInput:
+					return InputMethodDetector.SupportsXInput(ud);
+				case Engine.InputMethod.GamingInput:
+					return InputMethodDetector.SupportsGamingInput(ud);
+				case Engine.InputMethod.RawInput:
+					return InputMethodDetector.SupportsRawInput(ud);
+				default:
+					return false;
+			}
+		}
+
+		/// <summary>
+		/// Updates the tooltip for the input method status label with appropriate information.
+		/// </summary>
+		/// <param name="ud">The UserDevice</param>
+		/// <param name="inputMethod">The current input method</param>
+		/// <param name="isSupported">Whether the input method is supported</param>
+		private void UpdateInputMethodTooltip(UserDevice ud, Engine.InputMethod inputMethod, bool isSupported)
+		{
+			if (!isSupported)
+			{
+				var availableMethods = InputMethodDetector.GetAvailableInputMethodsText(ud);
+				InputMethodStatusLabel.ToolTip = $"{inputMethod} is not supported for this device.\n\nAvailable methods: {availableMethods}\n\nSwitch to a supported input method for full functionality.";
+				return;
+			}
+
+			switch (inputMethod)
+			{
+				case Engine.InputMethod.DirectInput:
+					var diLimitation = ud.IsXboxCompatible && InputMethodDetector.IsWindows10OrLater()
+						? "\n\nNote: Xbox controllers may lose background access on Windows 10+"
+						: "";
+					InputMethodStatusLabel.ToolTip = $"DirectInput provides universal controller support.{diLimitation}";
+					break;
+
+				case Engine.InputMethod.XInput:
+					var slotsInfo = InputMethodDetector.GetAvailableXInputSlots() < 4
+						? $"\n\n{4 - InputMethodDetector.GetAvailableXInputSlots()} XInput slots available"
+						: "\n\nAll 4 XInput slots available";
+					InputMethodStatusLabel.ToolTip = $"XInput provides Xbox controller support with background access.{slotsInfo}";
+					break;
+
+				case Engine.InputMethod.GamingInput:
+					var support = ud.IsXboxCompatible
+						? "full Xbox features including trigger rumble"
+						: "basic gamepad support";
+					InputMethodStatusLabel.ToolTip = $"GamingInput provides {support}.\n\nRequires Windows 10+. No background access.";
+					break;
+
+				case Engine.InputMethod.RawInput:
+					InputMethodStatusLabel.ToolTip = "RawInput provides direct HID access with background support.\n\nMore complex setup but works with all controllers.";
+					break;
+
+				default:
+					InputMethodStatusLabel.ToolTip = $"{inputMethod} input method is active.";
+					break;
+			}
+		}
+
+		/// <summary>
+		/// Updates the visibility and styling of XInput value labels (XILabel controls) based on input method support.
+		/// Uses InputMethodDetector for consistent validation with other UI elements.
+		/// Grays out or hides XI labels when XInput is not supported to prevent user confusion.
+		/// </summary>
+		/// <param name="ud">The UserDevice to check XInput compatibility for</param>
+		public void UpdateXILabelsVisibility(UserDevice ud)
+		{
+			bool showXILabels = ud != null &&
+			                   ud.InputMethod == Engine.InputMethod.XInput &&
+			                   InputMethodDetector.SupportsXInput(ud);
+			var opacity = showXILabels ? 1.0 : 0.3;
+			var foregroundBrush = showXILabels ? Brushes.Green : Brushes.Gray;
+
+			// Update all XILabel controls to show appropriate visual feedback
+			TriggerLXILabel.Opacity = opacity;
+			TriggerLXILabel.Foreground = foregroundBrush;
+			TriggerRXILabel.Opacity = opacity;
+			TriggerRXILabel.Foreground = foregroundBrush;
+
+			BumperLXILabel.Opacity = opacity;
+			BumperLXILabel.Foreground = foregroundBrush;
+			BumperRXILabel.Opacity = opacity;
+			BumperRXILabel.Foreground = foregroundBrush;
+
+			MenuBackXILabel.Opacity = opacity;
+			MenuBackXILabel.Foreground = foregroundBrush;
+			MenuStartXILabel.Opacity = opacity;
+			MenuStartXILabel.Foreground = foregroundBrush;
+			MenuGuideXILabel.Opacity = opacity;
+			MenuGuideXILabel.Foreground = foregroundBrush;
+
+			ActionAXILabel.Opacity = opacity;
+			ActionAXILabel.Foreground = foregroundBrush;
+			ActionBXILabel.Opacity = opacity;
+			ActionBXILabel.Foreground = foregroundBrush;
+			ActionXXILabel.Opacity = opacity;
+			ActionXXILabel.Foreground = foregroundBrush;
+			ActionYXILabel.Opacity = opacity;
+			ActionYXILabel.Foreground = foregroundBrush;
+
+			DPadXILabel.Opacity = opacity;
+			DPadXILabel.Foreground = foregroundBrush;
+			DPadUpXILabel.Opacity = opacity;
+			DPadUpXILabel.Foreground = foregroundBrush;
+			DPadDownXILabel.Opacity = opacity;
+			DPadDownXILabel.Foreground = foregroundBrush;
+			DPadLeftXILabel.Opacity = opacity;
+			DPadLeftXILabel.Foreground = foregroundBrush;
+			DPadRightXILabel.Opacity = opacity;
+			DPadRightXILabel.Foreground = foregroundBrush;
+
+			StickLAxisXXILabel.Opacity = opacity;
+			StickLAxisXXILabel.Foreground = foregroundBrush;
+			StickLAxisYXILabel.Opacity = opacity;
+			StickLAxisYXILabel.Foreground = foregroundBrush;
+			StickLButtonXILabel.Opacity = opacity;
+			StickLButtonXILabel.Foreground = foregroundBrush;
+			StickLUpXILabel.Opacity = opacity;
+			StickLUpXILabel.Foreground = foregroundBrush;
+			StickLDownXILabel.Opacity = opacity;
+			StickLDownXILabel.Foreground = foregroundBrush;
+			StickLLeftXILabel.Opacity = opacity;
+			StickLLeftXILabel.Foreground = foregroundBrush;
+			StickLRightXILabel.Opacity = opacity;
+			StickLRightXILabel.Foreground = foregroundBrush;
+
+			StickRAxisXXILabel.Opacity = opacity;
+			StickRAxisXXILabel.Foreground = foregroundBrush;
+			StickRAxisYXILabel.Opacity = opacity;
+			StickRAxisYXILabel.Foreground = foregroundBrush;
+			StickRButtonXILabel.Opacity = opacity;
+			StickRButtonXILabel.Foreground = foregroundBrush;
+			StickRUpXILabel.Opacity = opacity;
+			StickRUpXILabel.Foreground = foregroundBrush;
+			StickRDownXILabel.Opacity = opacity;
+			StickRDownXILabel.Foreground = foregroundBrush;
+			StickRLeftXILabel.Opacity = opacity;
+			StickRLeftXILabel.Foreground = foregroundBrush;
+			StickRRightXILabel.Opacity = opacity;
+			StickRRightXILabel.Foreground = foregroundBrush;
+
+			// Set content to indicate unavailable state when not supported
+			if (!showXILabels && ud?.InputMethod == Engine.InputMethod.XInput)
+			{
+				var unavailableText = "-";
+				TriggerLXILabel.Content = unavailableText;
+				TriggerRXILabel.Content = unavailableText;
+				BumperLXILabel.Content = unavailableText;
+				BumperRXILabel.Content = unavailableText;
+				MenuBackXILabel.Content = unavailableText;
+				MenuStartXILabel.Content = unavailableText;
+				MenuGuideXILabel.Content = unavailableText;
+				ActionAXILabel.Content = unavailableText;
+				ActionBXILabel.Content = unavailableText;
+				ActionXXILabel.Content = unavailableText;
+				ActionYXILabel.Content = unavailableText;
+				DPadXILabel.Content = unavailableText;
+				DPadUpXILabel.Content = unavailableText;
+				DPadDownXILabel.Content = unavailableText;
+				DPadLeftXILabel.Content = unavailableText;
+				DPadRightXILabel.Content = unavailableText;
+				StickLAxisXXILabel.Content = unavailableText;
+				StickLAxisYXILabel.Content = unavailableText;
+				StickLButtonXILabel.Content = unavailableText;
+				StickLUpXILabel.Content = unavailableText;
+				StickLDownXILabel.Content = unavailableText;
+				StickLLeftXILabel.Content = unavailableText;
+				StickLRightXILabel.Content = unavailableText;
+				StickRAxisXXILabel.Content = unavailableText;
+				StickRAxisYXILabel.Content = unavailableText;
+				StickRButtonXILabel.Content = unavailableText;
+				StickRUpXILabel.Content = unavailableText;
+				StickRDownXILabel.Content = unavailableText;
+				StickRLeftXILabel.Content = unavailableText;
+				StickRRightXILabel.Content = unavailableText;
+			}
+		}
+
+		#endregion
 
         #region ■ Direct Input Menu
 

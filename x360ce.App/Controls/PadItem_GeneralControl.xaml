@@ -215,8 +215,8 @@
 			<ColumnDefinition Width="*" MinWidth="280" />
 			<ColumnDefinition Width="220" />
 		</Grid.ColumnDefinitions>
-		<Border Grid.Column="2" Style="{StaticResource DragAndDropXInputBorder}">
-			<Label Style="{StaticResource DragAndDropXInputLabel}" />
+		<Border Grid.Column="2" Name="InputMethodStatusBorder" Style="{StaticResource DragAndDropXInputBorder}">
+			<Label Name="InputMethodStatusLabel" Style="{StaticResource DragAndDropXInputLabel}" />
 		</Border>
 
 		<!--  Buttons and Axes  -->
