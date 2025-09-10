@@ -228,7 +228,7 @@ namespace x360ce.App
 
 			// 5) Write information to debug output.
 			Debug.WriteLine(
-				$"DEV_BROADCAST_DEVICEINTERFACE: " +
+				$"DEV_BROADCAST_DEVICEINTERFACE(StartHelper.cs): " +
 				$"{(evt == DBT_DEVICEARRIVAL ? "Attached" : "Removed")}, " +
 				$"{DateTime.Now:HH:mm:ss.fff}, " +
 				$"ClassGuid: {guid}, " +
