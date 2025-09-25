@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using x360ce.App.Input.Devices;
 using x360ce.Engine.Data;
 
 namespace x360ce.App.Input.Orchestration
@@ -28,8 +29,15 @@ namespace x360ce.App.Input.Orchestration
 				// Get currently listed devices.
 				var listedDevices = SettingsManager.UserDevices.ItemsToArraySynchronized();
 
-				// Retrieve connected devices and check if the list has changed.
-				(var connectedDevices, bool listChanged) = GetConnectedDiDevices(directInput);
+                // List devices: Physical, DirectInput, RawInput, XInput, GamingInput.
+                var devicesCombined = new DevicesCombined();
+				devicesCombined.RunDirectInputEnumeration();
+                devicesCombined.RunXInputEnumeration();
+                devicesCombined.RunRawInputEnumeration();
+                devicesCombined.RunGamingInputEnumeration();
+
+                // Retrieve connected devices and check if the list has changed.
+                (var connectedDevices, bool listChanged) = GetConnectedDiDevices(directInput);
 
 				// Compare listedDevices with connectedDevices and put...
 				// added and updated devices (from connectedDevices) into: addedDevices, updatedDevices

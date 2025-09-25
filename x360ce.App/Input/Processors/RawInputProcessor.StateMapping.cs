@@ -195,7 +195,7 @@ namespace x360ce.App.Input.Processors
 							// Only log significant changes to avoid spam
 							if (Math.Abs(convertedValue) > 1000)
 							{
-								Debug.WriteLine($"Raw Input: Axis {valueInfo.CustomDeviceStateIndex} ({valueInfo.Name}) = {convertedValue} (raw: {rawValue}, range: {valueInfo.LogicalMin}-{valueInfo.LogicalMax})");
+								// Debug.WriteLine($"Raw Input: Axis {valueInfo.CustomDeviceStateIndex} ({valueInfo.Name}) = {convertedValue} (raw: {rawValue}, range: {valueInfo.LogicalMin}-{valueInfo.LogicalMax})");
 							}
 						}
 					}
@@ -246,7 +246,7 @@ namespace x360ce.App.Input.Processors
 						if (valueInfo.CustomDeviceStateIndex >= 0 && valueInfo.CustomDeviceStateIndex < state.POVs.Length)
 						{
 							state.POVs[valueInfo.CustomDeviceStateIndex] = povValue;
-							Debug.WriteLine($"Raw Input: POV {valueInfo.CustomDeviceStateIndex} = {povValue} (raw: {rawValue})");
+							// Debug.WriteLine($"Raw Input: POV {valueInfo.CustomDeviceStateIndex} = {povValue} (raw: {rawValue})");
 						}
 					}
 					else if (status != HIDP_STATUS_USAGE_NOT_FOUND)
