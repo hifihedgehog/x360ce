@@ -93,6 +93,7 @@ namespace x360ce.App.Input.Devices
         /// </remarks>
         public List<DirectInputDeviceInfo> GetDirectInputDeviceList()
         {
+            var stopwatch = Stopwatch.StartNew();
             var deviceList = new List<DirectInputDeviceInfo>();
             var deviceListDebugLines = new List<string>();
             int deviceListIndex = 0;
@@ -324,7 +325,9 @@ namespace x360ce.App.Input.Devices
                 var mouseCount = deviceList.Count(d => d.DeviceType == DeviceType.Mouse);
                 var offlineCount = deviceList.Count(d => !d.IsOnline);
 
-                deviceListDebugLines.Add($"\nDeviceDirectInput: " +
+                stopwatch.Stop();
+
+                deviceListDebugLines.Add($"\nDeviceDirectInput: ({(int)Math.Round(stopwatch.Elapsed.TotalMilliseconds)} ms) " +
                 $"Input Devices found: {deviceList.Count}, " +
                 $"Gamepads/Joysticks: {gamepadCount}, " +
                 $"Keyboards: {keyboardCount}, " +
@@ -337,7 +340,7 @@ namespace x360ce.App.Input.Devices
                 Debug.WriteLine($"DeviceDirectInput: Stack trace: {ex.StackTrace}");
             }
 
-           foreach (var debugLine in deviceListDebugLines) { Debug.WriteLine(debugLine); }
+            foreach (var debugLine in deviceListDebugLines) { Debug.WriteLine(debugLine); }
 
             return deviceList;
         }

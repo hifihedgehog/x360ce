@@ -236,6 +236,7 @@ namespace x360ce.App.Input.Devices
         /// </remarks>
         public List<RawInputDeviceInfo> GetRawInputDeviceList()
         {
+            var stopwatch = Stopwatch.StartNew();
             var deviceList = new List<RawInputDeviceInfo>();
             var deviceListDebugLines = new List<string>();
             int deviceListIndex = 0;
@@ -375,7 +376,9 @@ namespace x360ce.App.Input.Devices
                 var gamepadCount = deviceList.Count(d => IsGamepadDevice(d.Usage, d.UsagePage));
                 var offlineCount = deviceList.Count(d => !d.IsOnline);
 
-                deviceListDebugLines.Add($"\nDevicesRawInput: " +
+                stopwatch.Stop();
+
+                deviceListDebugLines.Add($"\nDevicesRawInput: ({(int)Math.Round(stopwatch.Elapsed.TotalMilliseconds)} ms) " +
                     $"Input Devices found: {deviceList.Count}, " +
                     $"HID: {hidCount}, " +
                     $"Gamepads: {gamepadCount}, " +

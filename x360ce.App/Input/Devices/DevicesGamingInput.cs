@@ -105,6 +105,7 @@ namespace x360ce.App.Input.Devices
         /// </remarks>
         public List<GamingInputDeviceInfo> GetGamingInputDeviceList()
         {
+            var stopwatch = Stopwatch.StartNew();
             var deviceList = new List<GamingInputDeviceInfo>();
             var deviceListDebugLines = new List<string>();
             int deviceListIndex = 0;
@@ -325,7 +326,9 @@ namespace x360ce.App.Input.Devices
                 var vibrationCount = deviceList.Count(d => d.SupportsVibration);
                 var triggerRumbleCount = deviceList.Count(d => d.SupportsTriggerRumble);
 
-                deviceListDebugLines.Add($"\nDevicesGamingInput: " +
+                stopwatch.Stop();
+
+                deviceListDebugLines.Add($"\nDevicesGamingInput: ({(int)Math.Round(stopwatch.Elapsed.TotalMilliseconds)} ms) " +
                     $"Gaming Input gamepads found: {connectedCount}, " +
                     $"Online: {connectedCount - offlineCount}, " +
                     $"Offline/Failed: {offlineCount}, " +

@@ -152,7 +152,7 @@ namespace x360ce.App.Input.Orchestration
                 }
 
 				stopwatch.Stop();
-				Debug.WriteLine($"SharpDX.DirectInput.DeviceInstance: Stopwatch {stopwatch.Elapsed.TotalMilliseconds} ms");
+				Debug.WriteLine($"SharpDX.DirectInput.DeviceInstance: ({(int)Math.Round(stopwatch.Elapsed.TotalMilliseconds)} ms)");
 			}
 
 			return (connectedDiDevices, listChanged);
@@ -280,7 +280,7 @@ namespace x360ce.App.Input.Orchestration
             }
 
             stopwatchLD.Stop();
-            Debug.WriteLine($"ListedDevice: Stopwatch: {stopwatchLD.Elapsed.TotalMilliseconds} ms\n");
+            Debug.WriteLine($"ListedDevice: ({(int)Math.Round(stopwatchLD.Elapsed.TotalMilliseconds)} ms)\n");
 
             var stopwatchUD = Stopwatch.StartNew();
 
@@ -297,7 +297,7 @@ namespace x360ce.App.Input.Orchestration
             }
 
             stopwatchUD.Stop();
-            Debug.WriteLine($"UpdatedDevice: Stopwatch: {stopwatchUD.Elapsed.TotalMilliseconds} ms\n");
+            Debug.WriteLine($"UpdatedDevice: ({(int)Math.Round(stopwatchUD.Elapsed.TotalMilliseconds)} ms)\n");
         }
 
         /// <summary>

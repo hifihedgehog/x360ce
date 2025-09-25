@@ -424,7 +424,7 @@ namespace JocysCom.ClassLibrary.IO
 		// INTERFACES.
 		public static DeviceInfo[] GetInterfaces(bool DiDevicesOnly = false)
 		{
-			var stopwatchInt = Stopwatch.StartNew();
+			var stopwatch = Stopwatch.StartNew();
 
 			var list = new List<DeviceInfo>();
 			var hidGuid = Guid.Empty;
@@ -534,8 +534,9 @@ namespace JocysCom.ClassLibrary.IO
 			{
 				Debug.WriteLine($"No PnPDevice.");
 			}
-				stopwatchInt.Stop();
-			Debug.WriteLine($"PnPDeviceInterface: Stopwatch: {stopwatchInt.Elapsed.TotalMilliseconds} ms\n");
+
+			stopwatch.Stop();
+			Debug.WriteLine($"PnPDeviceInterface: ({(int)Math.Round(stopwatch.Elapsed.TotalMilliseconds)} ms)\n");
 
 			return list.ToArray();
 		}
@@ -624,7 +625,7 @@ namespace JocysCom.ClassLibrary.IO
 
         public static DeviceInfo[] GetDevices(Guid? classGuid = null, DIGCF? flags = null, string parentDeviceId = null, int vid = 0, int pid = 0, int rev = 0, bool DiDevicesOnly = false)
 		{
-			var stopwatchPnP = Stopwatch.StartNew();
+			var stopwatch = Stopwatch.StartNew();
 			var list = new List<DeviceInfo>();
 
 			_EnumDeviceInfo(classGuid, flags, null, (infoSet, infoData) =>
@@ -693,8 +694,8 @@ namespace JocysCom.ClassLibrary.IO
 				Debug.WriteLine($"No PnPDevice.");
 			}
 
-				stopwatchPnP.Stop();
-			Debug.WriteLine($"PnPDeviceInfo: Stopwatch {stopwatchPnP.Elapsed.TotalMilliseconds} ms\n");
+			stopwatch.Stop();
+			Debug.WriteLine($"PnPDeviceInfo: ({(int)Math.Round(stopwatch.Elapsed.TotalMilliseconds)} ms)\n");
 
 			return listOrdered;
 		}

@@ -104,6 +104,7 @@ namespace x360ce.App.Input.Devices
         /// </remarks>
         public List<XInputDeviceInfo> GetXInputDeviceList()
         {
+            var stopwatch = Stopwatch.StartNew();
             var deviceList = new List<XInputDeviceInfo>();
             var deviceListDebugLines = new List<string>();
             int deviceListIndex = 0;
@@ -245,7 +246,9 @@ namespace x360ce.App.Input.Devices
                 var connectedCount = deviceList.Count;
                 var offlineCount = deviceList.Count(d => !d.IsOnline);
 
-                deviceListDebugLines.Add($"\nDevicesXInput: " +
+                stopwatch.Stop();
+
+                deviceListDebugLines.Add($"\nDevicesXInput: ({(int)Math.Round(stopwatch.Elapsed.TotalMilliseconds)} ms) " +
                     $"Input Devices found: {connectedCount}/4, " +
                     $"Online: {connectedCount - offlineCount}, " +
                     $"Offline/Failed: {offlineCount}\n");

@@ -88,21 +88,20 @@ namespace x360ce.App
 			return ud;
 		}
 
-		static Stopwatch watch;
+		static Stopwatch stopwatch;
 
 		public static JoystickState GetCurrentState(UserDevice ud)
 		{
-			if (watch == null)
+            if (stopwatch == null)
 			{
-				watch = new Stopwatch();
-				watch.Start();
+                stopwatch = Stopwatch.StartNew();
 			}
-			var elapsed = watch.Elapsed;
+			var elapsed = stopwatch.Elapsed;
 			// Restart timer if out of limits.
 			if (elapsed.TotalMilliseconds > int.MaxValue)
 			{
-				watch.Restart();
-				elapsed = watch.Elapsed;
+				stopwatch.Restart();
+				elapsed = stopwatch.Elapsed;
 			}
 			// Acquire values.
 			var ts = (int)elapsed.TotalSeconds;
