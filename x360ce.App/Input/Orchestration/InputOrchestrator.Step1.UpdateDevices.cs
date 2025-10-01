@@ -31,11 +31,11 @@ namespace x360ce.App.Input.Orchestration
 
                 // List devices: PnPInput, DirectInput, RawInput, XInput, GamingInput.
                 var devicesCombined = new DevicesCombined();
-                devicesCombined.RunPnPInputEnumeration();
-                devicesCombined.RunDirectInputEnumeration();
-                devicesCombined.RunXInputEnumeration();
-                devicesCombined.RunRawInputEnumeration();
-                devicesCombined.RunGamingInputEnumeration();
+                var pnPDevices = devicesCombined.RunPnPInputEnumeration();
+                var directInputDevices = devicesCombined.RunDirectInputEnumeration();
+                var xInputDevices = devicesCombined.RunXInputEnumeration();
+                var rawInputDevices = devicesCombined.RunRawInputEnumeration();
+                var gamingInputDevices = devicesCombined.RunGamingInputEnumeration();
 
                 // Retrieve connected devices and check if the list has changed.
                 (var connectedDevices, bool listChanged) = GetConnectedDiDevices(directInput);

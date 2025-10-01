@@ -493,30 +493,16 @@ namespace x360ce.App.Controls
 				axes.Add(i);
 			}
 
-			// Sliders - For non-DirectInput modes, we can assume standard slider availability
-			// This provides a consistent interface regardless of input method
-			if (ud.InputMethod == x360ce.Engine.InputMethod.DirectInput && ud.DirectInputDevice is Joystick device)
+			// Sliders - Use DiSliderMask to detect which sliders are available
+			// This provides accurate slider detection based on device capabilities
+			if (ud.InputMethod == x360ce.Engine.InputMethod.DirectInput)
 			{
-				// For DirectInput, check actual slider state to see what's available
-				try
+				// For DirectInput, use the DiSliderMask calculated during capability loading
+				// This mask indicates which slider offsets are present on the device
+				for (int i = 0; i < 8; i++) // Check all 8 possible slider positions
 				{
-					var state = (JoystickState)ud.DirectInputDeviceState;
-					if (state != null)
-					{
-						if (state.Sliders[0] != 0) sliders.Add(0);
-						if (state.Sliders[1] != 0) sliders.Add(1);
-						if (state.AccelerationSliders[0] != 0) sliders.Add(2);
-						if (state.AccelerationSliders[1] != 0) sliders.Add(3);
-						if (state.ForceSliders[0] != 0) sliders.Add(4);
-						if (state.ForceSliders[1] != 0) sliders.Add(5);
-						if (state.VelocitySliders[0] != 0) sliders.Add(6);
-						if (state.VelocitySliders[1] != 0) sliders.Add(7);
-					}
-				}
-				catch
-				{
-					// If DirectInput state access fails, fall back to basic slider assumption
-					for (int i = 0; i < 2; i++) // Assume basic 2 sliders for most controllers
+					// Check if this slider bit is set in the mask
+					if ((ud.DiSliderMask & (1 << i)) != 0)
 					{
 						sliders.Add(i);
 					}

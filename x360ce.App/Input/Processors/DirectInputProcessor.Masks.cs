@@ -110,11 +110,12 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
-		/// Calculates joystick sliders mask (moved from CustomDeviceState.GetJoystickSlidersMask).
+		/// Calculates joystick sliders mask.
 		/// </summary>
 		private void CalculateJoystickSlidersMask(DeviceObjectItem[] items, Joystick device, UserDevice ud)
 		{
 			int slidersMask = 0;
+			
 			for (int i = 0; i < CustomDeviceHelper.SliderOffsets.Count; i++)
 			{
 				try
@@ -133,8 +134,8 @@ namespace x360ce.App.Input.Processors
 				catch { }
 			}
 
-			// Note: UserDevice doesn't currently have a DiSlidersMask property,
-			// but the calculation is preserved for future use
+			// Update UserDevice with calculated slider mask
+			ud.DiSliderMask = slidersMask;
 		}
 
 	}

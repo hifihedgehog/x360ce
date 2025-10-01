@@ -21,7 +21,9 @@ namespace x360ce.App.Input.Devices
 		public int Usage { get; set; }
 		public int UsagePage { get; set; }
 		public int AxeCount { get; set; }
+		public int SliderCount { get; set; }
 		public int ButtonCount { get; set; }
+		public int KeyCount { get; set; }
 		public int PovCount { get; set; }
 		public bool HasForceFeedback { get; set; }
 		public int DriverVersion { get; set; }
@@ -90,7 +92,9 @@ namespace x360ce.App.Input.Devices
 		
 		// Standard Gaming Input capabilities
 		private const int AXES_COUNT = 6;      // Left Stick X/Y, Right Stick X/Y, Left/Right Triggers
+		private const int SLIDER_COUNT = 0;    // Gaming Input has no sliders (triggers are axes)
 		private const int BUTTON_COUNT = 16;   // Gaming Input supports up to 16 buttons
+		private const int KEY_COUNT = 0;       // Gaming Input has no keys (only buttons)
 		private const int POV_COUNT = 1;       // D-Pad as POV
 		
 		// Detection timeout constants (in milliseconds)
@@ -343,7 +347,9 @@ namespace x360ce.App.Input.Devices
 				
 				// Capabilities
 				AxeCount = AXES_COUNT,
+				SliderCount = SLIDER_COUNT,
 				ButtonCount = BUTTON_COUNT,
+				KeyCount = KEY_COUNT,
 				PovCount = POV_COUNT,
 				HasForceFeedback = true,
 				SupportsVibration = true,
@@ -612,24 +618,26 @@ namespace x360ce.App.Input.Devices
 		{
 			// Note: GamingInput API does not provide DeviceId, InterfacePath, or HardwareIds - these are always empty
 			Debug.WriteLine($"\n{deviceNumber}. DevicesGamingInputInfo: " +
-				$"CommonIdentifier: {deviceInfo.CommonIdentifier}, " +
+				$"CommonIdentifier (generated): {deviceInfo.CommonIdentifier}, " +
 				$"GamepadIndex: {deviceInfo.GamepadIndex}, " +
-				$"InstanceGuid: {deviceInfo.InstanceGuid}, " +
-				$"ProductGuid: {deviceInfo.ProductGuid}, " +
-				$"InstanceName: {deviceInfo.InstanceName}, " +
-				$"ProductName: {deviceInfo.ProductName}, " +
-				$"DeviceType: {deviceInfo.DeviceType}, " +
-				$"DeviceTypeName: {deviceInfo.DeviceTypeName}, " +
+				$"InstanceGuid (generated): {deviceInfo.InstanceGuid}, " +
+				$"ProductGuid (generated): {deviceInfo.ProductGuid}, " +
+				$"InstanceName (generated): {deviceInfo.InstanceName}, " +
+				$"ProductName (generated): {deviceInfo.ProductName}, " +
+				$"DeviceType (generated): {deviceInfo.DeviceType}, " +
+				$"DeviceTypeName (generated): {deviceInfo.DeviceTypeName}, " +
 				$"Timestamp: {deviceInfo.LastTimestamp}");
 
-			Debug.WriteLine($"DevicesGamingInputInfo Identification: " +
+			Debug.WriteLine($"DevicesGamingInputInfo Identification (generated): " +
 				$"VidPidString: {deviceInfo.VidPidString}, " +
 				$"VendorId: {deviceInfo.VendorId} (0x{deviceInfo.VendorId:X4}), " +
 				$"ProductId: {deviceInfo.ProductId} (0x{deviceInfo.ProductId:X4})");
 
-			Debug.WriteLine($"DevicesGamingInputInfo Capabilities: " +
+			Debug.WriteLine($"DevicesGamingInputInfo Capabilities (generated): " +
 				$"AxeCount: {deviceInfo.AxeCount}, " +
+				$"SliderCount: {deviceInfo.SliderCount}, " +
 				$"ButtonCount: {deviceInfo.ButtonCount}, " +
+				$"KeyCount: {deviceInfo.KeyCount}, " +
 				$"PovCount: {deviceInfo.PovCount}, " +
 				$"HasForceFeedback: {deviceInfo.HasForceFeedback}, " +
 				$"SupportsVibration: {deviceInfo.SupportsVibration}, " +

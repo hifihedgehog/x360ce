@@ -32,8 +32,17 @@ namespace x360ce.App.Input.Devices
         public int Usage { get; set; }
         public int UsagePage { get; set; }
         public int AxeCount { get; set; }
+        public int SliderCount { get; set; }
         public int ButtonCount { get; set; }
+        public int KeyCount { get; set; }
         public int PovCount { get; set; }
+        
+        // Simulation Controls (Usage Page 0x02)
+        public int ThrottleCount { get; set; }
+        public int BrakeCount { get; set; }
+        public int SteeringCount { get; set; }
+        public int AcceleratorCount { get; set; }
+        public int ClutchCount { get; set; }
         
         /// <summary>
         /// Force feedback availability. Always false for RawInput devices.
@@ -373,6 +382,7 @@ namespace x360ce.App.Input.Devices
 
         // HID Usage Pages
         private const ushort HID_USAGE_PAGE_GENERIC = 0x01;
+        private const ushort HID_USAGE_PAGE_SIMULATION = 0x02;
         private const ushort HID_USAGE_PAGE_GAME = 0x05;
 
         // HID Usages for Generic Desktop
@@ -735,11 +745,19 @@ namespace x360ce.App.Input.Devices
         /// <param name="povCount">Output: number of POV hats</param>
         /// <param name="hasForceFeedback">Output: whether device supports force feedback</param>
         /// <returns>True if capabilities were successfully retrieved</returns>
-        private bool GetHidCapabilities(IntPtr hDevice, out int axeCount, out int buttonCount, out int povCount, out bool hasForceFeedback)
+        private bool GetHidCapabilities(IntPtr hDevice, out int axeCount, out int sliderCount, out int buttonCount, out int povCount,
+            out int throttleCount, out int brakeCount, out int steeringCount, out int acceleratorCount, out int clutchCount,
+            out bool hasForceFeedback)
         {
             axeCount = 0;
+            sliderCount = 0;
             buttonCount = 0;
             povCount = 0;
+            throttleCount = 0;
+            brakeCount = 0;
+            steeringCount = 0;
+            acceleratorCount = 0;
+            clutchCount = 0;
             hasForceFeedback = false;
 
             IntPtr preparsedData = IntPtr.Zero;
@@ -756,15 +774,19 @@ namespace x360ce.App.Input.Devices
                     return false;
                 }
 
+                Debug.WriteLine($"DevicesRawInput: Preparsed data size: {size} bytes for device 0x{hDevice.ToInt64():X8}");
+
                 // Allocate buffer and get preparsed data
                 preparsedData = Marshal.AllocHGlobal((int)size);
                 uint result = GetRawInputDeviceInfo(hDevice, RIDI_PREPARSEDDATA, preparsedData, ref size);
                 
                 if (result == uint.MaxValue || result == 0)
                 {
-                    Debug.WriteLine($"DevicesRawInput: Failed to get preparsed data for device 0x{hDevice.ToInt64():X8}");
+                    Debug.WriteLine($"DevicesRawInput: Failed to get preparsed data for device 0x{hDevice.ToInt64():X8}, result: {result}");
                     return false;
                 }
+
+                Debug.WriteLine($"DevicesRawInput: Successfully retrieved preparsed data for device 0x{hDevice.ToInt64():X8}");
 
                 // Get HID capabilities
                 HIDP_CAPS caps;
@@ -775,6 +797,8 @@ namespace x360ce.App.Input.Devices
                     Debug.WriteLine($"DevicesRawInput: HidP_GetCaps failed with status 0x{status:X8} for device 0x{hDevice.ToInt64():X8}");
                     return false;
                 }
+
+                Debug.WriteLine($"DevicesRawInput: HID Caps - InputButtonCaps: {caps.NumberInputButtonCaps}, InputValueCaps: {caps.NumberInputValueCaps}");
 
                 // Parse input button capabilities
                 if (caps.NumberInputButtonCaps > 0)
@@ -812,21 +836,110 @@ namespace x360ce.App.Input.Devices
                     {
                         foreach (var valueCap in valueCaps)
                         {
+                            // Debug: Log ALL value capabilities regardless of usage page
+                            ushort usage = valueCap.IsRange ? valueCap.Range.UsageMin : valueCap.NotRange.Usage;
+                            ushort usageMax = valueCap.IsRange ? valueCap.Range.UsageMax : usage;
+                            ushort linkUsage = valueCap.LinkUsage;
+                            ushort linkUsagePage = valueCap.LinkUsagePage;
+                            
+                            if (valueCap.IsRange)
+                            {
+                                Debug.WriteLine($"DevicesRawInput: HID Value Range - UsagePage: 0x{valueCap.UsagePage:X2}, UsageMin: 0x{usage:X2}, UsageMax: 0x{usageMax:X2}, " +
+                                    $"LinkUsage: 0x{linkUsage:X2}, LinkUsagePage: 0x{linkUsagePage:X2}, ReportCount: {valueCap.ReportCount}");
+                            }
+                            else
+                            {
+                                Debug.WriteLine($"DevicesRawInput: HID Value - UsagePage: 0x{valueCap.UsagePage:X2}, Usage: 0x{usage:X2}, " +
+                                    $"LinkUsage: 0x{linkUsage:X2}, LinkUsagePage: 0x{linkUsagePage:X2}, ReportCount: {valueCap.ReportCount}");
+                            }
+                            
+                            // Special handling for devices with invalid UsagePage (0x00) but valid LinkUsage
+                            // Some devices (like T.16000M) report axes/sliders in LinkUsage when UsagePage is 0
+                            // Note: Some devices put the usage code in BOTH LinkUsage and LinkUsagePage fields
+                            if (valueCap.UsagePage == 0x00 && linkUsage >= 0x30 && linkUsage <= 0x39 &&
+                                (linkUsagePage == HID_USAGE_PAGE_GENERIC || linkUsagePage == linkUsage))
+                            {
+                                Debug.WriteLine($"DevicesRawInput: Found control with invalid UsagePage but valid LinkUsage: 0x{linkUsage:X2}");
+                                
+                                // Standard axes: X(0x30), Y(0x31), Z(0x32), Rx(0x33), Ry(0x34), Rz(0x35)
+                                if (linkUsage >= 0x30 && linkUsage <= 0x35)
+                                {
+                                    axeCount++;
+                                    Debug.WriteLine($"DevicesRawInput: Found 1 axis at LinkUsage 0x{linkUsage:X2}");
+                                }
+                                // Sliders: Slider(0x36), Dial(0x37), Wheel(0x38)
+                                else if (linkUsage >= 0x36 && linkUsage <= 0x38)
+                                {
+                                    sliderCount++;
+                                    Debug.WriteLine($"DevicesRawInput: Found 1 slider at LinkUsage 0x{linkUsage:X2}");
+                                }
+                                // POV Hat Switch (0x39)
+                                else if (linkUsage == 0x39)
+                                {
+                                    povCount++;
+                                    Debug.WriteLine($"DevicesRawInput: Found 1 POV at LinkUsage 0x{linkUsage:X2}");
+                                }
+                                continue; // Skip normal processing since we handled it
+                            }
+                            
+                            // Also check for Pointer collections that might contain nested axes
+                            if (valueCap.UsagePage == HID_USAGE_PAGE_GENERIC && usage == 0x01 &&
+                                linkUsagePage == HID_USAGE_PAGE_GENERIC && linkUsage >= 0x30 && linkUsage <= 0x39)
+                            {
+                                Debug.WriteLine($"DevicesRawInput: Found nested control in Pointer collection - LinkUsage: 0x{linkUsage:X2}");
+                                
+                                // Standard axes: X(0x30), Y(0x31), Z(0x32), Rx(0x33), Ry(0x34), Rz(0x35)
+                                if (linkUsage >= 0x30 && linkUsage <= 0x35)
+                                {
+                                    axeCount++;
+                                    Debug.WriteLine($"DevicesRawInput: Found 1 axis (nested) at LinkUsage 0x{linkUsage:X2}");
+                                }
+                                // Sliders: Slider(0x36), Dial(0x37), Wheel(0x38)
+                                else if (linkUsage >= 0x36 && linkUsage <= 0x38)
+                                {
+                                    sliderCount++;
+                                    Debug.WriteLine($"DevicesRawInput: Found 1 slider (nested) at LinkUsage 0x{linkUsage:X2}");
+                                }
+                                // POV Hat Switch (0x39)
+                                else if (linkUsage == 0x39)
+                                {
+                                    povCount++;
+                                    Debug.WriteLine($"DevicesRawInput: Found 1 POV (nested) at LinkUsage 0x{linkUsage:X2}");
+                                }
+                                continue; // Skip normal processing for Pointer collections
+                            }
+                            
                             // Check usage page and usage to determine if it's an axis or POV
                             if (valueCap.UsagePage == HID_USAGE_PAGE_GENERIC)
                             {
-                                ushort usage = valueCap.IsRange ? valueCap.Range.UsageMin : valueCap.NotRange.Usage;
-                                
-                                // Common axis usages: X(0x30), Y(0x31), Z(0x32), Rx(0x33), Ry(0x34), Rz(0x35), Slider(0x36), Dial(0x37), Wheel(0x38)
-                                if (usage >= 0x30 && usage <= 0x38)
+                                // Standard axes: X(0x30), Y(0x31), Z(0x32), Rx(0x33), Ry(0x34), Rz(0x35)
+                                if (usage >= 0x30 && usage <= 0x35)
                                 {
                                     if (valueCap.IsRange)
                                     {
-                                        axeCount += (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
+                                        int count = (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
+                                        axeCount += count;
+                                        Debug.WriteLine($"DevicesRawInput: Found {count} axes in range 0x{usage:X2}-0x{usageMax:X2}");
                                     }
                                     else
                                     {
                                         axeCount++;
+                                        Debug.WriteLine($"DevicesRawInput: Found 1 axis at usage 0x{usage:X2}");
+                                    }
+                                }
+                                // Sliders: Slider(0x36), Dial(0x37), Wheel(0x38)
+                                else if (usage >= 0x36 && usage <= 0x38)
+                                {
+                                    if (valueCap.IsRange)
+                                    {
+                                        int count = (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
+                                        sliderCount += count;
+                                        Debug.WriteLine($"DevicesRawInput: Found {count} sliders in range 0x{usage:X2}-0x{usageMax:X2}");
+                                    }
+                                    else
+                                    {
+                                        sliderCount++;
+                                        Debug.WriteLine($"DevicesRawInput: Found 1 slider at usage 0x{usage:X2}");
                                     }
                                 }
                                 // POV Hat Switch (0x39)
@@ -834,12 +947,87 @@ namespace x360ce.App.Input.Devices
                                 {
                                     if (valueCap.IsRange)
                                     {
-                                        povCount += (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
+                                        int count = (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
+                                        povCount += count;
+                                        Debug.WriteLine($"DevicesRawInput: Found {count} POVs in range 0x{usage:X2}-0x{usageMax:X2}");
                                     }
                                     else
                                     {
                                         povCount++;
+                                        Debug.WriteLine($"DevicesRawInput: Found 1 POV at usage 0x{usage:X2}");
                                     }
+                                }
+                            }
+                            // Simulation Controls Page (0x02) - Racing wheels, flight sim controls
+                            else if (valueCap.UsagePage == HID_USAGE_PAGE_SIMULATION)
+                            {
+                                switch (usage)
+                                {
+                                    case 0xBA: // Throttle
+                                        if (valueCap.IsRange)
+                                        {
+                                            int count = (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
+                                            throttleCount += count;
+                                            Debug.WriteLine($"DevicesRawInput: Found {count} throttles in range 0x{usage:X2}-0x{usageMax:X2}");
+                                        }
+                                        else
+                                        {
+                                            throttleCount++;
+                                            Debug.WriteLine($"DevicesRawInput: Found 1 throttle at usage 0x{usage:X2}");
+                                        }
+                                        break;
+                                    case 0xBB: // Accelerator
+                                        if (valueCap.IsRange)
+                                        {
+                                            int count = (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
+                                            acceleratorCount += count;
+                                            Debug.WriteLine($"DevicesRawInput: Found {count} accelerators in range 0x{usage:X2}-0x{usageMax:X2}");
+                                        }
+                                        else
+                                        {
+                                            acceleratorCount++;
+                                            Debug.WriteLine($"DevicesRawInput: Found 1 accelerator at usage 0x{usage:X2}");
+                                        }
+                                        break;
+                                    case 0xBC: // Brake
+                                        if (valueCap.IsRange)
+                                        {
+                                            int count = (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
+                                            brakeCount += count;
+                                            Debug.WriteLine($"DevicesRawInput: Found {count} brakes in range 0x{usage:X2}-0x{usageMax:X2}");
+                                        }
+                                        else
+                                        {
+                                            brakeCount++;
+                                            Debug.WriteLine($"DevicesRawInput: Found 1 brake at usage 0x{usage:X2}");
+                                        }
+                                        break;
+                                    case 0xBD: // Clutch
+                                        if (valueCap.IsRange)
+                                        {
+                                            int count = (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
+                                            clutchCount += count;
+                                            Debug.WriteLine($"DevicesRawInput: Found {count} clutches in range 0x{usage:X2}-0x{usageMax:X2}");
+                                        }
+                                        else
+                                        {
+                                            clutchCount++;
+                                            Debug.WriteLine($"DevicesRawInput: Found 1 clutch at usage 0x{usage:X2}");
+                                        }
+                                        break;
+                                    case 0xB0: // Steering
+                                        if (valueCap.IsRange)
+                                        {
+                                            int count = (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
+                                            steeringCount += count;
+                                            Debug.WriteLine($"DevicesRawInput: Found {count} steering controls in range 0x{usage:X2}-0x{usageMax:X2}");
+                                        }
+                                        else
+                                        {
+                                            steeringCount++;
+                                            Debug.WriteLine($"DevicesRawInput: Found 1 steering control at usage 0x{usage:X2}");
+                                        }
+                                        break;
                                 }
                             }
                         }
@@ -873,8 +1061,61 @@ namespace x360ce.App.Input.Devices
                     }
                 }
 
+                // If we found sliders but no axes/POVs, and we detected a Pointer→Joystick collection,
+                // the device likely has axes and POVs nested inside the Pointer that Windows HID API can't enumerate.
+                // Make an intelligent estimate based on device type and what we found.
+                if ((axeCount == 0 || povCount == 0) && sliderCount > 0)
+                {
+                    // Check if we saw a Pointer→Joystick collection in the value caps
+                    bool hasPointerJoystickCollection = false;
+                    if (caps.NumberInputValueCaps > 0)
+                    {
+                        var valueCaps = new HIDP_VALUE_CAPS[caps.NumberInputValueCaps];
+                        ushort valueCapsLength = caps.NumberInputValueCaps;
+                        status = HidP_GetValueCaps(HIDP_REPORT_TYPE.HidP_Input, valueCaps, ref valueCapsLength, preparsedData);
+                        
+                        if (status == HIDP_STATUS_SUCCESS)
+                        {
+                            foreach (var valueCap in valueCaps)
+                            {
+                                ushort usage = valueCap.IsRange ? valueCap.Range.UsageMin : valueCap.NotRange.Usage;
+                                ushort linkUsage = valueCap.LinkUsage;
+                                ushort linkUsagePage = valueCap.LinkUsagePage;
+                                
+                                // Check for Pointer (0x01) linking to Joystick (0x04)
+                                if (valueCap.UsagePage == HID_USAGE_PAGE_GENERIC && usage == 0x01 &&
+                                    linkUsagePage == HID_USAGE_PAGE_GENERIC && linkUsage == HID_USAGE_GENERIC_JOYSTICK)
+                                {
+                                    hasPointerJoystickCollection = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (hasPointerJoystickCollection)
+                    {
+                        // Flight sticks typically have 3-4 axes (X, Y, Z/twist, and sometimes RZ)
+                        // Since we found a slider (likely the throttle), estimate 3 axes for the stick itself
+                        if (axeCount == 0)
+                        {
+                            axeCount = 3;
+                            Debug.WriteLine($"DevicesRawInput: Estimated {axeCount} axes for joystick with Pointer→Joystick collection and {sliderCount} slider(s)");
+                        }
+                        
+                        // Flight sticks typically have 1 POV hat switch on top
+                        if (povCount == 0)
+                        {
+                            povCount = 1;
+                            Debug.WriteLine($"DevicesRawInput: Estimated {povCount} POV for joystick with Pointer→Joystick collection");
+                        }
+                    }
+                }
+                
                 Debug.WriteLine($"DevicesRawInput: Parsed HID capabilities for device 0x{hDevice.ToInt64():X8} - " +
-                    $"Axes: {axeCount}, Buttons: {buttonCount}, POVs: {povCount}, ForceFeedback: {hasForceFeedback}");
+                    $"Axes: {axeCount}, Sliders: {sliderCount}, Buttons: {buttonCount}, POVs: {povCount}, " +
+                    $"Throttles: {throttleCount}, Brakes: {brakeCount}, Steering: {steeringCount}, " +
+                    $"Accelerators: {acceleratorCount}, Clutches: {clutchCount}, ForceFeedback: {hasForceFeedback}");
                 
                 return true;
             }
@@ -910,7 +1151,8 @@ namespace x360ce.App.Input.Devices
 
                 case RIM_TYPEKEYBOARD:
                     var keyboard = ridDeviceInfo.union.keyboard;
-                    deviceInfo.ButtonCount = (int)keyboard.dwNumberOfKeysTotal;
+                    deviceInfo.KeyCount = (int)keyboard.dwNumberOfKeysTotal;
+                    deviceInfo.ButtonCount = 0; // Keyboards have keys, not buttons
                     deviceInfo.ProductName = "Keyboard";
                     deviceInfo.DeviceSubtype = (int)keyboard.dwSubType;
                     break;
@@ -935,7 +1177,9 @@ namespace x360ce.App.Input.Devices
                     
                     // Initialize to 0 (will be populated if HID parsing succeeds)
                     deviceInfo.AxeCount = 0;
+                    deviceInfo.SliderCount = 0;
                     deviceInfo.ButtonCount = 0;
+                    deviceInfo.KeyCount = 0; // HID gamepads have no keys
                     deviceInfo.PovCount = 0;
                     deviceInfo.HasForceFeedback = false;
                     break;
@@ -1392,13 +1636,20 @@ namespace x360ce.App.Input.Devices
                     // For HID devices, try to parse actual capabilities from HID Report Descriptor
                     if (deviceInfo.RawInputDeviceType == RawInputDeviceType.HID)
                     {
-                        int axes, buttons, povs;
+                        int axes, sliders, buttons, povs, throttles, brakes, steering, accelerators, clutches;
                         bool forceFeedback;
-                        if (GetHidCapabilities(rawDevice.hDevice, out axes, out buttons, out povs, out forceFeedback))
+                        if (GetHidCapabilities(rawDevice.hDevice, out axes, out sliders, out buttons, out povs,
+                            out throttles, out brakes, out steering, out accelerators, out clutches, out forceFeedback))
                         {
                             deviceInfo.AxeCount = axes;
+                            deviceInfo.SliderCount = sliders;
                             deviceInfo.ButtonCount = buttons;
                             deviceInfo.PovCount = povs;
+                            deviceInfo.ThrottleCount = throttles;
+                            deviceInfo.BrakeCount = brakes;
+                            deviceInfo.SteeringCount = steering;
+                            deviceInfo.AcceleratorCount = accelerators;
+                            deviceInfo.ClutchCount = clutches;
                             deviceInfo.HasForceFeedback = forceFeedback;
                         }
                     }
@@ -1432,33 +1683,35 @@ namespace x360ce.App.Input.Devices
 
                 // Log comprehensive device information for debugging
                 deviceListDebugLines.Add($"\n{deviceListIndex}. DevicesRawInputInfo: " +
-                    $"CommonIdentifier: {deviceInfo.CommonIdentifier}, " +
-                    $"DeviceHandle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
-                    $"RawInputDeviceType: {deviceInfo.RawInputDeviceType}, " +
-                    $"InstanceGuid: {deviceInfo.InstanceGuid}, " +
-                    $"ProductGuid: {deviceInfo.ProductGuid}, " +
-                    $"InstanceName: {deviceInfo.InstanceName}, " +
-                    $"ProductName: {deviceInfo.ProductName}, " +
-                    $"DeviceTypeName: {deviceInfo.DeviceTypeName}, " +
-                    $"Usage: 0x{deviceInfo.Usage:X4}, " +
-                    $"UsagePage: 0x{deviceInfo.UsagePage:X4}, " +
-                    FormatProperty("InterfacePath", deviceInfo.InterfacePath).TrimEnd(',', ' '));
-
+                	$"CommonIdentifier (generated): {deviceInfo.CommonIdentifier}, " +
+                	$"DeviceHandle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
+                	$"RawInputDeviceType: {deviceInfo.RawInputDeviceType}, " +
+                	$"InstanceGuid (generated): {deviceInfo.InstanceGuid}, " +
+                	$"ProductGuid (generated): {deviceInfo.ProductGuid}, " +
+                	$"InstanceName (generated): {deviceInfo.InstanceName}, " +
+                	$"ProductName: {deviceInfo.ProductName}, " +
+                	$"DeviceTypeName: {deviceInfo.DeviceTypeName}, " +
+                	$"Usage: 0x{deviceInfo.Usage:X4}, " +
+                	$"UsagePage: 0x{deviceInfo.UsagePage:X4}, " +
+                	FormatProperty("InterfacePath", deviceInfo.InterfacePath).TrimEnd(',', ' '));
+            
                 deviceListDebugLines.Add($"DevicesRawInputInfo Identification: " +
-                    $"VidPidString: {deviceInfo.VidPidString}, " +
-                    $"VendorId: {deviceInfo.VendorId} (0x{deviceInfo.VendorId:X4}), " +
-                    $"ProductId: {deviceInfo.ProductId} (0x{deviceInfo.ProductId:X4}), " +
-                    FormatProperty("DeviceId", deviceInfo.DeviceId).TrimEnd(',', ' '));
+                	$"VidPidString: {deviceInfo.VidPidString}, " +
+                	$"VendorId: {deviceInfo.VendorId} (0x{deviceInfo.VendorId:X4}), " +
+                	$"ProductId: {deviceInfo.ProductId} (0x{deviceInfo.ProductId:X4}), " +
+                	FormatProperty("DeviceId", deviceInfo.DeviceId).TrimEnd(',', ' '));
 
                 // Add capability information with appropriate context
                 if (deviceInfo.RawInputDeviceType == RawInputDeviceType.HID)
                 {
                     // HID devices: Show parsed capabilities from HID Report Descriptor
-                    if (deviceInfo.AxeCount > 0 || deviceInfo.ButtonCount > 0 || deviceInfo.PovCount > 0)
+                    if (deviceInfo.AxeCount > 0 || deviceInfo.SliderCount > 0 || deviceInfo.ButtonCount > 0 || deviceInfo.PovCount > 0)
                     {
                         deviceListDebugLines.Add($"DevicesRawInputInfo Capabilities (from HID Report Descriptor): " +
                             $"AxeCount: {deviceInfo.AxeCount}, " +
+                            $"SliderCount: {deviceInfo.SliderCount}, " +
                             $"ButtonCount: {deviceInfo.ButtonCount}, " +
+                            $"KeyCount: {deviceInfo.KeyCount}, " +
                             $"PovCount: {deviceInfo.PovCount}, " +
                             $"HasForceFeedback: {deviceInfo.HasForceFeedback}");
                     }
@@ -1471,10 +1724,24 @@ namespace x360ce.App.Input.Devices
                 else
                 {
                     // Mouse and Keyboard have actual counts from RawInput API
-                    deviceListDebugLines.Add($"DevicesRawInputInfo Capabilities: " +
-                        $"AxeCount: {deviceInfo.AxeCount}, " +
-                        $"ButtonCount: {deviceInfo.ButtonCount}, " +
-                        $"PovCount: {deviceInfo.PovCount}");
+                    if (deviceInfo.RawInputDeviceType == RawInputDeviceType.Keyboard)
+                    {
+                        deviceListDebugLines.Add($"DevicesRawInputInfo Capabilities: " +
+                            $"AxeCount: {deviceInfo.AxeCount}, " +
+                            $"SliderCount: {deviceInfo.SliderCount}, " +
+                            $"ButtonCount: {deviceInfo.ButtonCount}, " +
+                            $"KeyCount: {deviceInfo.KeyCount}, " +
+                            $"PovCount: {deviceInfo.PovCount}");
+                    }
+                    else // Mouse
+                    {
+                        deviceListDebugLines.Add($"DevicesRawInputInfo Capabilities: " +
+                            $"AxeCount: {deviceInfo.AxeCount}, " +
+                            $"SliderCount: {deviceInfo.SliderCount}, " +
+                            $"ButtonCount: {deviceInfo.ButtonCount}, " +
+                            $"KeyCount: {deviceInfo.KeyCount}, " +
+                            $"PovCount: {deviceInfo.PovCount}");
+                    }
                 }
 
                 // Add device to the final list (already filtered as input device)

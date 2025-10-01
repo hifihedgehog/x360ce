@@ -21,7 +21,9 @@ namespace x360ce.App.Input.Devices
 		public int Usage { get; set; }
 		public int UsagePage { get; set; }
 		public int AxeCount { get; set; }
+		public int SliderCount { get; set; }
 		public int ButtonCount { get; set; }
+		public int KeyCount { get; set; }
 		public int PovCount { get; set; }
 		public bool HasForceFeedback { get; set; }
 		public int DriverVersion { get; set; }
@@ -92,7 +94,9 @@ namespace x360ce.App.Input.Devices
 		private const int XInputVendorId = 0x045E; // Microsoft
 		private const int XInputProductId = 0x028E; // Xbox 360 Controller
 		private const int XInputAxeCount = 6; // Left Stick X/Y, Right Stick X/Y, Left/Right Triggers
+		private const int XInputSliderCount = 0; // XInput has no sliders (triggers are axes)
 		private const int XInputButtonCount = 15; // A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad (4), Guide
+		private const int XInputKeyCount = 0; // XInput has no keys (only buttons)
 		private const int XInputPovCount = 0; // XInput maps DPad to buttons, not POV
 		private const int XInputVersion = 0x0104; // Version 1.4
 		private const int GameControlsUsage = 0x05;
@@ -220,7 +224,9 @@ namespace x360ce.App.Input.Devices
 					
 					// Capabilities
 					AxeCount = XInputAxeCount,
+					SliderCount = XInputSliderCount,
 					ButtonCount = XInputButtonCount,
+					KeyCount = XInputKeyCount,
 					PovCount = XInputPovCount,
 					HasForceFeedback = true,
 					
@@ -253,23 +259,25 @@ namespace x360ce.App.Input.Devices
 		{
 			// Note: XInput API does not provide DeviceId, InterfacePath, or HardwareIds - these are always empty
 			Debug.WriteLine($"\n{deviceIndex}. DevicesXInputInfo: " +
-				$"CommonIdentifier: {deviceInfo.CommonIdentifier}, " +
+				$"CommonIdentifier (generated): {deviceInfo.CommonIdentifier}, " +
 				$"SlotIndex: {deviceInfo.SlotIndex}, " +
 				$"XInputSlot: {deviceInfo.XInputSlot}, " +
-				$"InstanceGuid: {deviceInfo.InstanceGuid}, " +
-				$"ProductGuid: {deviceInfo.ProductGuid}, " +
-				$"InstanceName: {deviceInfo.InstanceName}, " +
-				$"ProductName: {deviceInfo.ProductName}, " +
-				$"DeviceType: {deviceInfo.DeviceType}, " +
-				$"DeviceTypeName: {deviceInfo.DeviceTypeName}, " +
+				$"InstanceGuid (generated): {deviceInfo.InstanceGuid}, " +
+				$"ProductGuid (generated): {deviceInfo.ProductGuid}, " +
+				$"InstanceName (generated): {deviceInfo.InstanceName}, " +
+				$"ProductName (generated): {deviceInfo.ProductName}, " +
+				$"DeviceType (generated): {deviceInfo.DeviceType}, " +
+				$"DeviceTypeName (generated): {deviceInfo.DeviceTypeName}, " +
 				$"PacketNumber: {deviceInfo.LastPacketNumber}, " +
-				$"VidPidString: {deviceInfo.VidPidString}, " +
-				$"VendorId: {deviceInfo.VendorId} (0x{deviceInfo.VendorId:X4}), " +
-				$"ProductId: {deviceInfo.ProductId} (0x{deviceInfo.ProductId:X4})");
+				$"VidPidString (generated): {deviceInfo.VidPidString}, " +
+				$"VendorId (generated): {deviceInfo.VendorId} (0x{deviceInfo.VendorId:X4}), " +
+				$"ProductId (generated): {deviceInfo.ProductId} (0x{deviceInfo.ProductId:X4})");
 
-			Debug.WriteLine($"DevicesXInputInfo Capabilities: " +
+			Debug.WriteLine($"DevicesXInputInfo Capabilities (generated): " +
 				$"AxeCount: {deviceInfo.AxeCount}, " +
+				$"SliderCount: {deviceInfo.SliderCount}, " +
 				$"ButtonCount: {deviceInfo.ButtonCount}, " +
+				$"KeyCount: {deviceInfo.KeyCount}, " +
 				$"PovCount: {deviceInfo.PovCount}, " +
 				$"HasForceFeedback: {deviceInfo.HasForceFeedback}");
 			

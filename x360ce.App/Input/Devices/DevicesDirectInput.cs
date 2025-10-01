@@ -21,7 +21,9 @@ namespace x360ce.App.Input.Devices
 		public int Usage { get; set; }
 		public int UsagePage { get; set; }
 		public int AxeCount { get; set; }
+		public int SliderCount { get; set; }
 		public int ButtonCount { get; set; }
+		public int KeyCount { get; set; }
 		public int PovCount { get; set; }
 		public bool HasForceFeedback { get; set; }
 		public int DriverVersion { get; set; }
@@ -163,6 +165,9 @@ namespace x360ce.App.Input.Devices
 				// Extract hardware identification for joystick devices
 				if (device is Joystick joystick)
 					ExtractJoystickProperties(joystick, deviceInfo);
+				else
+					// Generate CommonIdentifier for keyboard and mouse devices
+					GenerateCommonIdentifier(deviceInfo);
 
 				deviceInfo.DirectInputDevice = device;
 				deviceInfo.IsOnline = true;
@@ -241,11 +246,62 @@ namespace x360ce.App.Input.Devices
 			var capabilities = device.Capabilities;
 			deviceInfo.AxeCount = capabilities.AxeCount;
 			deviceInfo.ButtonCount = capabilities.ButtonCount;
+			deviceInfo.KeyCount = 0; // Keyboards report keys as ButtonCount
 			deviceInfo.PovCount = capabilities.PovCount;
 			deviceInfo.HasForceFeedback = capabilities.Flags.HasFlag(DeviceFlags.ForceFeedback);
 			deviceInfo.DriverVersion = capabilities.DriverVersion;
 			deviceInfo.HardwareRevision = capabilities.HardwareRevision;
 			deviceInfo.FirmwareRevision = capabilities.FirmwareRevision;
+			
+			// Calculate slider count by checking which slider offsets are present
+			deviceInfo.SliderCount = CalculateSliderCount(device);
+		}
+		
+		/// <summary>
+		/// Calculates the number of sliders present on a joystick device by checking slider offsets.
+		/// Uses the standard DirectInput slider offset list to detect which sliders are available.
+		/// </summary>
+		/// <param name="device">The DirectInput device to check</param>
+		/// <returns>Number of sliders detected (0-8)</returns>
+		private int CalculateSliderCount(Device device)
+		{
+			// Only joysticks can have sliders
+			if (!(device is Joystick joystick))
+				return 0;
+			
+			int sliderCount = 0;
+			
+			// Standard DirectInput slider offsets (from CustomDeviceHelper.SliderOffsets)
+			var sliderOffsets = new[]
+			{
+				JoystickOffset.Sliders0,
+				JoystickOffset.Sliders1,
+				JoystickOffset.AccelerationSliders0,
+				JoystickOffset.AccelerationSliders1,
+				JoystickOffset.ForceSliders0,
+				JoystickOffset.ForceSliders1,
+				JoystickOffset.VelocitySliders0,
+				JoystickOffset.VelocitySliders1
+			};
+			
+			// Check each slider offset to see if it exists on the device
+			foreach (var offset in sliderOffsets)
+			{
+				try
+				{
+					var objectInfo = joystick.GetObjectInfoByOffset((int)offset);
+					if (objectInfo != null)
+					{
+						sliderCount++;
+					}
+				}
+				catch
+				{
+					// Slider offset not present on this device - continue checking others
+				}
+			}
+			
+			return sliderCount;
 		}
 
 		/// <summary>
@@ -462,7 +518,7 @@ namespace x360ce.App.Input.Devices
 		private void LogDeviceInfo(DirectInputDeviceInfo deviceInfo, int deviceIndex, List<string> debugLines)
 		{
 			debugLines.Add($"\n{deviceIndex}. DeviceDirectInputInfo: " +
-				$"CommonIdentifier: {deviceInfo.CommonIdentifier}, " +
+				$"CommonIdentifier (generated): {deviceInfo.CommonIdentifier}, " +
 				$"InstanceGuid: {deviceInfo.InstanceGuid}, " +
 				$"ProductGuid: {deviceInfo.ProductGuid}, " +
 				$"InstanceName: {deviceInfo.InstanceName}, " +
@@ -482,7 +538,9 @@ namespace x360ce.App.Input.Devices
 
 			debugLines.Add($"DeviceDirectInputInfo Capabilities: " +
 				$"AxeCount: {deviceInfo.AxeCount}, " +
+				$"SliderCount: {deviceInfo.SliderCount}, " +
 				$"ButtonCount: {deviceInfo.ButtonCount}, " +
+				$"KeyCount: {deviceInfo.KeyCount}, " +
 				$"PovCount: {deviceInfo.PovCount}, " +
 				$"HasForceFeedback: {deviceInfo.HasForceFeedback}");
 		}

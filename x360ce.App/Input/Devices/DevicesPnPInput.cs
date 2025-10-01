@@ -23,7 +23,9 @@ namespace x360ce.App.Input.Devices
         public int Usage { get; set; }
         public int UsagePage { get; set; }
         public int AxeCount { get; set; }
+        public int SliderCount { get; set; }
         public int ButtonCount { get; set; }
+        public int KeyCount { get; set; }
         public int PovCount { get; set; }
         public bool HasForceFeedback { get; set; }
         public int DriverVersion { get; set; }
@@ -1001,7 +1003,9 @@ namespace x360ce.App.Input.Devices
             // Windows PnP does NOT provide detailed input capability information
             // Set all capability counts to 0 to indicate "unknown/not available"
             deviceInfo.AxeCount = 0;        // Unknown - PnP doesn't provide axis count
+            deviceInfo.SliderCount = 0;     // Unknown - PnP doesn't provide slider count
             deviceInfo.ButtonCount = 0;     // Unknown - PnP doesn't provide button count
+            deviceInfo.KeyCount = 0;        // Unknown - PnP doesn't provide key count
             deviceInfo.PovCount = 0;        // Unknown - PnP doesn't provide POV count
             deviceInfo.HasForceFeedback = false; // Unknown - PnP doesn't provide force feedback info
 
@@ -1349,7 +1353,7 @@ namespace x360ce.App.Input.Devices
 
             // Create hierarchical display with proper indentation
             debugLines.Add($"\n{indentation}{index}. {deviceTypePrefix}: " +
-                $"CommonIdentifier: {deviceInfo.CommonIdentifier}, " +
+                $"CommonIdentifier (generated): {deviceInfo.CommonIdentifier}, " +
                 $"DeviceInstanceId: {deviceInfo.DeviceInstanceId}, " +
                 $"ClassGuid: {deviceInfo.ClassGuid}, " +
                 FormatProperty("FriendlyName", deviceInfo.FriendlyName) +
@@ -1358,7 +1362,7 @@ namespace x360ce.App.Input.Devices
                 $"VidPidString: {deviceInfo.VidPidString}, " +
                 $"VendorId: {deviceInfo.VendorId} (0x{deviceInfo.VendorId:X4}), " +
                 $"ProductId: {deviceInfo.ProductId} (0x{deviceInfo.ProductId:X4}), " +
-                $"SortingString: {deviceInfo.SortingString}");
+                $"SortingString (generated): {deviceInfo.SortingString}");
 
             debugLines.Add($"{indentation}{deviceTypePrefix} Status: " +
                 $"IsPresent: {deviceInfo.IsPresent}, " +
@@ -1371,7 +1375,7 @@ namespace x360ce.App.Input.Devices
                 FormatProperty("LocationInformation", deviceInfo.LocationInformation).TrimEnd(',', ' '));
             
             debugLines.Add($"{indentation}{deviceTypePrefix} Note: " +
-                $"Windows PnP does not provide capability information (AxeCount, ButtonCount, PovCount, HasForceFeedback, Usage, UsagePage) - use DirectInput for device capabilities");
+                $"Windows PnP does not provide capability information (AxeCount, SliderCount, ButtonCount, KeyCount, PovCount, HasForceFeedback, Usage, UsagePage) - use DirectInput for device capabilities");
         }
 
 
