@@ -1236,6 +1236,7 @@ namespace x360ce.App.Input.Devices
         /// <summary>
         /// Extracts VID and PID from device interface path.
         /// Supports multiple VID/PID formats including standard (VID_XXXX&PID_XXXX) and alternate (VID&XXXXXXXX_PID&XXXX) formats.
+        /// Falls back to VEN_/DEV_ values or composite device IDs (like INT33D2) when VID/PID are not available.
         /// </summary>
         /// <param name="interfacePath">Device interface path</param>
         /// <returns>Tuple containing VID and PID values</returns>
@@ -1246,9 +1247,13 @@ namespace x360ce.App.Input.Devices
 
             try
             {
+                Debug.WriteLine($"DevicesRawInput: ExtractVidPidFromPath called with: {interfacePath}");
+                
                 // Common patterns in interface paths:
                 // Standard format: \\?\hid#vid_045e&pid_028e#...
                 // Alternate format: {GUID}_VID&00020111_PID&1431&Col02
+                // Fallback format with VEN/DEV: \\?\HID#VEN_INT&DEV_33D2&Col01#...
+                // Composite format: \\?\HID#INT33D2&Col01#... (vendor+device without prefix)
                 var upperPath = interfacePath.ToUpperInvariant();
 
                 // Try standard format first: VID_XXXX
@@ -1311,13 +1316,194 @@ namespace x360ce.App.Input.Devices
                         }
                     }
                 }
+                
+                // Fallback: Try VEN_ and DEV_ formats (for devices like HID\VEN_INT&DEV_33D2)
+                int venId = ExtractHexValue(upperPath, "VEN_", 4) ?? 0;
+                int devId = ExtractHexValue(upperPath, "DEV_", 4) ?? 0;
+                
+                if (venId != 0 || devId != 0)
+                {
+                    return (venId, devId);
+                }
+                
+                // Final fallback: Try to extract composite device ID from various path formats
+                // Supported patterns:
+                // - HID: \\?\HID#INT33D2&Col01#... -> INT (vendor) + 33D2 (device)
+                // - ACPI: \\?\ACPI#DLLK0A05#... -> DLLK (vendor) + 0A05 (device)
+                
+                // Try to find device ID after HID# or ACPI#
+                string deviceId = null;
+                int deviceIdStart = -1;
+                
+                // Check for HID devices: look for "HID#" pattern
+                var hidIndex = upperPath.IndexOf("HID#");
+                if (hidIndex >= 0)
+                {
+                    deviceIdStart = hidIndex + 4; // Skip "HID#"
+                }
+                
+                // Check for ACPI devices if HID not found: look for "ACPI#" pattern
+                if (deviceIdStart < 0)
+                {
+                    var acpiIndex = upperPath.IndexOf("ACPI#");
+                    if (acpiIndex >= 0)
+                    {
+                        deviceIdStart = acpiIndex + 5; // Skip "ACPI#"
+                    }
+                }
+                
+                if (deviceIdStart >= 0)
+                {
+                    // Find the end of device ID - stop at first '&' or '#' (whichever comes first)
+                    // For ACPI paths like "ACPI#DLL0A05#4&...", we want just "DLL0A05" (stop at '#')
+                    // For HID paths like "HID#INT33D2&Col01#...", we want just "INT33D2" (stop at '&')
+                    var ampersandPos = upperPath.IndexOf('&', deviceIdStart);
+                    var hashPos = upperPath.IndexOf('#', deviceIdStart);
+                    
+                    // Take whichever delimiter comes first (or the one that exists if only one is found)
+                    int deviceIdEnd = -1;
+                    if (ampersandPos >= 0 && hashPos >= 0)
+                        deviceIdEnd = Math.Min(ampersandPos, hashPos);
+                    else if (ampersandPos >= 0)
+                        deviceIdEnd = ampersandPos;
+                    else if (hashPos >= 0)
+                        deviceIdEnd = hashPos;
+                    
+                    if (deviceIdEnd > deviceIdStart)
+                    {
+                        deviceId = upperPath.Substring(deviceIdStart, deviceIdEnd - deviceIdStart);
+                        Debug.WriteLine($"DevicesRawInput: Found device ID: {deviceId}");
+                        
+                        // Try to split into vendor (letters) and device (alphanumeric)
+                        // Examples:
+                        // - INT33D2 -> INT (vendor) + 33D2 (device)
+                        // - DLLK0A05 -> Try DLLK (vendor) + 0A05 (device) first, then DLL (vendor) + K0A05 (device)
+                        
+                        // Strategy: Find the longest letter sequence at the start, then check if remainder is valid hex
+                        int splitPos = 0;
+                        while (splitPos < deviceId.Length && char.IsLetter(deviceId[splitPos]))
+                            splitPos++;
+                        
+                        Debug.WriteLine($"DevicesRawInput: Initial split position: {splitPos} (letters: {deviceId.Substring(0, splitPos)})");
+                        
+                        // Try different split positions if the first one doesn't work
+                        for (int tryPos = splitPos; tryPos > 0; tryPos--)
+                        {
+                            var vendorPart = deviceId.Substring(0, tryPos);
+                            var devicePart = deviceId.Substring(tryPos);
+                            
+                            Debug.WriteLine($"DevicesRawInput: Trying split - Vendor: '{vendorPart}', Device: '{devicePart}'");
+                            
+                            // Device part must be valid hex and at least 2 characters
+                            bool isValidHex = devicePart.Length >= 2 &&
+                                devicePart.All(c => (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'));
+                            
+                            Debug.WriteLine($"DevicesRawInput: Device part '{devicePart}' valid hex: {isValidHex}");
+                            
+                            if (isValidHex)
+                            {
+                                // Convert vendor part using ASCII encoding, always pad to 4 bytes
+                                int vendorCode = 0;
+                                for (int i = 0; i < vendorPart.Length && i < 4; i++)
+                                {
+                                    vendorCode = (vendorCode << 8) | (byte)vendorPart[i];
+                                }
+                                // Pad with zeros if vendor is less than 4 characters
+                                // vendorCode = vendorCode << (8 * (4 - Math.Min(vendorPart.Length, 4)));
+                                
+                                // Parse device part as hex
+                                if (int.TryParse(devicePart, System.Globalization.NumberStyles.HexNumber, null, out int deviceCode))
+                                {
+                                    Debug.WriteLine($"DevicesRawInput: Extracted composite device ID: Vendor={vendorPart} (0x{vendorCode:X8}), Device={devicePart} (0x{deviceCode:X})");
+                                    return (vendorCode, deviceCode);
+                                }
+                                else
+                                {
+                                    Debug.WriteLine($"DevicesRawInput: Failed to parse device part '{devicePart}' as hex");
+                                }
+                            }
+                        }
+                        
+                        Debug.WriteLine($"DevicesRawInput: No valid split found for device ID: {deviceId}");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"DevicesRawInput: Could not find device ID end delimiter");
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"DevicesRawInput: Could not find HID# or ACPI# in path");
+                }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"DevicesRawInput: Error extracting VID/PID from path '{interfacePath}': {ex.Message}");
+                Debug.WriteLine($"DevicesRawInput: Stack trace: {ex.StackTrace}");
             }
 
+            Debug.WriteLine($"DevicesRawInput: ExtractVidPidFromPath returning (0, 0) for: {interfacePath}");
             return (0, 0);
+        }
+        
+        /// <summary>
+        /// Extracts a hexadecimal value following a specific pattern in a string.
+        /// Handles both numeric hex values (e.g., "046A") and alphanumeric vendor codes (e.g., "INT").
+        /// Uses the same conversion logic as DevicesPnPInput for consistency.
+        /// </summary>
+        /// <param name="text">Text to search in</param>
+        /// <param name="pattern">Pattern to search for (e.g., "VID_", "VEN_")</param>
+        /// <param name="length">Expected length of hex value</param>
+        /// <returns>Parsed integer value or null if not found</returns>
+        private static int? ExtractHexValue(string text, string pattern, int length)
+        {
+            var index = text.IndexOf(pattern, StringComparison.Ordinal);
+            if (index < 0)
+                return null;
+
+            var start = index + pattern.Length;
+            if (start >= text.Length)
+                return null;
+
+            // Extract characters that could be hex digits or alphanumeric vendor codes
+            var end = start;
+            var maxEnd = Math.Min(start + length, text.Length);
+            
+            while (end < maxEnd)
+            {
+                var ch = text[end];
+                // Accept hex digits (0-9, A-F) and letters (for vendor codes like "INT")
+                if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z'))
+                    end++;
+                else
+                    break;
+            }
+
+            if (end <= start)
+                return null;
+
+            var hexStr = text.Substring(start, end - start);
+            
+            // Try to parse as hexadecimal number
+            if (int.TryParse(hexStr, System.Globalization.NumberStyles.HexNumber, null, out int value))
+                return value;
+            
+            // If parsing fails but we have a valid string (like "INT"),
+            // treat each character as a hex digit to create a unique identifier
+            // This ensures vendor codes like "INT" get converted to a numeric value
+            if (hexStr.Length > 0 && hexStr.All(c => (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z')))
+            {
+                // For vendor codes, use ASCII-based conversion to create unique numeric ID
+                // This ensures "INT" becomes a valid numeric identifier
+                int vendorCode = 0;
+                for (int i = 0; i < Math.Min(hexStr.Length, 4); i++)
+                {
+                    vendorCode = (vendorCode << 8) | (byte)hexStr[i];
+                }
+                return vendorCode;
+            }
+            
+            return null;
         }
 
         /// <summary>
@@ -1625,11 +1811,6 @@ namespace x360ce.App.Input.Devices
                 string deviceName = GetDeviceName(rawDevice.hDevice);
                 deviceInfo.InterfacePath = deviceName;
                 
-                // Extract VID/PID from device name (RawInput provides this in interface path)
-                var vidPid = ExtractVidPidFromPath(deviceName);
-                deviceInfo.VendorId = vidPid.vid;
-                deviceInfo.ProductId = vidPid.pid;
-                
                 // Use only what RawInput provides - extracted name from interface path
                 deviceInfo.InstanceName = ExtractDeviceNameFromPath(deviceName);
 
@@ -1661,7 +1842,16 @@ namespace x360ce.App.Input.Devices
                     }
                 }
 
-                // VID/PID already extracted above for friendly name lookup
+                // Extract VID/PID from InterfacePath for all device types
+                // For HID devices, this may override values from RID_DEVICE_INFO if they were 0
+                // For Keyboard/Mouse devices, this is the only way to get VID/PID
+                var vidPid = ExtractVidPidFromPath(deviceName);
+                if (vidPid.vid != 0 || vidPid.pid != 0)
+                {
+                    // Only override if we found valid values
+                    if (deviceInfo.VendorId == 0) deviceInfo.VendorId = vidPid.vid;
+                    if (deviceInfo.ProductId == 0) deviceInfo.ProductId = vidPid.pid;
+                }
 
                 // Generate GUIDs
                 deviceInfo.InstanceGuid = GenerateInstanceGuid(rawDevice.hDevice, deviceName);
@@ -1690,14 +1880,14 @@ namespace x360ce.App.Input.Devices
                 // Log comprehensive device information for debugging using StringBuilder for efficiency
                 var sb = new StringBuilder();
                 sb.AppendLine($"\n{deviceListIndex}. DevicesRawInputInfo:");
-                sb.Append($"  CommonIdentifier: {deviceInfo.CommonIdentifier}, ");
+                sb.Append($"  CommonIdentifier (generated): {deviceInfo.CommonIdentifier}, ");
                 sb.Append($"DeviceHandle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, ");
                 sb.Append($"Type: {deviceInfo.RawInputDeviceType}, ");
-                sb.Append($"InstanceGuid: {deviceInfo.InstanceGuid}");
+                sb.Append($"InstanceGuid (generated): {deviceInfo.InstanceGuid}");
                 sb.AppendLine();
-                sb.Append($"  InstanceName: {deviceInfo.InstanceName}, ");
+                sb.Append($"  InstanceName (generated): {deviceInfo.InstanceName}, ");
                 sb.Append($"ProductName: {deviceInfo.ProductName}, ");
-                sb.Append($"DeviceTypeName: {deviceInfo.DeviceTypeName}");
+                sb.Append($"DeviceTypeName (generated): {deviceInfo.DeviceTypeName}");
                 sb.AppendLine();
                 sb.Append($"  Usage: 0x{deviceInfo.Usage:X4}, ");
                 sb.Append($"UsagePage: 0x{deviceInfo.UsagePage:X4}");
@@ -1706,11 +1896,11 @@ namespace x360ce.App.Input.Devices
                 deviceListDebugLines.Add(sb.ToString());
             
                 sb.Clear();
-                sb.Append($"  Identification: VID/PID: {deviceInfo.VidPidString}, ");
+                sb.Append($"  Identification: VID/PID (generated): {deviceInfo.VidPidString}, ");
                 sb.Append($"VendorId: {deviceInfo.VendorId} (0x{deviceInfo.VendorId:X4}), ");
                 sb.Append($"ProductId: {deviceInfo.ProductId} (0x{deviceInfo.ProductId:X4})");
                 if (!string.IsNullOrEmpty(deviceInfo.DeviceId))
-                    sb.Append($", DeviceId: {deviceInfo.DeviceId}");
+                    sb.Append($", DeviceId (generated): {deviceInfo.DeviceId}");
                 deviceListDebugLines.Add(sb.ToString());
 
                 // Add capability information with appropriate context using StringBuilder

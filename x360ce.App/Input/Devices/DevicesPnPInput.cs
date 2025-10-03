@@ -513,8 +513,13 @@ namespace x360ce.App.Input.Devices
                 // ProductName: Use DeviceDescription if available, otherwise leave empty
                 deviceInfo.ProductName = deviceInfo.DeviceDescription ?? "";
 
-                // Extract VID/PID from hardware IDs
-                var vidPid = ExtractVidPidFromHardwareIds(deviceInfo.HardwareIds);
+                // Extract VID/PID from all available device properties
+                // Search in order of likelihood: HardwareIds, DeviceInstanceId, LocationInformation, PhysicalDeviceObjectName
+                var vidPid = ExtractVidPidFromAllProperties(
+                    deviceInfo.HardwareIds,
+                    deviceInfo.DeviceInstanceId,
+                    deviceInfo.LocationInformation,
+                    deviceInfo.PhysicalDeviceObjectName);
                 deviceInfo.VendorId = vidPid.vid;
                 deviceInfo.ProductId = vidPid.pid;
 
@@ -803,47 +808,98 @@ namespace x360ce.App.Input.Devices
 
 
         /// <summary>
-        /// Extracts VID and PID from hardware IDs string using optimized pattern matching.
-        /// Supports multiple VID/PID formats including standard (VID_XXXX) and alternate (VID&XXXXXXXX_PID&XXXX) formats.
+        /// Extracts VID and PID from all available device properties.
+        /// Searches multiple properties in order of likelihood to find VID/PID information.
+        /// Falls back to VEN_/DEV_ values when VID/PID are not available.
         /// </summary>
-        /// <param name="hardwareIds">Hardware IDs string</param>
+        /// <param name="hardwareIds">Hardware IDs string (primary source)</param>
+        /// <param name="deviceInstanceId">Device instance ID (secondary source)</param>
+        /// <param name="locationInfo">Location information (tertiary source)</param>
+        /// <param name="physicalDeviceObjectName">Physical device object name (quaternary source)</param>
         /// <returns>Tuple containing VID and PID values</returns>
-        private (int vid, int pid) ExtractVidPidFromHardwareIds(string hardwareIds)
+        private (int vid, int pid) ExtractVidPidFromAllProperties(
+            string hardwareIds,
+            string deviceInstanceId = null,
+            string locationInfo = null,
+            string physicalDeviceObjectName = null)
         {
-            if (string.IsNullOrEmpty(hardwareIds))
+            // Try primary source first (most reliable)
+            var result = ExtractVidPidFromSingleProperty(hardwareIds);
+            if (result.vid != 0 && result.pid != 0)
+                return result;
+            
+            // If either VID or PID is still missing, try other properties
+            int vid = result.vid;
+            int pid = result.pid;
+            
+            // Try DeviceInstanceId if VID or PID still missing
+            if (vid == 0 || pid == 0)
+            {
+                var instanceResult = ExtractVidPidFromSingleProperty(deviceInstanceId);
+                if (vid == 0) vid = instanceResult.vid;
+                if (pid == 0) pid = instanceResult.pid;
+            }
+            
+            // Try LocationInformation if VID or PID still missing
+            if (vid == 0 || pid == 0)
+            {
+                var locationResult = ExtractVidPidFromSingleProperty(locationInfo);
+                if (vid == 0) vid = locationResult.vid;
+                if (pid == 0) pid = locationResult.pid;
+            }
+            
+            // Try PhysicalDeviceObjectName if VID or PID still missing
+            if (vid == 0 || pid == 0)
+            {
+                var physicalResult = ExtractVidPidFromSingleProperty(physicalDeviceObjectName);
+                if (vid == 0) vid = physicalResult.vid;
+                if (pid == 0) pid = physicalResult.pid;
+            }
+            
+            return (vid, pid);
+        }
+
+        /// <summary>
+        /// Extracts VID and PID from a single property string using optimized pattern matching.
+        /// Supports multiple VID/PID formats including standard (VID_XXXX) and alternate (VID&XXXXXXXX_PID&XXXX) formats.
+        /// Falls back to VEN_/DEV_ values when VID/PID are not available or are 0000.
+        /// </summary>
+        /// <param name="propertyValue">Property value to search in</param>
+        /// <returns>Tuple containing VID and PID values</returns>
+        private (int vid, int pid) ExtractVidPidFromSingleProperty(string propertyValue)
+        {
+            if (string.IsNullOrEmpty(propertyValue))
                 return (0, 0);
 
             try
             {
-                var upperIds = hardwareIds.ToUpperInvariant();
+                var upperValue = propertyValue.ToUpperInvariant();
                 
                 // Try standard format first: VID_XXXX and PID_XXXX (most common)
-                int vid = ExtractHexValue(upperIds, "VID_", 4) ?? 0;
-                int pid = ExtractHexValue(upperIds, "PID_", 4) ?? 0;
-                
-                // Early return if both found
-                if (vid != 0 && pid != 0)
-                    return (vid, pid);
-                
-                // Try alternate vendor format: VEN_XXXX
-                if (vid == 0)
-                    vid = ExtractHexValue(upperIds, "VEN_", 4) ?? 0;
-                
-                // Try alternate product format: DEV_XXXX
-                if (pid == 0)
-                    pid = ExtractHexValue(upperIds, "DEV_", 4) ?? 0;
-                
-                // Early return if both found
-                if (vid != 0 && pid != 0)
-                    return (vid, pid);
+                int vid = ExtractHexValue(upperValue, "VID_", 4) ?? 0;
+                int pid = ExtractHexValue(upperValue, "PID_", 4) ?? 0;
                 
                 // Try alternate format: VID&XXXXXXXX
                 if (vid == 0)
-                    vid = ExtractHexValueVariable(upperIds, "VID&", "_PID&") ?? 0;
+                    vid = ExtractHexValueVariable(upperValue, "VID&", "_PID&") ?? 0;
                 
                 // Try alternate format: _PID&XXXX
                 if (pid == 0)
-                    pid = ExtractHexValueVariable(upperIds, "_PID&", new[] { "&", ";", "\\", " " }) ?? 0;
+                    pid = ExtractHexValueVariable(upperValue, "_PID&", new[] { "&", ";", "\\", " " }) ?? 0;
+                
+                // Fallback: If VID is still 0 or not found, try VEN_ format
+                // This handles cases like HID\VEN_INT&DEV_33D2 where VID is not available
+                if (vid == 0)
+                {
+                    vid = ExtractHexValue(upperValue, "VEN_", 4) ?? 0;
+                }
+                
+                // Fallback: If PID is still 0 or not found, try DEV_ format
+                // This handles cases like HID\VEN_INT&DEV_33D2 where PID is not available
+                if (pid == 0)
+                {
+                    pid = ExtractHexValue(upperValue, "DEV_", 4) ?? 0;
+                }
                 
                 return (vid, pid);
             }
@@ -856,9 +912,10 @@ namespace x360ce.App.Input.Devices
 
         /// <summary>
         /// Extracts a hexadecimal value following a specific pattern in a string.
+        /// Handles both numeric hex values (e.g., "046A") and alphanumeric vendor codes (e.g., "INT").
         /// </summary>
         /// <param name="text">Text to search in</param>
-        /// <param name="pattern">Pattern to search for (e.g., "VID_")</param>
+        /// <param name="pattern">Pattern to search for (e.g., "VID_", "VEN_")</param>
         /// <param name="length">Expected length of hex value</param>
         /// <returns>Parsed integer value or null if not found</returns>
         private static int? ExtractHexValue(string text, string pattern, int length)
@@ -868,17 +925,18 @@ namespace x360ce.App.Input.Devices
                 return null;
 
             var start = index + pattern.Length;
-            if (start + length > text.Length)
+            if (start >= text.Length)
                 return null;
 
-            // Extract exactly 'length' characters or until delimiter
+            // Extract characters that could be hex digits or alphanumeric vendor codes
             var end = start;
             var maxEnd = Math.Min(start + length, text.Length);
             
             while (end < maxEnd)
             {
                 var ch = text[end];
-                if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F'))
+                // Accept hex digits (0-9, A-F) and letters (for vendor codes like "INT")
+                if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z'))
                     end++;
                 else
                     break;
@@ -888,9 +946,27 @@ namespace x360ce.App.Input.Devices
                 return null;
 
             var hexStr = text.Substring(start, end - start);
-            return int.TryParse(hexStr, System.Globalization.NumberStyles.HexNumber, null, out int value)
-                ? value
-                : (int?)null;
+            
+            // Try to parse as hexadecimal number
+            if (int.TryParse(hexStr, System.Globalization.NumberStyles.HexNumber, null, out int value))
+                return value;
+            
+            // If parsing fails but we have a valid string (like "INT"),
+            // treat each character as a hex digit to create a unique identifier
+            // This ensures vendor codes like "INT" get converted to a numeric value
+            if (hexStr.Length > 0 && hexStr.All(c => (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z')))
+            {
+                // For vendor codes, use ASCII-based conversion to create unique numeric ID
+                // This ensures "INT" becomes a valid numeric identifier
+                int vendorCode = 0;
+                for (int i = 0; i < Math.Min(hexStr.Length, 4); i++)
+                {
+                    vendorCode = (vendorCode << 8) | (byte)hexStr[i];
+                }
+                return vendorCode;
+            }
+            
+            return null;
         }
 
         /// <summary>
@@ -1421,7 +1497,8 @@ namespace x360ce.App.Input.Devices
 
             debugLines.Add($"{indentation}{deviceTypePrefix} Hardware: " +
                 FormatProperty("HardwareIds", deviceInfo.HardwareIds) +
-                FormatProperty("LocationInformation", deviceInfo.LocationInformation).TrimEnd(',', ' '));
+                FormatProperty("LocationInformation", deviceInfo.LocationInformation) +
+                FormatProperty("PhysicalDeviceObjectName", deviceInfo.PhysicalDeviceObjectName).TrimEnd(',', ' '));
             
             debugLines.Add($"{indentation}{deviceTypePrefix} Note: " +
                 $"Windows PnP does not provide capability information (AxeCount, SliderCount, ButtonCount, KeyCount, PovCount, HasForceFeedback, Usage, UsagePage) - use DirectInput for device capabilities");
