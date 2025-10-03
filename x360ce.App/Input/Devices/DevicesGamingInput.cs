@@ -20,6 +20,7 @@ namespace x360ce.App.Input.Devices
 		public int DeviceSubtype { get; set; }
 		public int Usage { get; set; }
 		public int UsagePage { get; set; }
+		public string InputType { get; set; }
 		public int AxeCount { get; set; }
 		public int SliderCount { get; set; }
 		public int ButtonCount { get; set; }
@@ -140,26 +141,26 @@ namespace x360ce.App.Input.Devices
 				
 				Debug.WriteLine("DevicesGamingInput: Gaming Input API is available");
 				
-				// Use privilege-aware detection strategy
+				// Detect gamepads with privilege-aware retry strategy
 				bool isAdmin = IsRunningAsAdministrator();
-				Debug.WriteLine($"DevicesGamingInput: Running as Administrator: {isAdmin}");
-				Debug.WriteLine($"DevicesGamingInput: Using {(isAdmin ? "Administrator" : "normal-user")} detection mode");
+				Debug.WriteLine($"DevicesGamingInput: Running as {(isAdmin ? "Administrator" : "normal user")}");
 				
 				var gamepads = DetectGamepadsWithRetry(isAdmin);
-				Debug.WriteLine($"DevicesGamingInput: Detection found {gamepads.Count} gamepads");
+				Debug.WriteLine($"DevicesGamingInput: Found {gamepads.Count} gamepad(s)");
 				
-				// Process all detected gamepads
-				ProcessDetectedGamepads(gamepads, deviceList);
+				// Process functional gamepads only
+				ProcessFunctionalGamepads(gamepads, deviceList);
 				
 				// Log guidance if no devices found
-				LogDetectionGuidance(deviceList.Count, isAdmin);
+				if (deviceList.Count == 0)
+					LogDetectionGuidance(isAdmin);
 				
 				// Log summary
 				LogDeviceListSummary(deviceList, stopwatch);
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"DevicesGamingInput: Fatal error during Gaming Input device enumeration: {ex.Message}");
+				Debug.WriteLine($"DevicesGamingInput: Fatal error during enumeration: {ex.Message}");
 				Debug.WriteLine($"DevicesGamingInput: Stack trace: {ex.StackTrace}");
 			}
 
@@ -238,31 +239,24 @@ namespace x360ce.App.Input.Devices
 		#region Private Helper Methods - Detection
 
 		/// <summary>
-		/// Detects gamepads with retry logic based on privilege level.
+		/// Detects gamepads with privilege-aware retry logic.
 		/// </summary>
 		private IReadOnlyList<Gamepad> DetectGamepadsWithRetry(bool isAdmin)
 		{
 			var gamepads = Gamepad.Gamepads;
-			Debug.WriteLine($"DevicesGamingInput: Immediate access found {gamepads.Count} gamepads");
 			
 			if (gamepads.Count > 0)
+			{
+				Debug.WriteLine($"DevicesGamingInput: Immediate detection found {gamepads.Count} gamepad(s)");
 				return gamepads;
+			}
 			
-			// Apply privilege-specific retry strategy
-			if (isAdmin)
-			{
-				return RetryDetectionWithDelays(
-					new[] { ADMIN_INITIAL_DELAY, ADMIN_RETRY_DELAY, ADMIN_RETRY_DELAY },
-					"Admin"
-				);
-			}
-			else
-			{
-				return RetryDetectionWithDelays(
-					new[] { USER_INITIAL_DELAY, USER_RETRY_DELAY },
-					"User"
-				);
-			}
+			// Apply privilege-specific retry delays
+			var delays = isAdmin
+				? new[] { ADMIN_INITIAL_DELAY, ADMIN_RETRY_DELAY, ADMIN_RETRY_DELAY }
+				: new[] { USER_INITIAL_DELAY, USER_RETRY_DELAY };
+			
+			return RetryDetectionWithDelays(delays, isAdmin ? "Admin" : "User");
 		}
 
 		/// <summary>
@@ -270,39 +264,46 @@ namespace x360ce.App.Input.Devices
 		/// </summary>
 		private IReadOnlyList<Gamepad> RetryDetectionWithDelays(int[] delays, string mode)
 		{
-			var gamepads = Gamepad.Gamepads;
 			int totalDelay = 0;
 			
 			foreach (var delay in delays)
 			{
-				if (gamepads.Count > 0)
-					break;
-					
-				Debug.WriteLine($"DevicesGamingInput: [{mode}] No devices found, trying with {delay}ms delay...");
+				Debug.WriteLine($"DevicesGamingInput: [{mode}] Retrying with {delay}ms delay...");
 				System.Threading.Thread.Sleep(delay);
 				totalDelay += delay;
-				gamepads = Gamepad.Gamepads;
-				Debug.WriteLine($"DevicesGamingInput: [{mode}] After {totalDelay}ms total delay found {gamepads.Count} gamepads");
+				
+				var gamepads = Gamepad.Gamepads;
+				if (gamepads.Count > 0)
+				{
+					Debug.WriteLine($"DevicesGamingInput: [{mode}] Found {gamepads.Count} gamepad(s) after {totalDelay}ms");
+					return gamepads;
+				}
 			}
 			
-			return gamepads;
+			Debug.WriteLine($"DevicesGamingInput: [{mode}] No gamepads found after {totalDelay}ms total delay");
+			return Gamepad.Gamepads;
 		}
 
 		/// <summary>
-		/// Processes all detected gamepads and adds them to the device list.
+		/// Processes functional gamepads and adds them to the device list.
+		/// Filters out non-responsive devices early for efficiency.
 		/// </summary>
-		private void ProcessDetectedGamepads(IReadOnlyList<Gamepad> gamepads, List<GamingInputDeviceInfo> deviceList)
+		private void ProcessFunctionalGamepads(IReadOnlyList<Gamepad> gamepads, List<GamingInputDeviceInfo> deviceList)
 		{
 			for (int i = 0; i < gamepads.Count; i++)
 			{
 				try
 				{
-					var deviceInfo = CreateDeviceInfo(gamepads[i], i);
-					if (deviceInfo != null)
+					// Early filtering: Test gamepad functionality before creating device info
+					if (!TryGetGamepadReading(gamepads[i], out var reading))
 					{
-						deviceList.Add(deviceInfo);
-						LogDeviceInfo(deviceInfo, deviceList.Count);
+						Debug.WriteLine($"DevicesGamingInput: Gamepad {i} is not responding - skipping");
+						continue;
 					}
+					
+					var deviceInfo = CreateDeviceInfo(gamepads[i], i, reading);
+					deviceList.Add(deviceInfo);
+					LogDeviceInfo(deviceInfo, deviceList.Count);
 				}
 				catch (Exception ex)
 				{
@@ -312,19 +313,12 @@ namespace x360ce.App.Input.Devices
 		}
 
 		/// <summary>
-		/// Creates a GamingInputDeviceInfo object from a gamepad.
-		/// Returns null if the gamepad is not functional.
+		/// Creates a GamingInputDeviceInfo object from a functional gamepad.
 		/// </summary>
-		private GamingInputDeviceInfo CreateDeviceInfo(Gamepad gamepad, int index)
+		private GamingInputDeviceInfo CreateDeviceInfo(Gamepad gamepad, int index, GamepadReading reading)
 		{
-			// Test if gamepad is functional
-			if (!TryGetGamepadReading(gamepad, out var reading))
-			{
-				Debug.WriteLine($"DevicesGamingInput: Gamepad {index} is not responding");
-				return null;
-			}
 			
-			var deviceInfo = new GamingInputDeviceInfo
+			return new GamingInputDeviceInfo
 			{
 				// Identity
 				InstanceGuid = GenerateGamingInputGuid(index),
@@ -339,11 +333,13 @@ namespace x360ce.App.Input.Devices
 				DeviceTypeName = "Gaming Input Gamepad",
 				Usage = GAME_CONTROLS_USAGE,
 				UsagePage = GENERIC_DESKTOP_USAGE_PAGE,
+				InputType = "GamingInput",
 				
 				// Hardware identification - GamingInput uses generic Microsoft VID/PID
 				VendorId = MICROSOFT_VENDOR_ID,
 				ProductId = GAMING_INPUT_PRODUCT_ID,
 				ClassGuid = GenerateGamingInputClassGuid(),
+				CommonIdentifier = $"VID_{MICROSOFT_VENDOR_ID:X4}&PID_{GAMING_INPUT_PRODUCT_ID:X4}",
 				
 				// Capabilities
 				AxeCount = AXES_COUNT,
@@ -371,11 +367,6 @@ namespace x360ce.App.Input.Devices
 				HardwareRevision = 1,
 				FirmwareRevision = 1
 			};
-			
-			// Generate CommonIdentifier for device grouping
-			GenerateCommonIdentifier(deviceInfo);
-			
-			return deviceInfo;
 		}
 
 		#endregion
@@ -549,29 +540,6 @@ namespace x360ce.App.Input.Devices
 			return new Guid("47414D49-4E47-434C-4153-000000000000"); // "GAMINGCLAS"
 		}
 		
-		/// <summary>
-		/// Generates CommonIdentifier for the device.
-		/// GamingInput uses generic Microsoft VID/PID, so CommonIdentifier is VID/PID only.
-		/// </summary>
-		/// <param name="deviceInfo">Device information to process</param>
-		private void GenerateCommonIdentifier(GamingInputDeviceInfo deviceInfo)
-		{
-			try
-			{
-				var vid = deviceInfo.VendorId > 0 ? $"{deviceInfo.VendorId:X4}" : "0000";
-				var pid = deviceInfo.ProductId > 0 ? $"{deviceInfo.ProductId:X4}" : "0000";
-				
-				// GamingInput uses generic Microsoft VID/PID for all devices
-				// No MI or COL information available from GamingInput API
-				deviceInfo.CommonIdentifier = $"VID_{vid}&PID_{pid}";
-			}
-			catch (Exception ex)
-			{
-				Debug.WriteLine($"DevicesGamingInput: Error generating CommonIdentifier: {ex.Message}");
-				deviceInfo.CommonIdentifier = "VID_0000&PID_0000";
-			}
-		}
-
 		#endregion
 
 		#region Private Helper Methods - Logging
@@ -587,26 +555,18 @@ namespace x360ce.App.Input.Devices
 		}
 
 		/// <summary>
-		/// Logs detection guidance based on results and privilege level.
+		/// Logs detection guidance based on privilege level.
 		/// </summary>
-		private void LogDetectionGuidance(int deviceCount, bool isAdmin)
+		private void LogDetectionGuidance(bool isAdmin)
 		{
-			if (deviceCount > 0)
-				return;
-				
 			if (!isAdmin)
 			{
 				Debug.WriteLine("DevicesGamingInput: No devices found in normal user mode.");
-				Debug.WriteLine("DevicesGamingInput: RECOMMENDATION: Try running as Administrator for full GamingInput access.");
-				Debug.WriteLine("DevicesGamingInput: Right-click the application and select 'Run as administrator'.");
-				Debug.WriteLine("DevicesGamingInput: No GamingInput devices detected in normal user mode.");
-				Debug.WriteLine("DevicesGamingInput: For full GamingInput support, run as Administrator.");
+				Debug.WriteLine("DevicesGamingInput: RECOMMENDATION: Run as Administrator for full GamingInput access.");
 			}
 			else
 			{
-				Debug.WriteLine("DevicesGamingInput: No devices found even with Administrator privileges.");
-				Debug.WriteLine("DevicesGamingInput: This indicates no GamingInput-compatible controllers are connected.");
-				Debug.WriteLine("DevicesGamingInput: No GamingInput devices found (Administrator mode).");
+				Debug.WriteLine("DevicesGamingInput: No devices found with Administrator privileges.");
 				Debug.WriteLine("DevicesGamingInput: Controllers may only support DirectInput/XInput.");
 			}
 		}

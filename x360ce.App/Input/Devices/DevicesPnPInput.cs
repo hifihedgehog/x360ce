@@ -22,6 +22,7 @@ namespace x360ce.App.Input.Devices
         public int DeviceSubtype { get; set; }
         public int Usage { get; set; }
         public int UsagePage { get; set; }
+        public string InputType { get; set; }
         public int AxeCount { get; set; }
         public int SliderCount { get; set; }
         public int ButtonCount { get; set; }
@@ -485,7 +486,8 @@ namespace x360ce.App.Input.Devices
                 var deviceInfo = new PnPInputDeviceInfo
                 {
                     ClassGuid = deviceInfoData.ClassGuid,
-                    IsOnline = true
+                    IsOnline = true,
+                    InputType = "PnPInput"
                 };
 
                 // Get device instance ID
@@ -621,7 +623,6 @@ namespace x360ce.App.Input.Devices
             // For HID devices, apply strict filtering with early exits
             var hardwareIds = deviceInfo.HardwareIds ?? "";
             var description = deviceInfo.DeviceDescription ?? "";
-            var friendlyName = deviceInfo.FriendlyName ?? "";
 
             // Early reject: No identification information
             if (string.IsNullOrEmpty(hardwareIds) && string.IsNullOrEmpty(description))
@@ -629,16 +630,17 @@ namespace x360ce.App.Input.Devices
                 return false;
             }
 
-            // Prepare search strings once (performance optimization)
-            var lowerHardwareIds = hardwareIds.ToLowerInvariant();
-            var lowerDescription = description.ToLowerInvariant();
+            // Cache case conversions once for performance
             var upperHardwareIds = hardwareIds.ToUpperInvariant();
-
+            
             // Early reject: Vendor-defined usage pages (FF00-FFFF) - fastest check first
-            if (ContainsAny(upperHardwareIds, _vendorDefinedPatterns))
+            if (ContainsVendorDefinedPattern(upperHardwareIds))
             {
                 return false;
             }
+
+            var lowerHardwareIds = hardwareIds.ToLowerInvariant();
+            var lowerDescription = description.ToLowerInvariant();
 
             // Early reject: Known non-input device patterns in hardware IDs
             if (ContainsAny(lowerHardwareIds, _excludeHardwarePatterns))
@@ -653,8 +655,32 @@ namespace x360ce.App.Input.Devices
             }
 
             // Final check: Must have explicit input device indicators
+            // Combine strings only if we passed all rejection filters
+            var friendlyName = deviceInfo.FriendlyName ?? "";
             var combinedText = $"{lowerHardwareIds} {lowerDescription} {friendlyName.ToLowerInvariant()}";
             return ContainsAny(combinedText, _acceptInputPatterns);
+        }
+
+        /// <summary>
+        /// Efficiently checks if text contains vendor-defined HID usage page patterns.
+        /// Optimized for the most common case (UP:FF prefix).
+        /// </summary>
+        /// <param name="upperText">Text to search in (must be uppercase)</param>
+        /// <returns>True if vendor-defined pattern is found</returns>
+        private static bool ContainsVendorDefinedPattern(string upperText)
+        {
+            if (string.IsNullOrEmpty(upperText))
+                return false;
+
+            // Check most common patterns first for early exit
+            return upperText.Contains("UP:FF") || upperText.Contains("&UP:FF") ||
+                   upperText.Contains("UP:FE") || upperText.Contains("&UP:FE") ||
+                   upperText.Contains("UP:FD") || upperText.Contains("&UP:FD") ||
+                   upperText.Contains("UP:FC") || upperText.Contains("&UP:FC") ||
+                   upperText.Contains("UP:FB") || upperText.Contains("&UP:FB") ||
+                   upperText.Contains("UP:FA") || upperText.Contains("&UP:FA") ||
+                   upperText.Contains("UP:F9") || upperText.Contains("&UP:F9") ||
+                   upperText.Contains("UP:F8") || upperText.Contains("&UP:F8");
         }
 
         /// <summary>
@@ -679,25 +705,20 @@ namespace x360ce.App.Input.Devices
         #region Filter Pattern Constants
 
         /// <summary>
-        /// Vendor-defined HID usage page patterns (FF00-FFFF) - these are not standard input devices.
-        /// </summary>
-        private static readonly string[] _vendorDefinedPatterns = {
-            "UP:FF", "UP:FE", "UP:FD", "UP:FC", "UP:FB", "UP:FA", "UP:F9", "UP:F8",
-            "&UP:FF", "&UP:FE", "&UP:FD", "&UP:FC", "&UP:FB", "&UP:FA", "&UP:F9", "&UP:F8"
-        };
-
-        /// <summary>
         /// Hardware ID patterns that indicate non-input devices.
+        /// Ordered by frequency of occurrence for faster rejection.
         /// </summary>
         private static readonly string[] _excludeHardwarePatterns = {
+            // Most common non-input patterns first for faster rejection
+            "audio", "sound", "storage", "disk", "network", "ethernet",
             // System devices
             "acpi", "root", "system", "pci", "usb\\root", "composite",
-            // Audio devices
-            "audio", "sound", "speaker", "microphone", "headphone", "headset",
-            // Storage devices
-            "storage", "disk", "drive", "mass", "flash", "cdrom", "dvd",
-            // Network devices
-            "network", "ethernet", "wifi", "wlan", "bluetooth\\radio", "bthhfenum",
+            // Audio devices (continued)
+            "speaker", "microphone", "headphone", "headset",
+            // Storage devices (continued)
+            "drive", "mass", "flash", "cdrom", "dvd",
+            // Network devices (continued)
+            "wifi", "wlan", "bluetooth\\radio", "bthhfenum",
             // Display devices
             "display", "monitor", "video", "graphics", "capture", "camera", "webcam",
             // Communication devices
@@ -719,11 +740,14 @@ namespace x360ce.App.Input.Devices
 
         /// <summary>
         /// Description patterns that indicate non-input devices.
+        /// Ordered by frequency of occurrence for faster rejection.
         /// </summary>
         private static readonly string[] _excludeDescriptionPatterns = {
-            "audio", "sound", "speaker", "microphone", "headphone", "headset",
-            "storage", "disk", "drive", "mass", "flash", "cdrom",
-            "network", "ethernet", "wifi", "bluetooth", "radio",
+            // Most common non-input patterns first
+            "audio", "sound", "storage", "disk", "network", "ethernet",
+            "speaker", "microphone", "headphone", "headset",
+            "drive", "mass", "flash", "cdrom",
+            "wifi", "bluetooth", "radio",
             "display", "monitor", "video", "graphics", "capture", "camera", "webcam",
             "printer", "scanner", "fax", "modem", "serial",
             "battery", "power", "thermal", "fan", "temperature",
@@ -733,19 +757,22 @@ namespace x360ce.App.Input.Devices
 
         /// <summary>
         /// Patterns that positively identify input devices.
+        /// Ordered by frequency of occurrence for faster acceptance.
         /// </summary>
         private static readonly string[] _acceptInputPatterns = {
+            // Most common input device patterns first
+            "hid\\vid_", "usb\\class_03", "mouse", "keyboard",
             // Gaming devices
             "gamepad", "joystick", "controller", "wheel", "pedal", "throttle",
             "xbox", "playstation", "nintendo", "dualshock", "pro controller",
-            // Input devices
-            "mouse", "keyboard", "trackpad", "touchpad", "trackball",
+            // Input devices (continued)
+            "trackpad", "touchpad", "trackball",
             "tablet", "digitizer", "stylus", "pen", "touch",
             // Standard HID input usage pages
             "up:0001_u:0002", "up:0001_u:0006", "up:0001_u:0004", "up:0001_u:0005",
             "hid_device_system_mouse", "hid_device_system_keyboard", "hid_device_system_game",
-            // HID input class
-            "usb\\class_03", "hid\\vid_", "input"
+            // Generic input indicator
+            "input"
         };
 
         #endregion
@@ -790,21 +817,33 @@ namespace x360ce.App.Input.Devices
             {
                 var upperIds = hardwareIds.ToUpperInvariant();
                 
-                // Try standard format first: VID_XXXX and PID_XXXX
-                int vid = ExtractHexValue(upperIds, "VID_", 4) ?? ExtractHexValue(upperIds, "VEN_", 4) ?? 0;
-                int pid = ExtractHexValue(upperIds, "PID_", 4) ?? ExtractHexValue(upperIds, "DEV_", 4) ?? 0;
+                // Try standard format first: VID_XXXX and PID_XXXX (most common)
+                int vid = ExtractHexValue(upperIds, "VID_", 4) ?? 0;
+                int pid = ExtractHexValue(upperIds, "PID_", 4) ?? 0;
                 
-                // If VID not found in standard format, try alternate format: VID&XXXXXXXX
+                // Early return if both found
+                if (vid != 0 && pid != 0)
+                    return (vid, pid);
+                
+                // Try alternate vendor format: VEN_XXXX
                 if (vid == 0)
-                {
-                    vid = ExtractHexValueVariable(upperIds, "VID&", "_PID&") ?? 0;
-                }
+                    vid = ExtractHexValue(upperIds, "VEN_", 4) ?? 0;
                 
-                // If PID not found in standard format, try alternate format: _PID&XXXX
+                // Try alternate product format: DEV_XXXX
                 if (pid == 0)
-                {
+                    pid = ExtractHexValue(upperIds, "DEV_", 4) ?? 0;
+                
+                // Early return if both found
+                if (vid != 0 && pid != 0)
+                    return (vid, pid);
+                
+                // Try alternate format: VID&XXXXXXXX
+                if (vid == 0)
+                    vid = ExtractHexValueVariable(upperIds, "VID&", "_PID&") ?? 0;
+                
+                // Try alternate format: _PID&XXXX
+                if (pid == 0)
                     pid = ExtractHexValueVariable(upperIds, "_PID&", new[] { "&", ";", "\\", " " }) ?? 0;
-                }
                 
                 return (vid, pid);
             }
@@ -824,7 +863,7 @@ namespace x360ce.App.Input.Devices
         /// <returns>Parsed integer value or null if not found</returns>
         private static int? ExtractHexValue(string text, string pattern, int length)
         {
-            var index = text.IndexOf(pattern);
+            var index = text.IndexOf(pattern, StringComparison.Ordinal);
             if (index < 0)
                 return null;
 
@@ -832,12 +871,17 @@ namespace x360ce.App.Input.Devices
             if (start + length > text.Length)
                 return null;
 
-            // Find the end of the hex value (stop at delimiter or max length)
+            // Extract exactly 'length' characters or until delimiter
             var end = start;
-            while (end < text.Length && end < start + length &&
-                   ((text[end] >= '0' && text[end] <= '9') || (text[end] >= 'A' && text[end] <= 'F')))
+            var maxEnd = Math.Min(start + length, text.Length);
+            
+            while (end < maxEnd)
             {
-                end++;
+                var ch = text[end];
+                if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F'))
+                    end++;
+                else
+                    break;
             }
 
             if (end <= start)
@@ -1041,20 +1085,25 @@ namespace x360ce.App.Input.Devices
                 var vid = deviceInfo.VendorId.ToString("X4");
                 var pid = deviceInfo.ProductId.ToString("X4");
 
-                // Combine all possible sources once for efficient searching of MI and COL
-                var combinedText = string.Join(";",
-                    deviceInfo.HardwareIds ?? "",
-                    deviceInfo.DeviceInstanceId ?? "",
-                    deviceInfo.InterfacePath ?? "",
-                    deviceInfo.PhysicalDeviceObjectName ?? "",
-                    deviceInfo.LocationInformation ?? ""
-                ).ToUpperInvariant();
+                // Prioritize DeviceInstanceId and HardwareIds as they're most likely to contain MI/COL
+                var primaryText = $"{deviceInfo.DeviceInstanceId ?? ""};{deviceInfo.HardwareIds ?? ""}".ToUpperInvariant();
+                
+                // Extract MI and COL values from primary sources first
+                var mi = ExtractPatternValue(primaryText, new[] { "&MI_", "\\MI_" }, 2);
+                var col = ExtractPatternValue(primaryText, new[] { "&COL", "\\COL" }, 2);
+                
+                // Only check secondary sources if not found in primary
+                if (string.IsNullOrEmpty(mi) && string.IsNullOrEmpty(col))
+                {
+                    var secondaryText = $"{deviceInfo.InterfacePath ?? ""};{deviceInfo.PhysicalDeviceObjectName ?? ""};{deviceInfo.LocationInformation ?? ""}".ToUpperInvariant();
+                    if (!string.IsNullOrEmpty(secondaryText) && secondaryText.Length > 1)
+                    {
+                        mi = mi ?? ExtractPatternValue(secondaryText, new[] { "&MI_", "\\MI_" }, 2);
+                        col = col ?? ExtractPatternValue(secondaryText, new[] { "&COL", "\\COL" }, 2);
+                    }
+                }
 
-                // Extract MI and COL values
-                var mi = ExtractPatternValue(combinedText, new[] { "&MI_", "\\MI_" }, 2);
-                var col = ExtractPatternValue(combinedText, new[] { "&COL", "\\COL" }, 2);
-
-                // Build SortingString efficiently
+                // Build SortingString efficiently using StringBuilder for better performance
                 var sortingString = $"VID_{vid}&PID_{pid}";
                 if (!string.IsNullOrEmpty(mi))
                     sortingString += $"&MI_{mi}";

@@ -1,0 +1,143 @@
+﻿<UserControl x:Class="x360ce.App.Controls.UserDevicesDebugControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:x360ce.App.Controls"
+             mc:Ignorable="d" 
+             Loaded="UserControl_Loaded"
+	d:DesignHeight="400"
+	d:DesignWidth="720"
+	Background="{StaticResource BackgroundLight}">
+    <Grid VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <DockPanel>
+            <Button
+                Name="RefreshButton"
+                DockPanel.Dock="Right"
+                Margin="0,3,3,3"
+                Click="RefreshButton_Click">
+                <StackPanel>
+                    <ContentControl Content="{StaticResource Icon_Refresh}" />
+                    <Label Content="Refresh" Padding="0" />
+                </StackPanel>
+            </Button>
+            <TextBox
+                Name="InputDeviceSearch"
+                Width="400"
+                HorizontalAlignment="Left"
+                VerticalContentAlignment="Center"
+                TextChanged="InputDeviceSearch_TextChanged"/>
+            <Button
+                Name="ClearButton"
+                DockPanel.Dock="Left"
+                Margin="0,3,3,3"
+                Click="ClearButton_Click">
+                <StackPanel>
+                    <ContentControl Content="{StaticResource Icon_Cleanup}" />
+                    <Label Content="Clear" Padding="0" />
+                </StackPanel>
+            </Button>
+            
+        </DockPanel>
+        <Border
+			Grid.Row="1"
+			Height="1"
+			BorderBrush="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"
+			BorderThickness="1"
+			SnapsToDevicePixels="True" />
+        <Border
+			Grid.Row="2"
+			Background="{StaticResource BackgroundWhite}"
+			CornerRadius="0,0,5,5">
+            <DataGrid
+                AutoGenerateColumns="False"
+                IsReadOnly="True"
+                x:Name="AllInputDevicesDataGrid">
+                <DataGrid.Resources>
+                    <Style BasedOn="{StaticResource DataGridHeader_Sorting}" TargetType="DataGridColumnHeader" />
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding InputType}" Value="PnPInput">
+                                <Setter Property="Background" Value="#F0F0F0" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding InputType}" Value="RawInput">
+                                <Setter Property="Background" Value="#FFE0E0" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding InputType}" Value="DirectInput">
+                                <Setter Property="Background" Value="#E0E8FF" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding InputType}" Value="XInput">
+                                <Setter Property="Background" Value="#E0FFE0" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding InputType}" Value="GamingInput">
+                                <Setter Property="Background" Value="#FFFFE0" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="IsTabStop" Value="False" />
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" />
+                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                    <Style TargetType="TextBox">
+                        <Setter Property="IsReadOnly" Value="True"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="IsTabStop" Value="False"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridCell}}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.Resources>
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="InputType" SortMemberPath="InputType" Width="Auto">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding InputType, Mode=OneWay}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="CommonIdentifier" SortMemberPath="CommonIdentifier" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding CommonIdentifier, Mode=OneWay}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="A" Binding="{Binding AxeCount}" Width="Auto"/>
+                    <DataGridTextColumn Header="S" Binding="{Binding SliderCount}" Width="Auto"/>
+                    <DataGridTextColumn Header="B" Binding="{Binding ButtonCount}" Width="Auto"/>
+                    <DataGridTextColumn Header="K" Binding="{Binding KeyCount}" Width="Auto"/>
+                    <DataGridTextColumn Header="P" Binding="{Binding PovCount}" Width="Auto"/>
+                    <DataGridTemplateColumn Header="ProductName" SortMemberPath="ProductName" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding ProductName, Mode=OneWay}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="InterfacePath" SortMemberPath="InterfacePath" Width="2*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding InterfacePath, Mode=OneWay}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
+</UserControl>

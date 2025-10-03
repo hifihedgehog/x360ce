@@ -31,6 +31,7 @@ namespace x360ce.App.Input.Devices
         public int DeviceSubtype { get; set; }
         public int Usage { get; set; }
         public int UsagePage { get; set; }
+        public string InputType { get; set; }
         public int AxeCount { get; set; }
         public int SliderCount { get; set; }
         public int ButtonCount { get; set; }
@@ -611,58 +612,58 @@ namespace x360ce.App.Input.Devices
             isInputDevice = false;
             var deviceType = (RawInputDeviceType)rawDevice.dwType;
 
-            // Always process Mouse and Keyboard devices
+            // Always process Mouse and Keyboard devices (fastest path)
             if (deviceType == RawInputDeviceType.Mouse || deviceType == RawInputDeviceType.Keyboard)
             {
                 isInputDevice = true;
                 return true;
             }
 
-            // For HID devices, perform early filtering
-            if (deviceType == RawInputDeviceType.HID)
-            {
-                // Get device name for early filtering
-                string deviceName = GetDeviceName(rawDevice.hDevice);
-                
-                // Quick rejection based on device name patterns
-                if (IsKnownNonInputDeviceByName(deviceName))
-                    return false;
-
-                // Get device info for HID usage analysis
-                var deviceInfoStruct = GetDeviceInfo(rawDevice.hDevice);
-                if (!deviceInfoStruct.HasValue || deviceInfoStruct.Value.dwType != RIM_TYPEHID)
-                    return false;
-
-                var hid = deviceInfoStruct.Value.union.hid;
-                int usagePage = hid.usUsagePage;
-                int usage = hid.usUsage;
-
-                // Check if it's a known input device by HID usage (fastest check)
-                if (IsKnownInputDeviceByUsage(usagePage, usage))
-                {
-                    isInputDevice = true;
-                    return true;
-                }
-
-                // Check if device name suggests it's an input device
-                if (HasInputDeviceNamePattern(deviceName, ""))
-                {
-                    isInputDevice = true;
-                    return true;
-                }
-
-                // Final check: verify actual input capabilities
-                var tempDeviceInfo = CreateTempDeviceInfo(rawDevice, deviceName, deviceInfoStruct.Value);
-                if (tempDeviceInfo != null && HasActualInputCapabilities(tempDeviceInfo))
-                {
-                    isInputDevice = true;
-                    return true;
-                }
-
+            // Only process HID devices
+            if (deviceType != RawInputDeviceType.HID)
                 return false;
+
+            // Step 1: Get device name once (used for all subsequent checks)
+            string deviceName = GetDeviceName(rawDevice.hDevice);
+            if (string.IsNullOrEmpty(deviceName))
+                return false;
+
+            // Step 2: Quick rejection based on device name patterns (fastest check - no Win32 calls)
+            if (IsKnownNonInputDeviceByName(deviceName))
+                return false;
+
+            // Step 3: Get device info once (reuse for all checks)
+            var deviceInfoStruct = GetDeviceInfo(rawDevice.hDevice);
+            if (!deviceInfoStruct.HasValue || deviceInfoStruct.Value.dwType != RIM_TYPEHID)
+                return false;
+
+            var hid = deviceInfoStruct.Value.union.hid;
+            int usagePage = hid.usUsagePage;
+            int usage = hid.usUsage;
+
+            // Step 4: Check if it's a known input device by HID usage (second fastest - simple comparison)
+            if (IsKnownInputDeviceByUsage(usagePage, usage))
+            {
+                isInputDevice = true;
+                return true;
             }
 
-            // Unknown device types are skipped
+            // Step 5: Check if device name suggests it's an input device (pattern matching)
+            if (HasInputDeviceNamePattern(deviceName, ""))
+            {
+                isInputDevice = true;
+                return true;
+            }
+
+            // Step 6: Final check - verify actual input capabilities (slowest - requires HID parsing)
+            // Only do this if previous checks didn't conclusively identify the device
+            var tempDeviceInfo = CreateTempDeviceInfo(rawDevice, deviceName, deviceInfoStruct.Value);
+            if (tempDeviceInfo != null && HasActualInputCapabilities(tempDeviceInfo))
+            {
+                isInputDevice = true;
+                return true;
+            }
+
             return false;
         }
 
@@ -1555,6 +1556,7 @@ namespace x360ce.App.Input.Devices
 
         /// <summary>
         /// Checks if device name/path contains patterns typical of input devices.
+        /// Optimized with comprehensive patterns and efficient checking.
         /// </summary>
         /// <param name="interfacePath">Device interface path</param>
         /// <param name="instanceName">Device instance name</param>
@@ -1566,31 +1568,34 @@ namespace x360ce.App.Input.Devices
 
             var combinedText = $"{interfacePath} {instanceName}".ToLowerInvariant();
 
-            // Known input device patterns
-            string[] inputPatterns = {
-                "gamepad", "joystick", "controller", "wheel", "pedal", "throttle",
-                "mouse", "keyboard", "trackpad", "touchpad", "trackball",
-                "tablet", "stylus", "pen", "digitizer", "touch",
-                "remote", "media", "volume", "button", "switch"
-            };
+            // Gaming input devices (highest priority)
+            if (combinedText.Contains("gamepad") || combinedText.Contains("joystick") ||
+                combinedText.Contains("controller") || combinedText.Contains("wheel") ||
+                combinedText.Contains("pedal") || combinedText.Contains("throttle") ||
+                combinedText.Contains("flight") || combinedText.Contains("racing"))
+                return true;
 
-            foreach (var pattern in inputPatterns)
-            {
-                if (combinedText.Contains(pattern))
-                    return true;
-            }
+            // Standard input devices
+            if (combinedText.Contains("mouse") || combinedText.Contains("keyboard") ||
+                combinedText.Contains("trackpad") || combinedText.Contains("touchpad") ||
+                combinedText.Contains("trackball") || combinedText.Contains("pointing"))
+                return true;
+
+            // Pen/touch input devices
+            if (combinedText.Contains("tablet") || combinedText.Contains("stylus") ||
+                combinedText.Contains("pen") || combinedText.Contains("digitizer") ||
+                combinedText.Contains("touch"))
+                return true;
+
+            // Remote/media controls
+            if (combinedText.Contains("remote") || combinedText.Contains("media") ||
+                combinedText.Contains("volume") || combinedText.Contains("button") ||
+                combinedText.Contains("switch"))
+                return true;
 
             return false;
         }
 
-
-        /// <summary>
-        /// Formats a property for debug output only if it has a non-empty value.
-        /// </summary>
-        private string FormatProperty(string name, string value)
-        {
-            return !string.IsNullOrEmpty(value) ? $"{name}: {value}, " : "";
-        }
 
         /// <summary>
         /// Processes a device that has been identified as an input device.
@@ -1612,7 +1617,8 @@ namespace x360ce.App.Input.Devices
                     RawInputDeviceType = (RawInputDeviceType)rawDevice.dwType,
                     DeviceType = (int)rawDevice.dwType,
                     RawInputFlags = rawDevice.dwType,
-                    IsOnline = true
+                    IsOnline = true,
+                    InputType = "RawInput"
                 };
 
                 // Get device name (interface path)
@@ -1681,67 +1687,63 @@ namespace x360ce.App.Input.Devices
 
                 deviceListIndex++;
 
-                // Log comprehensive device information for debugging
-                deviceListDebugLines.Add($"\n{deviceListIndex}. DevicesRawInputInfo: " +
-                	$"CommonIdentifier (generated): {deviceInfo.CommonIdentifier}, " +
-                	$"DeviceHandle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
-                	$"RawInputDeviceType: {deviceInfo.RawInputDeviceType}, " +
-                	$"InstanceGuid (generated): {deviceInfo.InstanceGuid}, " +
-                	$"ProductGuid (generated): {deviceInfo.ProductGuid}, " +
-                	$"InstanceName (generated): {deviceInfo.InstanceName}, " +
-                	$"ProductName: {deviceInfo.ProductName}, " +
-                	$"DeviceTypeName: {deviceInfo.DeviceTypeName}, " +
-                	$"Usage: 0x{deviceInfo.Usage:X4}, " +
-                	$"UsagePage: 0x{deviceInfo.UsagePage:X4}, " +
-                	FormatProperty("InterfacePath", deviceInfo.InterfacePath).TrimEnd(',', ' '));
+                // Log comprehensive device information for debugging using StringBuilder for efficiency
+                var sb = new StringBuilder();
+                sb.AppendLine($"\n{deviceListIndex}. DevicesRawInputInfo:");
+                sb.Append($"  CommonIdentifier: {deviceInfo.CommonIdentifier}, ");
+                sb.Append($"DeviceHandle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, ");
+                sb.Append($"Type: {deviceInfo.RawInputDeviceType}, ");
+                sb.Append($"InstanceGuid: {deviceInfo.InstanceGuid}");
+                sb.AppendLine();
+                sb.Append($"  InstanceName: {deviceInfo.InstanceName}, ");
+                sb.Append($"ProductName: {deviceInfo.ProductName}, ");
+                sb.Append($"DeviceTypeName: {deviceInfo.DeviceTypeName}");
+                sb.AppendLine();
+                sb.Append($"  Usage: 0x{deviceInfo.Usage:X4}, ");
+                sb.Append($"UsagePage: 0x{deviceInfo.UsagePage:X4}");
+                if (!string.IsNullOrEmpty(deviceInfo.InterfacePath))
+                    sb.Append($", InterfacePath: {deviceInfo.InterfacePath}");
+                deviceListDebugLines.Add(sb.ToString());
             
-                deviceListDebugLines.Add($"DevicesRawInputInfo Identification: " +
-                	$"VidPidString: {deviceInfo.VidPidString}, " +
-                	$"VendorId: {deviceInfo.VendorId} (0x{deviceInfo.VendorId:X4}), " +
-                	$"ProductId: {deviceInfo.ProductId} (0x{deviceInfo.ProductId:X4}), " +
-                	FormatProperty("DeviceId", deviceInfo.DeviceId).TrimEnd(',', ' '));
+                sb.Clear();
+                sb.Append($"  Identification: VID/PID: {deviceInfo.VidPidString}, ");
+                sb.Append($"VendorId: {deviceInfo.VendorId} (0x{deviceInfo.VendorId:X4}), ");
+                sb.Append($"ProductId: {deviceInfo.ProductId} (0x{deviceInfo.ProductId:X4})");
+                if (!string.IsNullOrEmpty(deviceInfo.DeviceId))
+                    sb.Append($", DeviceId: {deviceInfo.DeviceId}");
+                deviceListDebugLines.Add(sb.ToString());
 
-                // Add capability information with appropriate context
+                // Add capability information with appropriate context using StringBuilder
+                sb.Clear();
                 if (deviceInfo.RawInputDeviceType == RawInputDeviceType.HID)
                 {
                     // HID devices: Show parsed capabilities from HID Report Descriptor
                     if (deviceInfo.AxeCount > 0 || deviceInfo.SliderCount > 0 || deviceInfo.ButtonCount > 0 || deviceInfo.PovCount > 0)
                     {
-                        deviceListDebugLines.Add($"DevicesRawInputInfo Capabilities (from HID Report Descriptor): " +
-                            $"AxeCount: {deviceInfo.AxeCount}, " +
-                            $"SliderCount: {deviceInfo.SliderCount}, " +
-                            $"ButtonCount: {deviceInfo.ButtonCount}, " +
-                            $"KeyCount: {deviceInfo.KeyCount}, " +
-                            $"PovCount: {deviceInfo.PovCount}, " +
-                            $"HasForceFeedback: {deviceInfo.HasForceFeedback}");
+                        sb.Append($"  Capabilities (HID Report Descriptor): ");
+                        sb.Append($"Axes: {deviceInfo.AxeCount}, Sliders: {deviceInfo.SliderCount}, ");
+                        sb.Append($"Buttons: {deviceInfo.ButtonCount}, POVs: {deviceInfo.PovCount}, ");
+                        sb.Append($"ForceFeedback: {deviceInfo.HasForceFeedback}");
+                        deviceListDebugLines.Add(sb.ToString());
                     }
                     else
                     {
-                        deviceListDebugLines.Add($"DevicesRawInputInfo Note: " +
-                            $"Could not parse HID Report Descriptor for this device - capabilities unknown");
+                        deviceListDebugLines.Add($"  Note: Could not parse HID Report Descriptor - capabilities unknown");
                     }
                 }
                 else
                 {
                     // Mouse and Keyboard have actual counts from RawInput API
+                    sb.Append($"  Capabilities: ");
                     if (deviceInfo.RawInputDeviceType == RawInputDeviceType.Keyboard)
                     {
-                        deviceListDebugLines.Add($"DevicesRawInputInfo Capabilities: " +
-                            $"AxeCount: {deviceInfo.AxeCount}, " +
-                            $"SliderCount: {deviceInfo.SliderCount}, " +
-                            $"ButtonCount: {deviceInfo.ButtonCount}, " +
-                            $"KeyCount: {deviceInfo.KeyCount}, " +
-                            $"PovCount: {deviceInfo.PovCount}");
+                        sb.Append($"Keys: {deviceInfo.KeyCount}, Buttons: {deviceInfo.ButtonCount}");
                     }
                     else // Mouse
                     {
-                        deviceListDebugLines.Add($"DevicesRawInputInfo Capabilities: " +
-                            $"AxeCount: {deviceInfo.AxeCount}, " +
-                            $"SliderCount: {deviceInfo.SliderCount}, " +
-                            $"ButtonCount: {deviceInfo.ButtonCount}, " +
-                            $"KeyCount: {deviceInfo.KeyCount}, " +
-                            $"PovCount: {deviceInfo.PovCount}");
+                        sb.Append($"Axes: {deviceInfo.AxeCount}, Buttons: {deviceInfo.ButtonCount}");
                     }
+                    deviceListDebugLines.Add(sb.ToString());
                 }
 
                 // Add device to the final list (already filtered as input device)
@@ -1756,6 +1758,7 @@ namespace x360ce.App.Input.Devices
         /// <summary>
         /// Quick check if device name indicates it's a known non-input device.
         /// Used for early filtering to skip processing entirely.
+        /// Optimized with comprehensive patterns and efficient checking.
         /// </summary>
         /// <param name="deviceName">Device name/interface path</param>
         /// <returns>True if device is definitely not an input device</returns>
@@ -1766,23 +1769,62 @@ namespace x360ce.App.Input.Devices
 
             var lowerName = deviceName.ToLowerInvariant();
 
-            // Known non-input device patterns that we can identify early
-            string[] definiteNonInputPatterns = {
-                "audio", "sound", "speaker", "microphone", "headphone",
-                "storage", "disk", "drive", "mass", "flash",
-                "network", "ethernet", "wifi", "bluetooth\\radio",
-                "camera", "webcam", "video", "capture",
-                "printer", "scanner", "fax",
-                "modem", "serial", "parallel",
-                "hub", "root", "composite\\interface",
-                "system", "acpi", "pci", "processor"
-            };
+            // Comprehensive non-input device patterns organized by category
+            // Audio devices
+            if (lowerName.Contains("audio") || lowerName.Contains("sound") ||
+                lowerName.Contains("speaker") || lowerName.Contains("microphone") ||
+                lowerName.Contains("headphone") || lowerName.Contains("headset"))
+                return true;
 
-            foreach (var pattern in definiteNonInputPatterns)
-            {
-                if (lowerName.Contains(pattern))
-                    return true;
-            }
+            // Storage devices
+            if (lowerName.Contains("storage") || lowerName.Contains("disk") ||
+                lowerName.Contains("drive") || lowerName.Contains("mass") ||
+                lowerName.Contains("flash") || lowerName.Contains("card reader"))
+                return true;
+
+            // Network devices
+            if (lowerName.Contains("network") || lowerName.Contains("ethernet") ||
+                lowerName.Contains("wifi") || lowerName.Contains("bluetooth\\radio") ||
+                lowerName.Contains("wireless adapter"))
+                return true;
+
+            // Video/imaging devices
+            if (lowerName.Contains("camera") || lowerName.Contains("webcam") ||
+                lowerName.Contains("video") || lowerName.Contains("capture") ||
+                lowerName.Contains("imaging"))
+                return true;
+
+            // Printing/scanning devices
+            if (lowerName.Contains("printer") || lowerName.Contains("scanner") ||
+                lowerName.Contains("fax"))
+                return true;
+
+            // Communication devices
+            if (lowerName.Contains("modem") || lowerName.Contains("serial") ||
+                lowerName.Contains("parallel"))
+                return true;
+
+            // System/infrastructure devices
+            if (lowerName.Contains("hub") || lowerName.Contains("root") ||
+                lowerName.Contains("composite\\interface") || lowerName.Contains("system") ||
+                lowerName.Contains("acpi") || lowerName.Contains("pci") ||
+                lowerName.Contains("processor") || lowerName.Contains("chipset"))
+                return true;
+
+            // Display/monitor devices
+            if (lowerName.Contains("monitor") || lowerName.Contains("display") ||
+                lowerName.Contains("screen"))
+                return true;
+
+            // Power/battery devices
+            if (lowerName.Contains("battery") || lowerName.Contains("power") ||
+                lowerName.Contains("ups"))
+                return true;
+
+            // Sensor devices (non-input)
+            if (lowerName.Contains("sensor") || lowerName.Contains("accelerometer") ||
+                lowerName.Contains("gyroscope") || lowerName.Contains("proximity"))
+                return true;
 
             return false;
         }

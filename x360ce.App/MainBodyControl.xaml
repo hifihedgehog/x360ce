@@ -65,7 +65,10 @@
 		<TabItem Name="DevicesTabPage" Header="Devices">
 			<local:UserDevicesControl x:Name="DevicesPanel" />
 		</TabItem>
-		<TabItem Name="SettingsTabPage" Header="Settings">
+        <TabItem Name="DevicesDebugTabPage" Header="DevicesDebug">
+            <local:UserDevicesDebugControl x:Name="DevicesDebugPanel" />
+        </TabItem>
+        <TabItem Name="SettingsTabPage" Header="Settings">
 			<local:UserSettingListControl x:Name="SettingsPanel" />
 		</TabItem>
 		<TabItem Name="CloudTabPage" Header="Cloud">

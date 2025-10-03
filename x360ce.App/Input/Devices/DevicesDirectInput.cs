@@ -20,6 +20,7 @@ namespace x360ce.App.Input.Devices
 		public int DeviceSubtype { get; set; }
 		public int Usage { get; set; }
 		public int UsagePage { get; set; }
+		public string InputType { get; set; }
 		public int AxeCount { get; set; }
 		public int SliderCount { get; set; }
 		public int ButtonCount { get; set; }
@@ -78,6 +79,19 @@ namespace x360ce.App.Input.Devices
 	/// </summary>
 	internal class DevicesDirectInput
 	{
+		// Standard DirectInput slider offsets for capability detection
+		private static readonly JoystickOffset[] SliderOffsets = new[]
+		{
+			JoystickOffset.Sliders0,
+			JoystickOffset.Sliders1,
+			JoystickOffset.AccelerationSliders0,
+			JoystickOffset.AccelerationSliders1,
+			JoystickOffset.ForceSliders0,
+			JoystickOffset.ForceSliders1,
+			JoystickOffset.VelocitySliders0,
+			JoystickOffset.VelocitySliders1
+		};
+
 		/// <summary>
 		/// Creates a public list of DirectInput devices (gamepads, keyboards, mice) with live device objects and logs their properties.
 		/// This method enumerates all available DirectInput devices and outputs detailed information for debugging.
@@ -110,9 +124,9 @@ namespace x360ce.App.Input.Devices
 
 				using (var directInput = new DirectInput())
 				{
-					// Enumerate and filter to input devices only (early filtering for performance)
+					// Get all devices and filter to input devices only (early filtering for performance)
 					var inputDevices = directInput.GetDevices(DeviceClass.All, DeviceEnumerationFlags.AllDevices)
-						.Where(d => IsInputDevice(d.Type))
+						.Where(IsInputDevice)
 						.ToList();
 
 					Debug.WriteLine($"DeviceDirectInput: Found {inputDevices.Count} input devices");
@@ -149,7 +163,22 @@ namespace x360ce.App.Input.Devices
 			try
 			{
 				// Create device info with basic properties
-				var deviceInfo = CreateDeviceInfo(deviceInstance);
+				var deviceInfo = new DirectInputDeviceInfo
+				{
+					InstanceGuid = deviceInstance.InstanceGuid,
+					InstanceName = deviceInstance.InstanceName,
+					ProductGuid = deviceInstance.ProductGuid,
+					ProductName = deviceInstance.ProductName,
+					DeviceType = deviceInstance.Type,
+					DeviceSubtype = deviceInstance.Subtype,
+					Usage = (int)deviceInstance.Usage,
+					UsagePage = (int)deviceInstance.UsagePage,
+					DeviceTypeName = GetDeviceTypeName(deviceInstance.Type),
+					InputType = "DirectInput",
+					InterfacePath = "",
+					HardwareIds = "",
+					ParentDeviceId = ""
+				};
 
 				// Create DirectInput device object
 				var device = CreateDirectInputDevice(directInput, deviceInstance);
@@ -159,15 +188,11 @@ namespace x360ce.App.Input.Devices
 					return deviceInfo;
 				}
 
-				// Populate capabilities and properties
+				// Populate capabilities
 				PopulateDeviceCapabilities(device, deviceInfo);
 
-				// Extract hardware identification for joystick devices
-				if (device is Joystick joystick)
-					ExtractJoystickProperties(joystick, deviceInfo);
-				else
-					// Generate CommonIdentifier for keyboard and mouse devices
-					GenerateCommonIdentifier(deviceInfo);
+				// Extract hardware identification and generate CommonIdentifier
+				ExtractHardwareIdentification(device, deviceInfo);
 
 				deviceInfo.DirectInputDevice = device;
 				deviceInfo.IsOnline = true;
@@ -183,28 +208,6 @@ namespace x360ce.App.Input.Devices
 				Debug.WriteLine($"DeviceDirectInput: Error processing device {deviceInstance.InstanceName}: {ex.Message}");
 				return null;
 			}
-		}
-
-		/// <summary>
-		/// Creates a DirectInputDeviceInfo object with basic device instance properties.
-		/// </summary>
-		private DirectInputDeviceInfo CreateDeviceInfo(DeviceInstance deviceInstance)
-		{
-			return new DirectInputDeviceInfo
-			{
-				InstanceGuid = deviceInstance.InstanceGuid,
-				InstanceName = deviceInstance.InstanceName,
-				ProductGuid = deviceInstance.ProductGuid,
-				ProductName = deviceInstance.ProductName,
-				DeviceType = deviceInstance.Type,
-				DeviceSubtype = deviceInstance.Subtype,
-				Usage = (int)deviceInstance.Usage,
-				UsagePage = (int)deviceInstance.UsagePage,
-				DeviceTypeName = GetDeviceTypeName(deviceInstance.Type),
-				HardwareIds = "",
-				ParentDeviceId = "",
-				InterfacePath = "" // Only populated for Joystick devices
-			};
 		}
 
 		/// <summary>
@@ -253,47 +256,27 @@ namespace x360ce.App.Input.Devices
 			deviceInfo.HardwareRevision = capabilities.HardwareRevision;
 			deviceInfo.FirmwareRevision = capabilities.FirmwareRevision;
 			
-			// Calculate slider count by checking which slider offsets are present
-			deviceInfo.SliderCount = CalculateSliderCount(device);
+			// Calculate slider count for joystick devices
+			deviceInfo.SliderCount = device is Joystick joystick ? CalculateSliderCount(joystick) : 0;
 		}
 		
 		/// <summary>
 		/// Calculates the number of sliders present on a joystick device by checking slider offsets.
 		/// Uses the standard DirectInput slider offset list to detect which sliders are available.
 		/// </summary>
-		/// <param name="device">The DirectInput device to check</param>
+		/// <param name="joystick">The joystick device to check</param>
 		/// <returns>Number of sliders detected (0-8)</returns>
-		private int CalculateSliderCount(Device device)
+		private int CalculateSliderCount(Joystick joystick)
 		{
-			// Only joysticks can have sliders
-			if (!(device is Joystick joystick))
-				return 0;
-			
 			int sliderCount = 0;
 			
-			// Standard DirectInput slider offsets (from CustomDeviceHelper.SliderOffsets)
-			var sliderOffsets = new[]
-			{
-				JoystickOffset.Sliders0,
-				JoystickOffset.Sliders1,
-				JoystickOffset.AccelerationSliders0,
-				JoystickOffset.AccelerationSliders1,
-				JoystickOffset.ForceSliders0,
-				JoystickOffset.ForceSliders1,
-				JoystickOffset.VelocitySliders0,
-				JoystickOffset.VelocitySliders1
-			};
-			
 			// Check each slider offset to see if it exists on the device
-			foreach (var offset in sliderOffsets)
+			foreach (var offset in SliderOffsets)
 			{
 				try
 				{
-					var objectInfo = joystick.GetObjectInfoByOffset((int)offset);
-					if (objectInfo != null)
-					{
+					if (joystick.GetObjectInfoByOffset((int)offset) != null)
 						sliderCount++;
-					}
 				}
 				catch
 				{
@@ -305,69 +288,86 @@ namespace x360ce.App.Input.Devices
 		}
 
 		/// <summary>
-		/// Extracts hardware identification properties from joystick devices.
+		/// Extracts hardware identification properties from the device and generates CommonIdentifier.
+		/// Handles both joystick devices (with detailed properties) and keyboard/mouse devices.
 		/// </summary>
-		private void ExtractJoystickProperties(Joystick joystick, DirectInputDeviceInfo deviceInfo)
+		private void ExtractHardwareIdentification(Device device, DirectInputDeviceInfo deviceInfo)
 		{
 			try
 			{
-				// Get interface path
-				deviceInfo.InterfacePath = joystick.Properties.InterfacePath ?? "";
-
-				// Method 1: Get VID/PID directly from DirectInput properties (most reliable)
-				deviceInfo.VendorId = joystick.Properties.VendorId;
-				deviceInfo.ProductId = joystick.Properties.ProductId;
-
-				// Method 2: Parse VID/PID from interface path if properties are empty
-				if (deviceInfo.VendorId == 0 && deviceInfo.ProductId == 0 && !string.IsNullOrEmpty(deviceInfo.InterfacePath))
+				if (device is Joystick joystick)
 				{
-					var (vid, pid) = ExtractVidPidFromPath(deviceInfo.InterfacePath);
-					deviceInfo.VendorId = vid;
-					deviceInfo.ProductId = pid;
-				}
+					// Get interface path
+					deviceInfo.InterfacePath = joystick.Properties.InterfacePath ?? "";
 
-				// Method 3: Extract VID/PID from ProductGuid as last resort
-				if (deviceInfo.VendorId == 0 && deviceInfo.ProductId == 0)
-				{
-					var (vid, pid) = ExtractVidPidFromGuid(deviceInfo.ProductGuid);
-					deviceInfo.VendorId = vid;
-					deviceInfo.ProductId = pid;
-				}
+					// Extract VID/PID using multiple methods (prioritized by reliability)
+					ExtractVidPid(joystick, deviceInfo);
 
-				// Get class GUID if available
-				try
-				{
-					deviceInfo.ClassGuid = joystick.Properties.ClassGuid;
-				}
-				catch
-				{
-					deviceInfo.ClassGuid = Guid.Empty;
-				}
+					// Get class GUID if available
+					try
+					{
+						deviceInfo.ClassGuid = joystick.Properties.ClassGuid;
+					}
+					catch
+					{
+						deviceInfo.ClassGuid = Guid.Empty;
+					}
 
-				// Extract device ID from interface path
-				if (!string.IsNullOrEmpty(deviceInfo.InterfacePath))
-					deviceInfo.DeviceId = ExtractDeviceIdFromPath(deviceInfo.InterfacePath);
+					// Extract device ID from interface path
+					if (!string.IsNullOrEmpty(deviceInfo.InterfacePath))
+						deviceInfo.DeviceId = ExtractDeviceIdFromPath(deviceInfo.InterfacePath);
+				}
 				
-				// Generate CommonIdentifier
+				// Generate CommonIdentifier for all device types
 				GenerateCommonIdentifier(deviceInfo);
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"DeviceDirectInput: Error extracting joystick properties for {deviceInfo.InstanceName}: {ex.Message}");
+				Debug.WriteLine($"DeviceDirectInput: Error extracting hardware identification for {deviceInfo.InstanceName}: {ex.Message}");
+				deviceInfo.CommonIdentifier = "VID_0000&PID_0000";
 			}
 		}
 
 		/// <summary>
-		/// Extracts VID and PID from device interface path.
+		/// Extracts VID and PID using multiple methods in priority order.
+		/// Method 1: DirectInput properties (most reliable)
+		/// Method 2: Parse from interface path
+		/// Method 3: Extract from ProductGuid (fallback)
 		/// </summary>
-		private (int vid, int pid) ExtractVidPidFromPath(string interfacePath)
+		private void ExtractVidPid(Joystick joystick, DirectInputDeviceInfo deviceInfo)
+		{
+			// Method 1: Get VID/PID directly from DirectInput properties (most reliable)
+			deviceInfo.VendorId = joystick.Properties.VendorId;
+			deviceInfo.ProductId = joystick.Properties.ProductId;
+
+			// Method 2: Parse VID/PID from interface path if properties are empty
+			if (deviceInfo.VendorId == 0 && deviceInfo.ProductId == 0 && !string.IsNullOrEmpty(deviceInfo.InterfacePath))
+			{
+				var (vid, pid) = ParseVidPidFromPath(deviceInfo.InterfacePath);
+				deviceInfo.VendorId = vid;
+				deviceInfo.ProductId = pid;
+			}
+
+			// Method 3: Extract VID/PID from ProductGuid as last resort
+			if (deviceInfo.VendorId == 0 && deviceInfo.ProductId == 0)
+			{
+				var (vid, pid) = ParseVidPidFromGuid(deviceInfo.ProductGuid);
+				deviceInfo.VendorId = vid;
+				deviceInfo.ProductId = pid;
+			}
+		}
+
+		/// <summary>
+		/// Parses VID and PID from device interface path.
+		/// Handles common patterns: \\?\hid#vid_045e&pid_028e#... or \\?\usb#vid_045e&pid_028e#...
+		/// </summary>
+		private (int vid, int pid) ParseVidPidFromPath(string interfacePath)
 		{
 			if (string.IsNullOrEmpty(interfacePath))
 				return (0, 0);
 
 			try
 			{
-				// Common patterns: \\?\hid#vid_045e&pid_028e#... or \\?\usb#vid_045e&pid_028e#...
 				var upperPath = interfacePath.ToUpperInvariant();
 				var vidIndex = upperPath.IndexOf("VID_");
 				var pidIndex = upperPath.IndexOf("PID_");
@@ -392,23 +392,23 @@ namespace x360ce.App.Input.Devices
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"DeviceDirectInput: Error extracting VID/PID from path: {ex.Message}");
+				Debug.WriteLine($"DeviceDirectInput: Error parsing VID/PID from path: {ex.Message}");
 			}
 
 			return (0, 0);
 		}
 
 		/// <summary>
-		/// Extracts VID and PID from ProductGuid (some devices encode hardware IDs in GUID format).
+		/// Parses VID and PID from ProductGuid (some devices encode hardware IDs in GUID format).
+		/// GUID format: first 4 hex chars = PID, next 4 hex chars = VID
 		/// </summary>
-		private (int vid, int pid) ExtractVidPidFromGuid(Guid productGuid)
+		private (int vid, int pid) ParseVidPidFromGuid(Guid productGuid)
 		{
 			try
 			{
 				var guidString = productGuid.ToString("N");
 				if (guidString.Length >= 8)
 				{
-					// GUID format: first 4 hex chars = PID, next 4 hex chars = VID
 					if (int.TryParse(guidString.Substring(0, 4), System.Globalization.NumberStyles.HexNumber, null, out int pid) &&
 						int.TryParse(guidString.Substring(4, 4), System.Globalization.NumberStyles.HexNumber, null, out int vid))
 					{
@@ -418,7 +418,7 @@ namespace x360ce.App.Input.Devices
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"DeviceDirectInput: Error extracting VID/PID from GUID: {ex.Message}");
+				Debug.WriteLine($"DeviceDirectInput: Error parsing VID/PID from GUID: {ex.Message}");
 			}
 
 			return (0, 0);
@@ -426,6 +426,7 @@ namespace x360ce.App.Input.Devices
 
 		/// <summary>
 		/// Extracts device ID from interface path.
+		/// Example: \\?\hid#vid_045e&pid_028e&mi_00#7&1234abcd&0&0000#{...} -> vid_045e&pid_028e&mi_00
 		/// </summary>
 		private string ExtractDeviceIdFromPath(string interfacePath)
 		{
@@ -434,10 +435,9 @@ namespace x360ce.App.Input.Devices
 
 			try
 			{
-				// Extract device ID from paths like: \\?\hid#vid_045e&pid_028e&mi_00#7&1234abcd&0&0000#{...}
 				var parts = interfacePath.Split('#');
 				if (parts.Length >= 2)
-					return parts[1]; // Return hardware ID part (e.g., "vid_045e&pid_028e&mi_00")
+					return parts[1]; // Return hardware ID part
 			}
 			catch (Exception ex)
 			{
@@ -449,8 +449,8 @@ namespace x360ce.App.Input.Devices
 		
 		/// <summary>
 		/// Generates CommonIdentifier for the device by extracting VID, PID, MI, and COL values.
+		/// Format: VID_XXXX&PID_XXXX[&MI_XX][&COL_XX]
 		/// </summary>
-		/// <param name="deviceInfo">Device information to process</param>
 		private void GenerateCommonIdentifier(DirectInputDeviceInfo deviceInfo)
 		{
 			try
@@ -465,20 +465,16 @@ namespace x360ce.App.Input.Devices
 				{
 					var upperPath = deviceInfo.InterfacePath.ToUpperInvariant();
 					
-					// Extract MI
+					// Extract MI (interface number)
 					var miIndex = upperPath.IndexOf("&MI_");
 					if (miIndex < 0) miIndex = upperPath.IndexOf("\\MI_");
-					if (miIndex >= 0)
+					if (miIndex >= 0 && miIndex + 6 <= upperPath.Length)
 					{
-						var miStart = miIndex + 4;
-						if (miStart + 2 <= upperPath.Length)
-						{
-							var mi = upperPath.Substring(miStart, 2);
-							if (mi != "00") commonId += $"&MI_{mi}";
-						}
+						var mi = upperPath.Substring(miIndex + 4, 2);
+						if (mi != "00") commonId += $"&MI_{mi}";
 					}
 					
-					// Extract COL
+					// Extract COL (collection number)
 					var colIndex = upperPath.IndexOf("&COL");
 					if (colIndex < 0) colIndex = upperPath.IndexOf("\\COL");
 					if (colIndex >= 0)
@@ -505,14 +501,6 @@ namespace x360ce.App.Input.Devices
 		}
 
 		/// <summary>
-		/// Formats a property for debug output only if it has a non-empty value.
-		/// </summary>
-		private string FormatProperty(string name, string value)
-		{
-			return !string.IsNullOrEmpty(value) ? $"{name}: {value}, " : "";
-		}
-
-		/// <summary>
 		/// Logs comprehensive device information for debugging.
 		/// </summary>
 		private void LogDeviceInfo(DirectInputDeviceInfo deviceInfo, int deviceIndex, List<string> debugLines)
@@ -531,7 +519,7 @@ namespace x360ce.App.Input.Devices
 				$"DriverVersion: {deviceInfo.DriverVersion}, " +
 				$"HardwareRevision: {deviceInfo.HardwareRevision}, " +
 				$"FirmwareRevision: {deviceInfo.FirmwareRevision}, " +
-				FormatProperty("InterfacePath", deviceInfo.InterfacePath) +
+				(!string.IsNullOrEmpty(deviceInfo.InterfacePath) ? $"InterfacePath: {deviceInfo.InterfacePath}, " : "") +
 				$"VidPidString: {deviceInfo.VidPidString}, " +
 				$"VendorId: {deviceInfo.VendorId} (0x{deviceInfo.VendorId:X4}), " +
 				$"ProductId: {deviceInfo.ProductId} (0x{deviceInfo.ProductId:X4})");
@@ -596,8 +584,6 @@ namespace x360ce.App.Input.Devices
 		/// <summary>
 		/// Gets a human-readable device type name.
 		/// </summary>
-		/// <param name="deviceType">DirectInput device type</param>
-		/// <returns>Human-readable device type name</returns>
 		private string GetDeviceTypeName(DeviceType deviceType)
 		{
 			switch (deviceType)
@@ -624,8 +610,6 @@ namespace x360ce.App.Input.Devices
 		/// <summary>
 		/// Determines if a device type is a gamepad/joystick type.
 		/// </summary>
-		/// <param name="deviceType">DirectInput device type</param>
-		/// <returns>True if device is a gamepad/joystick type</returns>
 		private bool IsGamepadType(DeviceType deviceType)
 		{
 			return deviceType == DeviceType.Joystick ||
@@ -636,14 +620,13 @@ namespace x360ce.App.Input.Devices
 		}
 
 		/// <summary>
-		/// Determines if a device type represents an actual input device.
+		/// Determines if a device instance represents an actual input device.
 		/// Filters out non-input devices like sound cards, network adapters, etc.
+		/// This is used for early filtering to avoid unnecessary device creation.
 		/// </summary>
-		/// <param name="deviceType">DirectInput device type</param>
-		/// <returns>True if device is an input device (gamepad, keyboard, mouse)</returns>
-		private bool IsInputDevice(DeviceType deviceType)
+		private bool IsInputDevice(DeviceInstance deviceInstance)
 		{
-			switch (deviceType)
+			switch (deviceInstance.Type)
 			{
 				// Input devices to enumerate
 				case DeviceType.Mouse:
