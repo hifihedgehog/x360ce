@@ -110,6 +110,8 @@ namespace x360ce.App.Input.Devices
 		/// IMPORTANT: The returned DirectInputDeviceInfo objects contain live DirectInput devices.
 		/// Call Dispose() on each DirectInputDeviceInfo when no longer needed to free resources.
 		/// </remarks>
+		/// 
+
 		public List<DirectInputDeviceInfo> GetDirectInputDeviceList()
 		{
 			var stopwatch = Stopwatch.StartNew();
@@ -376,18 +378,18 @@ namespace x360ce.App.Input.Devices
 			try
 			{
 				var upperPath = interfacePath.ToUpperInvariant();
-				var vidIndex = upperPath.IndexOf("VID_");
-				var pidIndex = upperPath.IndexOf("PID_");
+				var vidIndex = upperPath.IndexOf("VID_", StringComparison.Ordinal);
+				var pidIndex = upperPath.IndexOf("PID_", StringComparison.Ordinal);
 
 				if (vidIndex >= 0 && pidIndex >= 0)
 				{
 					var vidStart = vidIndex + 4;
 					var pidStart = pidIndex + 4;
 
-					if (vidStart + 4 <= interfacePath.Length && pidStart + 4 <= interfacePath.Length)
+					if (vidStart + 4 <= upperPath.Length && pidStart + 4 <= upperPath.Length)
 					{
-						var vidStr = interfacePath.Substring(vidStart, 4);
-						var pidStr = interfacePath.Substring(pidStart, 4);
+						var vidStr = upperPath.Substring(vidStart, 4);
+						var pidStr = upperPath.Substring(pidStart, 4);
 
 						if (int.TryParse(vidStr, System.Globalization.NumberStyles.HexNumber, null, out int vid) &&
 							int.TryParse(pidStr, System.Globalization.NumberStyles.HexNumber, null, out int pid))
@@ -473,8 +475,8 @@ namespace x360ce.App.Input.Devices
 					var upperPath = deviceInfo.InterfacePath.ToUpperInvariant();
 					
 					// Extract MI (interface number)
-					var miIndex = upperPath.IndexOf("&MI_");
-					if (miIndex < 0) miIndex = upperPath.IndexOf("\\MI_");
+					var miIndex = upperPath.IndexOf("&MI_", StringComparison.Ordinal);
+					if (miIndex < 0) miIndex = upperPath.IndexOf("\\MI_", StringComparison.Ordinal);
 					if (miIndex >= 0 && miIndex + 6 <= upperPath.Length)
 					{
 						var mi = upperPath.Substring(miIndex + 4, 2);
@@ -482,8 +484,8 @@ namespace x360ce.App.Input.Devices
 					}
 					
 					// Extract COL (collection number)
-					var colIndex = upperPath.IndexOf("&COL");
-					if (colIndex < 0) colIndex = upperPath.IndexOf("\\COL");
+					var colIndex = upperPath.IndexOf("&COL", StringComparison.Ordinal);
+					if (colIndex < 0) colIndex = upperPath.IndexOf("\\COL", StringComparison.Ordinal);
 					if (colIndex >= 0)
 					{
 						var colStart = colIndex + 4;

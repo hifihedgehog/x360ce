@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace x360ce.App.Input.Devices
 {
@@ -23,7 +26,7 @@ namespace x360ce.App.Input.Devices
 		public List<DirectInputDeviceInfo> DirectInputDevicesList;
 		public List<XInputDeviceInfo> XInputDevicesList;
 		public List<GamingInputDeviceInfo> GamingInputDevicesList;
-		public List<AllInputDeviceInfo> AllInputDevicesList = new List<AllInputDeviceInfo>();
+		public ObservableCollection<AllInputDeviceInfo> AllInputDevicesList = new ObservableCollection<AllInputDeviceInfo>();
 
 		/// <summary>
 		/// Creates and populates all input device lists from various input sources.
@@ -97,19 +100,25 @@ namespace x360ce.App.Input.Devices
 
 			foreach (var item in sourceList)
 			{
-				// Use dynamic to access common properties across different device types
+				// Extract common properties using reflection-free approach with dynamic
 				dynamic device = item;
+				string commonId = device.CommonIdentifier;
 				
 				var allItem = new AllInputDeviceInfo
 				{
 					InputType = device.InputType,
-					CommonIdentifier = device.CommonIdentifier,
+					CommonIdentifier = commonId,
 					AxeCount = device.AxeCount,
 					SliderCount = device.SliderCount,
 					ButtonCount = device.ButtonCount,
 					KeyCount = device.KeyCount,
 					PovCount = device.PovCount,
-					ProductName = getProductName(item, device.CommonIdentifier),
+					AxePressed = false,
+					SliderPressed = false,
+					ButtonPressed = false,
+					KeyPressed = false,
+					PovPressed = false,
+					ProductName = getProductName(item, commonId),
 					InterfacePath = getInterfacePath(item)
 				};
 				
@@ -122,8 +131,8 @@ namespace x360ce.App.Input.Devices
 		/// </summary>
 		private string GetPrefixedProductName<T>(T item, string commonIdentifier) where T : class
 		{
-			dynamic device = item;
 			var prefix = GetDirectInputProductNameFromCache(commonIdentifier);
+			dynamic device = item;
 			return prefix + device.ProductName;
 		}
 
@@ -149,8 +158,9 @@ namespace x360ce.App.Input.Devices
 
 		/// <summary>
 		/// Unified device information structure containing properties common to all input types.
+		/// Implements INotifyPropertyChanged to enable DataGrid reactive updates.
 		/// </summary>
-		public class AllInputDeviceInfo
+		public class AllInputDeviceInfo : INotifyPropertyChanged
 		{
 			public string InputType { get; set; }
 			public string CommonIdentifier { get; set; }
@@ -161,6 +171,112 @@ namespace x360ce.App.Input.Devices
 			public int PovCount { get; set; }
 			public string ProductName { get; set; }
 			public string InterfacePath { get; set; }
+
+			private bool _axePressed;
+			private bool _sliderPressed;
+			private bool _buttonPressed;
+			private bool _keyPressed;
+			private bool _povPressed;
+
+			/// <summary>
+			/// Gets or sets whether any axis is currently pressed/moved.
+			/// </summary>
+			public bool AxePressed
+			{
+				get => _axePressed;
+				set
+				{
+					if (_axePressed != value)
+					{
+						_axePressed = value;
+						OnPropertyChanged();
+					}
+				}
+			}
+
+			/// <summary>
+			/// Gets or sets whether any slider is currently pressed/moved.
+			/// </summary>
+			public bool SliderPressed
+			{
+				get => _sliderPressed;
+				set
+				{
+					if (_sliderPressed != value)
+					{
+						_sliderPressed = value;
+						OnPropertyChanged();
+					}
+				}
+			}
+
+			/// <summary>
+			/// Gets or sets whether any button is currently pressed.
+			/// </summary>
+			public bool ButtonPressed
+			{
+				get
+				{
+					System.Diagnostics.Debug.WriteLine($"[AllInputDeviceInfo] ButtonPressed GET called for {ProductName}: {_buttonPressed}");
+					return _buttonPressed;
+				}
+				set
+				{
+					if (_buttonPressed != value)
+					{
+						System.Diagnostics.Debug.WriteLine($"[AllInputDeviceInfo] ButtonPressed SET: changing from {_buttonPressed} to {value} for {ProductName}");
+						_buttonPressed = value;
+						OnPropertyChanged();
+						System.Diagnostics.Debug.WriteLine($"[AllInputDeviceInfo] PropertyChanged event fired for ButtonPressed, new value: {_buttonPressed}");
+					}
+					else
+					{
+						System.Diagnostics.Debug.WriteLine($"[AllInputDeviceInfo] ButtonPressed SET: value unchanged ({value}) for {ProductName}");
+					}
+				}
+			}
+
+			/// <summary>
+			/// Gets or sets whether any key is currently pressed.
+			/// </summary>
+			public bool KeyPressed
+			{
+				get => _keyPressed;
+				set
+				{
+					if (_keyPressed != value)
+					{
+						_keyPressed = value;
+						OnPropertyChanged();
+					}
+				}
+			}
+
+			/// <summary>
+			/// Gets or sets whether any POV (point of view) control is currently pressed.
+			/// </summary>
+			public bool PovPressed
+			{
+				get => _povPressed;
+				set
+				{
+					if (_povPressed != value)
+					{
+						_povPressed = value;
+						OnPropertyChanged();
+					}
+				}
+			}
+
+			public event PropertyChangedEventHandler PropertyChanged;
+
+			/// <summary>
+			/// Raises the PropertyChanged event for data binding updates.
+			/// </summary>
+			protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			}
 		}
 	}
 }

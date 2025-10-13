@@ -45,15 +45,9 @@
             
         </DockPanel>
         <Border
-			Grid.Row="1"
-			Height="1"
-			BorderBrush="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"
-			BorderThickness="1"
-			SnapsToDevicePixels="True" />
-        <Border
-			Grid.Row="2"
-			Background="{StaticResource BackgroundWhite}"
-			CornerRadius="0,0,5,5">
+   Grid.Row="1"
+   Background="{StaticResource BackgroundWhite}"
+   CornerRadius="0,0,5,5">
             <DataGrid
                 AutoGenerateColumns="False"
                 IsReadOnly="True"
@@ -117,11 +111,50 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="A" Binding="{Binding AxeCount}" Width="Auto"/>
-                    <DataGridTextColumn Header="S" Binding="{Binding SliderCount}" Width="Auto"/>
-                    <DataGridTextColumn Header="B" Binding="{Binding ButtonCount}" Width="Auto"/>
-                    <DataGridTextColumn Header="K" Binding="{Binding KeyCount}" Width="Auto"/>
-                    <DataGridTextColumn Header="P" Binding="{Binding PovCount}" Width="Auto"/>
+                    <DataGridTextColumn x:Name="AxisColumn" Header="A" Binding="{Binding AxeCount}" Width="Auto">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn x:Name="SliderColumn" Header="S" Binding="{Binding SliderCount}" Width="Auto">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn x:Name="ButtonColumn" Header="B" Binding="{Binding ButtonCount}" Width="Auto">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                        <DataGridTextColumn.CellStyle>
+                            <Style TargetType="DataGridCell">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ButtonPressed}" Value="True">
+                                        <Setter Property="Background" Value="Red"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGridTextColumn.CellStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn x:Name="KeyColumn" Header="K" Binding="{Binding KeyCount}" Width="Auto">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn x:Name="PovColumn" Header="P" Binding="{Binding PovCount}" Width="Auto">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
                     <DataGridTemplateColumn Header="ProductName" SortMemberPath="ProductName" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
