@@ -831,6 +831,31 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
+		/// Gets the cached device state for a specific device by VID/PID.
+		/// This is a safe method that doesn't open device handles.
+		/// </summary>
+		/// <param name="vendorId">Vendor ID to match</param>
+		/// <param name="productId">Product ID to match</param>
+		/// <returns>Cached CustomDeviceState or null if not found</returns>
+		public CustomDeviceState GetCachedDeviceState(int vendorId, int productId)
+		{
+			if (vendorId == 0 && productId == 0)
+				return null;
+
+			// Find device by matching VID/PID
+			foreach (var kvp in _trackedDevices)
+			{
+				var deviceInfo = kvp.Value;
+				if (deviceInfo.VendorId == (uint)vendorId && deviceInfo.ProductId == (uint)productId)
+				{
+					return deviceInfo.LastState;
+				}
+			}
+
+			return null;
+		}
+
+		/// <summary>
 		/// Gets diagnostic information about Raw Input system status.
 		/// </summary>
 		/// <returns>String containing Raw Input diagnostic information</returns>

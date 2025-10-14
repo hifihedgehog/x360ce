@@ -76,41 +76,5 @@ namespace x360ce.App.Input.States
 				return null;
 			}
 		}
-
-		/// <summary>
-		/// Returns the current joystick state with type safety.
-		/// </summary>
-		/// <param name="deviceInfo">DirectInputDeviceInfo containing a joystick device</param>
-		/// <returns>JoystickState or null if device is not a joystick or read failed</returns>
-		public JoystickState GetJoystickState(DirectInputDeviceInfo deviceInfo)
-		{
-			return deviceInfo?.DirectInputDevice is Joystick
-				? GetDirectInputDeviceState(deviceInfo) as JoystickState
-				: null;
-		}
-
-		/// <summary>
-		/// Returns the current keyboard state with type safety.
-		/// </summary>
-		/// <param name="deviceInfo">DirectInputDeviceInfo containing a keyboard device</param>
-		/// <returns>KeyboardState or null if device is not a keyboard or read failed</returns>
-		public KeyboardState GetKeyboardState(DirectInputDeviceInfo deviceInfo)
-		{
-			return deviceInfo?.DirectInputDevice is Keyboard
-				? GetDirectInputDeviceState(deviceInfo) as KeyboardState
-				: null;
-		}
-
-		/// <summary>
-		/// Returns the current mouse state with type safety.
-		/// </summary>
-		/// <param name="deviceInfo">DirectInputDeviceInfo containing a mouse device</param>
-		/// <returns>MouseState or null if device is not a mouse or read failed</returns>
-		public MouseState GetMouseState(DirectInputDeviceInfo deviceInfo)
-		{
-			return deviceInfo?.DirectInputDevice is Mouse
-				? GetDirectInputDeviceState(deviceInfo) as MouseState
-				: null;
-		}
 	}
 }

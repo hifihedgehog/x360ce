@@ -9,7 +9,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using x360ce.App.Input.Devices;
 using x360ce.App.Input.States;
-using SharpDX.DirectInput;
 
 namespace x360ce.App.Controls
 {
@@ -63,80 +62,12 @@ namespace x360ce.App.Controls
             };
         }
 
-        // DirectInput state checking components
+        // Input device management and state checking components
         private readonly DevicesCombined _devicesCombined = new DevicesCombined();
-        private readonly StatesDirectInput _statesDirectInput = new StatesDirectInput();
-        
-        // Cache for DirectInput device to AllInputDeviceInfo mapping
-        private Dictionary<string, DevicesCombined.AllInputDeviceInfo> _deviceMapping;
-      
-        /// <summary>
-        /// Checks each DirectInput device for button presses and updates the ButtonPressed property
-        /// in AllInputDevicesList. This method runs every second when the control is visible.
-        /// </summary>
-        private void DevicesDirectInputAnyButtonIsPressed()
-        {
-        	if (_devicesCombined.DirectInputDevicesList == null || _devicesCombined.AllInputDevicesList == null)
-        		return;
-        	
-        	// Build mapping cache on first run or when device list changes
-        	if (_deviceMapping == null || _deviceMapping.Count != _devicesCombined.DirectInputDevicesList.Count)
-        		BuildDeviceMapping();
-            
-        	// Check each DirectInput device
-        	foreach (var diDevice in _devicesCombined.DirectInputDevicesList)
-        	{
-        		if (diDevice?.DirectInputDevice == null)
-        			continue;
-            
-        		// Get the current state and check for button presses
-        		var state = _statesDirectInput.GetDirectInputDeviceState(diDevice);
-        		if (state == null)
-        			continue;
-            
-        		// Determine if any button is pressed based on device type
-        		bool anyButtonPressed = IsAnyButtonPressed(state);
-            
-        		// Use cached mapping for faster lookup
-        		if (_deviceMapping.TryGetValue(diDevice.InterfacePath, out var allDevice))
-        		{
-        			allDevice.ButtonPressed = anyButtonPressed;
-        		}
-        	}
-        }
-        
-        /// <summary>
-        /// Builds a mapping dictionary from InterfacePath to AllInputDeviceInfo for fast lookups.
-        /// </summary>
-        private void BuildDeviceMapping()
-        {
-        	_deviceMapping = new Dictionary<string, DevicesCombined.AllInputDeviceInfo>();
-        	
-        	foreach (var device in _devicesCombined.AllInputDevicesList)
-        	{
-        		if (device.InputType == "DirectInput" && !string.IsNullOrEmpty(device.InterfacePath))
-        		{
-        			_deviceMapping[device.InterfacePath] = device;
-        		}
-        	}
-        }
-
-        /// <summary>
-        /// Checks if any button is pressed in the given device state.
-        /// </summary>
-        private static bool IsAnyButtonPressed(object state)
-        {
-        	if (state is JoystickState joystickState)
-        		return joystickState.Buttons.Any(b => b);
-        	
-        	if (state is KeyboardState keyboardState)
-        		return keyboardState.PressedKeys.Count > 0;
-        	
-        	if (state is MouseState mouseState)
-        		return mouseState.Buttons.Any(b => b);
-        	
-        	return false;
-        }
+        private readonly StatesAnyButtonIsPressedDirectInput _statesAnyButtonIsPressedDirectInput = new StatesAnyButtonIsPressedDirectInput();
+        private readonly StatesAnyButtonIsPressedXInput _statesAnyButtonIsPressedXInput = new StatesAnyButtonIsPressedXInput();
+        private readonly StatesAnyButtonIsPressedGamingInput _statesAnyButtonIsPressedGamingInput = new StatesAnyButtonIsPressedGamingInput();
+        private readonly StatesAnyButtonIsPressedRawInput _statesAnyButtonIsPressedRawInput = new StatesAnyButtonIsPressedRawInput();
 
         private void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
@@ -146,7 +77,9 @@ namespace x360ce.App.Controls
 
             // Clear caches when data source changes
             InvalidateVisualCache();
-            _deviceMapping = null; // Invalidate device mapping cache
+            _statesAnyButtonIsPressedDirectInput.InvalidateCache();
+            _statesAnyButtonIsPressedXInput.InvalidateCache();
+            _statesAnyButtonIsPressedGamingInput.InvalidateCache();
 
             _viewSource.View.Refresh();
         }
@@ -191,11 +124,22 @@ namespace x360ce.App.Controls
             {
                 Interval = TimeSpan.FromMilliseconds(ButtonCheckIntervalMs)
             };
-            _buttonCheckTimer.Tick += (s, e) => DevicesDirectInputAnyButtonIsPressed();
+            _buttonCheckTimer.Tick += (s, e) => StatesAllInputAnyButtonIsPressed();
             
             if (IsVisible)
                 _buttonCheckTimer.Start();
         }
+
+        private void StatesAllInputAnyButtonIsPressed()
+        {
+            // Check all input methods - each will only update its own device type
+            // Using logical OR in each checker preserves button states across methods
+            _statesAnyButtonIsPressedDirectInput.CheckDirectInputDevicesIfAnyButtonIsPressed(_devicesCombined);
+            _statesAnyButtonIsPressedXInput.CheckXInputDevicesIfAnyButtonIsPressed(_devicesCombined);
+            _statesAnyButtonIsPressedGamingInput.CheckGamingInputDevicesIfAnyButtonIsPressed(_devicesCombined);
+            //_statesAnyButtonIsPressedRawInput.CheckRawInputDevicesIfAnyButtonIsPressed(_devicesCombined);
+        }
+
 
         /// <summary>
         /// Initializes visibility change handling to start/stop the button check timer.
