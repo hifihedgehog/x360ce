@@ -215,23 +215,13 @@ namespace x360ce.App.Input.Devices
 			/// </summary>
 			public bool ButtonPressed
 			{
-				get
-				{
-					System.Diagnostics.Debug.WriteLine($"[AllInputDeviceInfo] ButtonPressed GET called for {ProductName}: {_buttonPressed}");
-					return _buttonPressed;
-				}
+				get => _buttonPressed;
 				set
 				{
 					if (_buttonPressed != value)
 					{
-						System.Diagnostics.Debug.WriteLine($"[AllInputDeviceInfo] ButtonPressed SET: changing from {_buttonPressed} to {value} for {ProductName}");
 						_buttonPressed = value;
 						OnPropertyChanged();
-						System.Diagnostics.Debug.WriteLine($"[AllInputDeviceInfo] PropertyChanged event fired for ButtonPressed, new value: {_buttonPressed}");
-					}
-					else
-					{
-						System.Diagnostics.Debug.WriteLine($"[AllInputDeviceInfo] ButtonPressed SET: value unchanged ({value}) for {ProductName}");
 					}
 				}
 			}

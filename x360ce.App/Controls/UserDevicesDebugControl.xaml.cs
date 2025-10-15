@@ -137,7 +137,7 @@ namespace x360ce.App.Controls
             _statesAnyButtonIsPressedDirectInput.CheckDirectInputDevicesIfAnyButtonIsPressed(_devicesCombined);
             _statesAnyButtonIsPressedXInput.CheckXInputDevicesIfAnyButtonIsPressed(_devicesCombined);
             _statesAnyButtonIsPressedGamingInput.CheckGamingInputDevicesIfAnyButtonIsPressed(_devicesCombined);
-            //_statesAnyButtonIsPressedRawInput.CheckRawInputDevicesIfAnyButtonIsPressed(_devicesCombined);
+            _statesAnyButtonIsPressedRawInput.CheckRawInputDevicesIfAnyButtonIsPressed(_devicesCombined);
         }
 
 
