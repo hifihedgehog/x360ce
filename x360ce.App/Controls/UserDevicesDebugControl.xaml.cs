@@ -80,6 +80,7 @@ namespace x360ce.App.Controls
             _statesAnyButtonIsPressedDirectInput.InvalidateCache();
             _statesAnyButtonIsPressedXInput.InvalidateCache();
             _statesAnyButtonIsPressedGamingInput.InvalidateCache();
+            _statesAnyButtonIsPressedRawInput.InvalidateCache();
 
             _viewSource.View.Refresh();
         }
@@ -149,9 +150,19 @@ namespace x360ce.App.Controls
             IsVisibleChanged += (s, e) =>
             {
                 if (IsVisible)
+                {
+                    // Invalidate all input method caches when control becomes visible again
+                    // This ensures device mappings are rebuilt if devices changed while hidden
+                    _statesAnyButtonIsPressedDirectInput.InvalidateCache();
+                    _statesAnyButtonIsPressedXInput.InvalidateCache();
+                    _statesAnyButtonIsPressedGamingInput.InvalidateCache();
+                    _statesAnyButtonIsPressedRawInput.InvalidateCache();
                     _buttonCheckTimer.Start();
+                }
                 else
+                {
                     _buttonCheckTimer.Stop();
+                }
             };
         }
 

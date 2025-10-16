@@ -76,6 +76,19 @@ namespace x360ce.App.Input.Devices
         public string RegistryPath { get; set; }
         
         /// <summary>
+        /// Indicates whether this device uses Report IDs in its HID reports.
+        /// When true, the first byte of the report is the Report ID.
+        /// When false, button data starts at byte 0.
+        /// </summary>
+        public bool UsesReportIds { get; set; }
+        
+        /// <summary>
+        /// The byte offset where button data starts in the HID report.
+        /// Typically 0 (no report ID) or 1 (with report ID).
+        /// </summary>
+        public int ButtonDataOffset { get; set; }
+        
+        /// <summary>
         /// Note: RawInput API does not provide native friendly names or manufacturer information.
         /// RawInput only provides device interface paths and basic HID information.
         /// Friendly names would require additional Windows Registry queries or device manager APIs
@@ -696,7 +709,7 @@ namespace x360ce.App.Input.Devices
             if (size == 0)
                 return "";
 
-            IntPtr buffer = Marshal.AllocHGlobal((int)size * 2); // Unicode characters
+            IntPtr buffer = Marshal.AllocHGlobal((int)size * Marshal.SystemDefaultCharSize); // Unicode characters
             try
             {
                 uint result = GetRawInputDeviceInfo(hDevice, RIDI_DEVICENAME, buffer, ref size);
@@ -744,7 +757,7 @@ namespace x360ce.App.Input.Devices
         /// <returns>True if capabilities were successfully retrieved</returns>
         private bool GetHidCapabilities(IntPtr hDevice, out int axeCount, out int sliderCount, out int buttonCount, out int povCount,
             out int throttleCount, out int brakeCount, out int steeringCount, out int acceleratorCount, out int clutchCount,
-            out bool hasForceFeedback)
+            out bool hasForceFeedback, out bool usesReportIds, out int buttonDataOffset)
         {
             axeCount = 0;
             sliderCount = 0;
@@ -756,6 +769,8 @@ namespace x360ce.App.Input.Devices
             acceleratorCount = 0;
             clutchCount = 0;
             hasForceFeedback = false;
+            usesReportIds = false;
+            buttonDataOffset = 0;
 
             IntPtr preparsedData = IntPtr.Zero;
             
@@ -797,7 +812,7 @@ namespace x360ce.App.Input.Devices
 
                 Debug.WriteLine($"DevicesRawInput: HID Caps - InputButtonCaps: {caps.NumberInputButtonCaps}, InputValueCaps: {caps.NumberInputValueCaps}");
 
-                // Parse input button capabilities
+                // Parse input button capabilities and detect Report ID usage
                 if (caps.NumberInputButtonCaps > 0)
                 {
                     var buttonCaps = new HIDP_BUTTON_CAPS[caps.NumberInputButtonCaps];
@@ -808,6 +823,12 @@ namespace x360ce.App.Input.Devices
                     {
                         foreach (var buttonCap in buttonCaps)
                         {
+                            // Check if device uses Report IDs (non-zero ReportID indicates usage)
+                            if (buttonCap.ReportID != 0)
+                            {
+                                usesReportIds = true;
+                            }
+                            
                             if (buttonCap.IsRange)
                             {
                                 // Range of buttons
@@ -822,7 +843,7 @@ namespace x360ce.App.Input.Devices
                     }
                 }
 
-                // Parse input value capabilities (axes and POVs)
+                // Parse input value capabilities (axes and POVs) and check for Report IDs
                 if (caps.NumberInputValueCaps > 0)
                 {
                     var valueCaps = new HIDP_VALUE_CAPS[caps.NumberInputValueCaps];
@@ -831,6 +852,16 @@ namespace x360ce.App.Input.Devices
                     
                     if (status == HIDP_STATUS_SUCCESS)
                     {
+                        // Also check value caps for Report ID usage
+                        foreach (var valueCap in valueCaps)
+                        {
+                            if (valueCap.ReportID != 0)
+                            {
+                                usesReportIds = true;
+                                break;
+                            }
+                        }
+                        
                         foreach (var valueCap in valueCaps)
                         {
                             // Debug: Log ALL value capabilities regardless of usage page
@@ -860,25 +891,23 @@ namespace x360ce.App.Input.Devices
                             {
                                 Debug.WriteLine($"DevicesRawInput: Found control with invalid UsagePage but valid LinkUsage: 0x{linkUsage:X2}, ReportCount: {valueCap.ReportCount}");
                                 
-                                int physicalCount = Math.Max(1, (int)valueCap.ReportCount);
-                                
                                 // Standard axes: X(0x30), Y(0x31), Z(0x32), Rx(0x33), Ry(0x34), Rz(0x35)
                                 if (linkUsage >= 0x30 && linkUsage <= 0x35)
                                 {
-                                    axeCount += physicalCount;
-                                    Debug.WriteLine($"DevicesRawInput: Found {physicalCount} axis/axes at LinkUsage 0x{linkUsage:X2}");
+                                    axeCount++;
+                                    Debug.WriteLine($"DevicesRawInput: Found 1 axis at LinkUsage 0x{linkUsage:X2}");
                                 }
                                 // Sliders: Slider(0x36), Dial(0x37), Wheel(0x38)
                                 else if (linkUsage >= 0x36 && linkUsage <= 0x38)
                                 {
-                                    sliderCount += physicalCount;
-                                    Debug.WriteLine($"DevicesRawInput: Found {physicalCount} slider(s) at LinkUsage 0x{linkUsage:X2}");
+                                    sliderCount++;
+                                    Debug.WriteLine($"DevicesRawInput: Found 1 slider at LinkUsage 0x{linkUsage:X2}");
                                 }
                                 // POV Hat Switch (0x39)
                                 else if (linkUsage == 0x39)
                                 {
-                                    povCount += physicalCount;
-                                    Debug.WriteLine($"DevicesRawInput: Found {physicalCount} POV(s) at LinkUsage 0x{linkUsage:X2}");
+                                    povCount++;
+                                    Debug.WriteLine($"DevicesRawInput: Found 1 POV at LinkUsage 0x{linkUsage:X2}");
                                 }
                                 continue; // Skip normal processing since we handled it
                             }
@@ -892,25 +921,23 @@ namespace x360ce.App.Input.Devices
                                 {
                                     Debug.WriteLine($"DevicesRawInput: Found nested control in Pointer collection - LinkUsage: 0x{linkUsage:X2}, ReportCount: {valueCap.ReportCount}");
                                     
-                                    int physicalCount = Math.Max(1, (int)valueCap.ReportCount);
-                                    
                                     // Standard axes: X(0x30), Y(0x31), Z(0x32), Rx(0x33), Ry(0x34), Rz(0x35)
                                     if (linkUsage >= 0x30 && linkUsage <= 0x35)
                                     {
-                                        axeCount += physicalCount;
-                                        Debug.WriteLine($"DevicesRawInput: Found {physicalCount} axis/axes (nested) at LinkUsage 0x{linkUsage:X2}");
+                                        axeCount++;
+                                        Debug.WriteLine($"DevicesRawInput: Found 1 axis (nested) at LinkUsage 0x{linkUsage:X2}");
                                     }
                                     // Sliders: Slider(0x36), Dial(0x37), Wheel(0x38)
                                     else if (linkUsage >= 0x36 && linkUsage <= 0x38)
                                     {
-                                        sliderCount += physicalCount;
-                                        Debug.WriteLine($"DevicesRawInput: Found {physicalCount} slider(s) (nested) at LinkUsage 0x{linkUsage:X2}");
+                                        sliderCount++;
+                                        Debug.WriteLine($"DevicesRawInput: Found 1 slider (nested) at LinkUsage 0x{linkUsage:X2}");
                                     }
                                     // POV Hat Switch (0x39)
                                     else if (linkUsage == 0x39)
                                     {
-                                        povCount += physicalCount;
-                                        Debug.WriteLine($"DevicesRawInput: Found {physicalCount} POV(s) (nested) at LinkUsage 0x{linkUsage:X2}");
+                                        povCount++;
+                                        Debug.WriteLine($"DevicesRawInput: Found 1 POV (nested) at LinkUsage 0x{linkUsage:X2}");
                                     }
                                     continue; // Skip normal processing for Pointer collections
                                 }
@@ -955,16 +982,13 @@ namespace x360ce.App.Input.Devices
                                     if (valueCap.IsRange)
                                     {
                                         int usageCount = (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
-                                        int physicalCount = usageCount * Math.Max(1, (int)valueCap.ReportCount);
-                                        sliderCount += physicalCount;
-                                        Debug.WriteLine($"DevicesRawInput: Found {physicalCount} sliders ({usageCount} usages × {valueCap.ReportCount} reports) " +
-                                            $"in range 0x{usage:X2}-0x{usageMax:X2}");
+                                        sliderCount += usageCount;
+                                        Debug.WriteLine($"DevicesRawInput: Found {usageCount} slider(s) in range 0x{usage:X2}-0x{usageMax:X2} (ReportCount: {valueCap.ReportCount})");
                                     }
                                     else
                                     {
-                                        int physicalCount = Math.Max(1, (int)valueCap.ReportCount);
-                                        sliderCount += physicalCount;
-                                        Debug.WriteLine($"DevicesRawInput: Found {physicalCount} slider(s) at usage 0x{usage:X2} (ReportCount: {valueCap.ReportCount})");
+                                        sliderCount++;
+                                        Debug.WriteLine($"DevicesRawInput: Found 1 slider at usage 0x{usage:X2} (ReportCount: {valueCap.ReportCount})");
                                     }
                                 }
                                 // POV Hat Switch (0x39)
@@ -973,16 +997,13 @@ namespace x360ce.App.Input.Devices
                                     if (valueCap.IsRange)
                                     {
                                         int usageCount = (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1);
-                                        int physicalCount = usageCount * Math.Max(1, (int)valueCap.ReportCount);
-                                        povCount += physicalCount;
-                                        Debug.WriteLine($"DevicesRawInput: Found {physicalCount} POVs ({usageCount} usages × {valueCap.ReportCount} reports) " +
-                                            $"in range 0x{usage:X2}-0x{usageMax:X2}");
+                                        povCount += usageCount;
+                                        Debug.WriteLine($"DevicesRawInput: Found {usageCount} POV(s) in range 0x{usage:X2}-0x{usageMax:X2} (ReportCount: {valueCap.ReportCount})");
                                     }
                                     else
                                     {
-                                        int physicalCount = Math.Max(1, (int)valueCap.ReportCount);
-                                        povCount += physicalCount;
-                                        Debug.WriteLine($"DevicesRawInput: Found {physicalCount} POV(s) at usage 0x{usage:X2} (ReportCount: {valueCap.ReportCount})");
+                                        povCount++;
+                                        Debug.WriteLine($"DevicesRawInput: Found 1 POV at usage 0x{usage:X2} (ReportCount: {valueCap.ReportCount})");
                                     }
                                 }
                             }
@@ -1171,10 +1192,14 @@ namespace x360ce.App.Input.Devices
                     }
                 }
                 
+                // Set button data offset based on Report ID usage
+                buttonDataOffset = usesReportIds ? 1 : 0;
+                
                 Debug.WriteLine($"DevicesRawInput: Parsed HID capabilities for device 0x{hDevice.ToInt64():X8} - " +
                     $"Axes: {axeCount}, Sliders: {sliderCount}, Buttons: {buttonCount}, POVs: {povCount}, " +
                     $"Throttles: {throttleCount}, Brakes: {brakeCount}, Steering: {steeringCount}, " +
-                    $"Accelerators: {acceleratorCount}, Clutches: {clutchCount}, ForceFeedback: {hasForceFeedback}");
+                    $"Accelerators: {acceleratorCount}, Clutches: {clutchCount}, ForceFeedback: {hasForceFeedback}, " +
+                    $"UsesReportIds: {usesReportIds}, ButtonDataOffset: {buttonDataOffset}");
                 
                 return true;
             }
@@ -1936,9 +1961,11 @@ namespace x360ce.App.Input.Devices
                     if (deviceInfo.RawInputDeviceType == RawInputDeviceType.HID)
                     {
                         int axes, sliders, buttons, povs, throttles, brakes, steering, accelerators, clutches;
-                        bool forceFeedback;
+                        bool forceFeedback, usesReportIds;
+                        int buttonDataOffset;
                         if (GetHidCapabilities(rawDevice.hDevice, out axes, out sliders, out buttons, out povs,
-                            out throttles, out brakes, out steering, out accelerators, out clutches, out forceFeedback))
+                            out throttles, out brakes, out steering, out accelerators, out clutches, out forceFeedback,
+                            out usesReportIds, out buttonDataOffset))
                         {
                             deviceInfo.AxeCount = axes;
                             deviceInfo.SliderCount = sliders;
@@ -1950,6 +1977,8 @@ namespace x360ce.App.Input.Devices
                             deviceInfo.AcceleratorCount = accelerators;
                             deviceInfo.ClutchCount = clutches;
                             deviceInfo.HasForceFeedback = forceFeedback;
+                            deviceInfo.UsesReportIds = usesReportIds;
+                            deviceInfo.ButtonDataOffset = buttonDataOffset;
                         }
                     }
                 }

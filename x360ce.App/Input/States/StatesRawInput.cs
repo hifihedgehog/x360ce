@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using x360ce.App.Input.Devices;
 
@@ -30,6 +30,9 @@ namespace x360ce.App.Input.States
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern uint GetRawInputData(IntPtr hRawInput, uint uiCommand, IntPtr pData, ref uint pcbSize, uint cbSizeHeader);
 
+		[DllImport("kernel32.dll")]
+		private static extern uint GetLastError();
+
 		private const uint RIM_TYPEHID = 2;
 		private const uint RID_INPUT = 0x10000003;
 		private const uint RIDEV_INPUTSINK = 0x00000100;
@@ -37,7 +40,7 @@ namespace x360ce.App.Input.States
 		private const ushort USAGE_JOYSTICK = 0x04;
 		private const ushort USAGE_GAMEPAD = 0x05;
 		private const ushort USAGE_MULTI_AXIS = 0x08;
-		private const int RAWHID_DATA_OFFSET = 8; // Offset to HID data after RAWINPUTHEADER
+		// RAWHID_DATA_OFFSET removed - now computed dynamically using Marshal.SizeOf
 
 		[StructLayout(LayoutKind.Sequential)]
 		private struct RAWINPUTDEVICE
@@ -120,14 +123,15 @@ namespace x360ce.App.Input.States
 		#endregion
 
 		private RawInputMessageWindow _messageWindow;
-		private readonly Dictionary<string, byte[]> _cachedStates = new Dictionary<string, byte[]>();
-		private readonly Dictionary<IntPtr, string> _handleToPath = new Dictionary<IntPtr, string>();
+		private readonly ConcurrentDictionary<string, byte[]> _cachedStates = new ConcurrentDictionary<string, byte[]>();
+		private readonly ConcurrentDictionary<IntPtr, string> _handleToPath = new ConcurrentDictionary<IntPtr, string>();
 		private bool _isInitialized;
 		private bool _disposed;
 		
 		// Cached struct sizes to avoid repeated Marshal.SizeOf calls
 		private static readonly int s_rawinputDeviceSize = Marshal.SizeOf(typeof(RAWINPUTDEVICE));
 		private static readonly int s_rawinputHeaderSize = Marshal.SizeOf(typeof(RAWINPUTHEADER));
+		private static readonly int s_rawhidSize = Marshal.SizeOf(typeof(RAWHID));
 
 		/// <summary>
 		/// Initializes the RawInput message receiver (non-blocking).
@@ -139,9 +143,9 @@ namespace x360ce.App.Input.States
 				// Create hidden window for WM_INPUT messages
 				_messageWindow = new RawInputMessageWindow(this);
 
-				// Register for ALL gaming input devices: Joystick (0x04), Gamepad (0x05), Multi-axis (0x08)
-				// This ensures we receive WM_INPUT messages from Xbox controllers and other gaming devices
-				var devices = new RAWINPUTDEVICE[3];
+				// Register for ALL input devices: Gaming devices, Keyboard, and Mouse
+				// This ensures we receive WM_INPUT messages from all input device types
+				var devices = new RAWINPUTDEVICE[5];
 				
 				// Joystick (0x04) - Flight sticks, racing wheels, Xbox controllers often report as this
 				devices[0].usUsagePage = USAGE_PAGE_GENERIC_DESKTOP;
@@ -160,8 +164,25 @@ namespace x360ce.App.Input.States
 				devices[2].usUsage = USAGE_MULTI_AXIS;
 				devices[2].dwFlags = RIDEV_INPUTSINK;
 				devices[2].hwndTarget = _messageWindow.Handle;
-
-				bool success = RegisterRawInputDevices(devices, 3, (uint)s_rawinputDeviceSize);
+				
+				// Keyboard (0x06) - All keyboard devices
+				devices[3].usUsagePage = USAGE_PAGE_GENERIC_DESKTOP;
+				devices[3].usUsage = 0x06;
+				devices[3].dwFlags = RIDEV_INPUTSINK;
+				devices[3].hwndTarget = _messageWindow.Handle;
+				
+				// Mouse (0x02) - All mouse devices
+				devices[4].usUsagePage = USAGE_PAGE_GENERIC_DESKTOP;
+				devices[4].usUsage = 0x02;
+				devices[4].dwFlags = RIDEV_INPUTSINK;
+				devices[4].hwndTarget = _messageWindow.Handle;
+	
+				bool success = RegisterRawInputDevices(devices, 5, (uint)s_rawinputDeviceSize);
+				if (!success)
+				{
+					uint errorCode = GetLastError();
+					System.Diagnostics.Debug.WriteLine($"StatesRawInput: RegisterRawInputDevices failed with error code: {errorCode}");
+				}
 				_isInitialized = success;
 			}
 			catch
@@ -176,32 +197,38 @@ namespace x360ce.App.Input.States
 		private void ProcessRawInputMessage(IntPtr lParam)
 		{
 			uint dwSize = 0;
-			GetRawInputData(lParam, RID_INPUT, IntPtr.Zero, ref dwSize, (uint)s_rawinputHeaderSize);
-
-			if (dwSize == 0)
+			uint headerSize = (uint)s_rawinputHeaderSize;
+			
+			// First call: get required buffer size
+			uint sizeResult = GetRawInputData(lParam, RID_INPUT, IntPtr.Zero, ref dwSize, headerSize);
+			if (sizeResult == uint.MaxValue || dwSize == 0)
 				return;
 
 			IntPtr buffer = Marshal.AllocHGlobal((int)dwSize);
 			try
 			{
-				uint result = GetRawInputData(lParam, RID_INPUT, buffer, ref dwSize, (uint)s_rawinputHeaderSize);
-				if (result != dwSize)
+				// Second call: get actual data
+				uint result = GetRawInputData(lParam, RID_INPUT, buffer, ref dwSize, headerSize);
+				if (result == uint.MaxValue || result < headerSize)
 					return;
 
 				var rawInput = Marshal.PtrToStructure<RAWINPUT>(buffer);
 				if (rawInput.header.dwType != RIM_TYPEHID)
 					return;
 
-				// Extract HID report data
-				int reportSize = (int)rawInput.hid.dwSizeHid;
-				if (reportSize <= 0)
+				// Compute sizes dynamically to avoid hard-coded offsets
+				int offset = s_rawinputHeaderSize + s_rawhidSize;
+				int totalAvailable = (int)dwSize - offset;
+				int hidReportSize = (int)rawInput.hid.dwSizeHid;
+				int hidCount = Math.Max(1, (int)rawInput.hid.dwCount);
+				int bytesToCopy = Math.Min(totalAvailable, hidReportSize * hidCount);
+
+				if (bytesToCopy <= 0)
 					return;
 
-				byte[] report = new byte[reportSize];
-				
-				// Copy report data from buffer
-				IntPtr reportPtr = IntPtr.Add(buffer, s_rawinputHeaderSize + RAWHID_DATA_OFFSET);
-				Marshal.Copy(reportPtr, report, 0, reportSize);
+				// Copy HID report data (handles multiple reports if dwCount > 1)
+				byte[] report = new byte[bytesToCopy];
+				Marshal.Copy(IntPtr.Add(buffer, offset), report, 0, bytesToCopy);
 
 				// Cache the report by device handle
 				if (_handleToPath.TryGetValue(rawInput.header.hDevice, out string path))
@@ -223,14 +250,15 @@ namespace x360ce.App.Input.States
 			if (deviceInfo?.InterfacePath == null)
 				return null;
 
-			// Register device handle to path mapping (single lookup optimization)
-			if (deviceInfo.DeviceHandle != IntPtr.Zero && !_handleToPath.ContainsKey(deviceInfo.DeviceHandle))
+			// Register device handle to path mapping (thread-safe)
+			if (deviceInfo.DeviceHandle != IntPtr.Zero)
 			{
-				_handleToPath[deviceInfo.DeviceHandle] = deviceInfo.InterfacePath;
+				_handleToPath.TryAdd(deviceInfo.DeviceHandle, deviceInfo.InterfacePath);
 			}
-
-			// Return cached state (non-blocking)
-			return _cachedStates.TryGetValue(deviceInfo.InterfacePath, out byte[] cachedState) ? cachedState : null;
+	
+			// Return cached state (non-blocking, thread-safe)
+			_cachedStates.TryGetValue(deviceInfo.InterfacePath, out byte[] cachedState);
+			return cachedState;
 		}
 
 		/// <summary>
@@ -242,17 +270,14 @@ namespace x360ce.App.Input.States
 			if (deviceInfo?.InterfacePath == null)
 				return null;
 
-			// Register device handle to path mapping (single lookup optimization)
-			if (deviceInfo.DeviceHandle != IntPtr.Zero && !_handleToPath.ContainsKey(deviceInfo.DeviceHandle))
+			// Register device handle to path mapping (thread-safe)
+			if (deviceInfo.DeviceHandle != IntPtr.Zero)
 			{
-				_handleToPath[deviceInfo.DeviceHandle] = deviceInfo.InterfacePath;
+				_handleToPath.TryAdd(deviceInfo.DeviceHandle, deviceInfo.InterfacePath);
 			}
-
-			// Get and remove cached state in one operation (non-blocking)
-			if (!_cachedStates.TryGetValue(deviceInfo.InterfacePath, out byte[] cachedState))
-				return null;
-			
-			_cachedStates.Remove(deviceInfo.InterfacePath);
+	
+			// Get and remove cached state in one operation (non-blocking, thread-safe)
+			_cachedStates.TryRemove(deviceInfo.InterfacePath, out byte[] cachedState);
 			return cachedState;
 		}
 
@@ -261,8 +286,11 @@ namespace x360ce.App.Input.States
 		/// </summary>
 		public byte[] GetRawInputState(string interfacePath)
 		{
-			return string.IsNullOrEmpty(interfacePath) ? null :
-				(_cachedStates.TryGetValue(interfacePath, out byte[] cachedState) ? cachedState : null);
+			if (string.IsNullOrEmpty(interfacePath))
+				return null;
+			
+			_cachedStates.TryGetValue(interfacePath, out byte[] cachedState);
+			return cachedState;
 		}
 
 		public void Dispose()
