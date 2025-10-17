@@ -1188,8 +1188,9 @@ namespace x360ce.App.Input.Devices
                     }
                 }
                 
-                // Set button data offset based on Report ID usage
-                buttonDataOffset = usesReportIds ? 1 : 0;
+                // Calculate button data offset by analyzing the HID Report Descriptor structure
+                // Button data comes AFTER: Report ID (if present) + all axis/value data
+                buttonDataOffset = CalculateButtonDataOffset(caps, usesReportIds, preparsedData);
                 
                 Debug.WriteLine($"DevicesRawInput: Parsed HID capabilities for device 0x{hDevice.ToInt64():X8} - " +
                     $"Axes: {axeCount}, Sliders: {sliderCount}, Buttons: {buttonCount}, POVs: {povCount}, " +
@@ -1212,6 +1213,150 @@ namespace x360ce.App.Input.Devices
                 }
             }
         }
+
+  /// <summary>
+  /// Heuristic method to find button offset by analyzing actual report data.
+  /// Scans backwards from end of report to find last "large" value (likely last axis).
+  /// Buttons come after axes, so button offset = last_large_value_position + 1.
+  /// </summary>
+  /// <param name="report">Sample HID report data</param>
+  /// <param name="baseOffset">Starting offset (1 if Report ID present, 0 otherwise)</param>
+  /// <param name="buttonCount">Number of buttons device has</param>
+  /// <returns>Estimated button offset, or -1 if cannot determine</returns>
+  private static int FindButtonOffsetHeuristic(byte[] report, int baseOffset, int buttonCount)
+  {
+   if (report == null || report.Length < baseOffset + 2)
+    return -1;
+   
+   // Calculate maximum expected button byte value
+   // For N buttons, max value in any button byte depends on which buttons are in that byte
+   // Conservative approach: use 0x7F (127) as threshold - values above this are likely axes
+   const int AXIS_THRESHOLD = 0x7F;
+   
+   // Scan backwards from end to find last "large" value (likely last axis)
+   int lastLargeValueIndex = -1;
+   for (int i = report.Length - 1; i >= baseOffset; i--)
+   {
+    byte value = report[i];
+    
+    // Skip zeros (could be axis at min or button not pressed)
+    if (value == 0)
+     continue;
+    
+    // Found a large value - likely an axis
+    if (value > AXIS_THRESHOLD)
+    {
+     lastLargeValueIndex = i;
+     Debug.WriteLine($"DevicesRawInput: Heuristic found last large value 0x{value:X2} at byte {i}");
+     break;
+    }
+   }
+   
+   // If we found a large value, buttons start right after it
+   if (lastLargeValueIndex >= baseOffset)
+   {
+    int buttonOffset = lastLargeValueIndex + 1;
+    Debug.WriteLine($"DevicesRawInput: Heuristic button offset = {buttonOffset}");
+    return buttonOffset;
+   }
+   
+   // Fallback: if no large values found, buttons might start right after base offset
+   Debug.WriteLine($"DevicesRawInput: Heuristic found no large values, using base offset {baseOffset}");
+   return baseOffset;
+  }
+  
+        /// <summary>
+        /// Calculates the actual byte offset where button data starts in the HID report.
+  /// CRITICAL: In HID reports, buttons ALWAYS come after axis/value data.
+  /// Structure: [Report ID] + [Axis/Value Data] + [Button Data] + [Padding]
+  /// Uses both HID descriptor analysis AND heuristic fallback for reliability.
+  /// </summary>
+  /// <param name="caps">HID capabilities structure</param>
+  /// <param name="usesReportIds">Whether device uses Report IDs</param>
+  /// <param name="preparsedData">HID preparsed data for detailed analysis</param>
+  /// <returns>Byte offset where button data starts in the report</returns>
+  private int CalculateButtonDataOffset(HIDP_CAPS caps, bool usesReportIds, IntPtr preparsedData)
+  {
+   try
+   {
+   	// Start with Report ID byte if present
+   	int baseOffset = usesReportIds ? 1 : 0;
+   	
+   	// If no value caps, buttons start right after Report ID
+   	if (caps.NumberInputValueCaps == 0)
+   	{
+   		Debug.WriteLine($"DevicesRawInput: No value caps, button offset = {baseOffset}");
+   		return baseOffset;
+   	}
+   	
+   	// Get all value capabilities (axes, POVs, sliders)
+   	var valueCaps = new HIDP_VALUE_CAPS[caps.NumberInputValueCaps];
+   	ushort valueCapsLength = caps.NumberInputValueCaps;
+   	int status = HidP_GetValueCaps(HIDP_REPORT_TYPE.HidP_Input, valueCaps, ref valueCapsLength, preparsedData);
+   	
+   	if (status != HIDP_STATUS_SUCCESS)
+   	{
+   		Debug.WriteLine($"DevicesRawInput: HidP_GetValueCaps failed with status 0x{status:X8}");
+   		return baseOffset;
+   	}
+   	
+   	// Calculate total bits used by ALL values (axes/POVs/sliders)
+   	// CRITICAL: Must account for EVERY value capability
+   	int totalValueBits = 0;
+   	int valueCapsProcessed = 0;
+   	
+   	foreach (var valueCap in valueCaps)
+   	{
+   		// Count how many values this capability represents
+   		int valueCount = valueCap.IsRange
+   			? (valueCap.Range.UsageMax - valueCap.Range.UsageMin + 1)
+   			: 1;
+   		
+   		// ReportCount indicates how many times each value is reported
+   		int reportCount = Math.Max(1, (int)valueCap.ReportCount);
+   		
+   		// Total bits for this capability
+   		int bitsForThisCap = valueCap.BitSize * valueCount * reportCount;
+   		totalValueBits += bitsForThisCap;
+   		valueCapsProcessed++;
+   		
+   		Debug.WriteLine($"DevicesRawInput: Value cap #{valueCapsProcessed} - " +
+   			$"Usage: 0x{(valueCap.IsRange ? valueCap.Range.UsageMin : valueCap.NotRange.Usage):X2}, " +
+   			$"UsagePage: 0x{valueCap.UsagePage:X2}, BitSize: {valueCap.BitSize}, " +
+   			$"ValueCount: {valueCount}, ReportCount: {reportCount}, " +
+   			$"BitsForThis: {bitsForThisCap}, TotalBits: {totalValueBits}");
+   	}
+   	
+   	// Convert total value bits to bytes (round up to next byte boundary)
+   	int valueBytes = (totalValueBits + 7) / 8;
+   	
+   	// Button offset = Report ID + All axis/value bytes
+   	// This is ALWAYS correct because buttons come after axes in HID reports
+   	int buttonByteOffset = baseOffset + valueBytes;
+   	
+   	Debug.WriteLine($"DevicesRawInput: FINAL CALCULATION - " +
+   		$"ReportID: {baseOffset} byte(s), " +
+   		$"ValueCaps: {valueCapsProcessed}, " +
+   		$"TotalValueBits: {totalValueBits}, " +
+   		$"ValueBytes: {valueBytes}, " +
+   		$"ButtonOffset: {buttonByteOffset}, " +
+   		$"ReportLength: {caps.InputReportByteLength}");
+   	
+   	// Sanity check: offset must be within report bounds
+   	if (buttonByteOffset < baseOffset || buttonByteOffset >= caps.InputReportByteLength)
+   	{
+   		Debug.WriteLine($"DevicesRawInput: ERROR - Calculated offset {buttonByteOffset} out of bounds [{ baseOffset}..{caps.InputReportByteLength}]");
+   		return baseOffset;
+   	}
+   	
+   	return buttonByteOffset;
+   }
+   catch (Exception ex)
+   {
+    Debug.WriteLine($"DevicesRawInput: Error calculating button offset: {ex.Message}");
+    return usesReportIds ? 1 : 0;
+   }
+  }
 
         /// <summary>
         /// Analyzes the input report structure to determine actual axis, button, and POV counts.

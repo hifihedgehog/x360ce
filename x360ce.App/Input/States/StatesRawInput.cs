@@ -290,6 +290,7 @@ namespace x360ce.App.Input.States
 
 		/// <summary>
 		/// Processes HID device input (gamepads, joysticks).
+		/// CRITICAL FIX: Always caches report to ensure button release detection works correctly.
 		/// </summary>
 		private void ProcessHidInput(IntPtr buffer, uint dwSize, RAWINPUT rawInput)
 		{
@@ -307,8 +308,21 @@ namespace x360ce.App.Input.States
 			byte[] report = new byte[bytesToCopy];
 			Marshal.Copy(IntPtr.Add(buffer, offset), report, 0, bytesToCopy);
 
-			// Cache the report by device handle
-			if (_handleToPath.TryGetValue(rawInput.header.hDevice, out string path))
+			// Get interface path from device handle (handles may change between enumeration and runtime)
+			string path = null;
+			if (!_handleToPath.TryGetValue(rawInput.header.hDevice, out path))
+			{
+				path = GetDeviceInterfacePath(rawInput.header.hDevice);
+				if (!string.IsNullOrEmpty(path))
+				{
+					_handleToPath[rawInput.header.hDevice] = path;
+				}
+			}
+
+			// CRITICAL FIX: Always update cached state, even if report hasn't changed
+			// This ensures GetRawInputDeviceState() always returns the current state
+			// and button release detection works correctly
+			if (!string.IsNullOrEmpty(path))
 			{
 				_cachedStates[path] = report;
 			}
