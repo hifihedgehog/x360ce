@@ -7,9 +7,9 @@ namespace x360ce.App.Input.States
 	/// Provides methods to check if any button is pressed on DirectInput devices.
 	/// Supports DirectInput devices (joysticks, keyboards, mice).
 	/// </summary>
-	internal class StatesAnyButtonIsPressedDirectInput
+	internal class StatesDirectInputAnyButtonIsPressed
 	{
-		private readonly StatesConvertToListType _statesConvertToListType = new StatesConvertToListType();
+        private readonly StatesDirectInput _statesDirectInput = new StatesDirectInput();
 		
 		// Cache for DirectInput device to AllInputDeviceInfo mapping
 		private Dictionary<string, DevicesCombined.AllInputDeviceInfo> _deviceMapping;
@@ -29,13 +29,19 @@ namespace x360ce.App.Input.States
 				BuildDeviceMapping(devicesCombined);
 			
 			// Check each DirectInput device
-			foreach (var diDevice in devicesCombined.DirectInputDevicesList)
+			foreach (var diDeviceInfo in devicesCombined.DirectInputDevicesList)
 			{
-				if (diDevice?.DirectInputDevice == null)
+				if (diDeviceInfo?.DirectInputDevice == null)
 					continue;
-			
-				// Get the current state as ListTypeState
-				var listState = _statesConvertToListType.GetDirectInputStateAsListTypeState(diDevice);
+
+
+                // Get the latest DirectInput device state (non-blocking)
+                var diState = _statesDirectInput.GetDirectInputDeviceState(diDeviceInfo);
+				if (diState == null)
+					continue;
+
+                // Convert DirectInput state to ListTypeState format (non-blocking)
+                var listState = StatesDirectInputConvertToListType.ConvertToListTypeState(diState);
 				if (listState == null)
 					continue;
 			
@@ -45,7 +51,7 @@ namespace x360ce.App.Input.States
 					(listState.POVs != null && listState.POVs.Exists(pov => pov > -1));
 			
 				// Use cached mapping for faster lookup
-				if (_deviceMapping.TryGetValue(diDevice.InterfacePath, out var allDevice))
+				if (_deviceMapping.TryGetValue(diDeviceInfo.InterfacePath, out var allDevice))
 				{
 					allDevice.ButtonPressed = anyButtonPressed;
 				}

@@ -7,9 +7,9 @@ namespace x360ce.App.Input.States
 	/// Provides methods to check if any button is pressed on Gaming Input devices.
 	/// Supports Gaming Input devices (modern gamepads using Windows.Gaming.Input API).
 	/// </summary>
-	internal class StatesAnyButtonIsPressedGamingInput
+	internal class StatesGamingInputAnyButtonIsPressed
 	{
-		private readonly StatesConvertToListType _statesConverter = new StatesConvertToListType();
+        private readonly StatesGamingInput _statesGamingInput = new StatesGamingInput();
 
 		// Cache for Gaming Input device to AllInputDeviceInfo mapping
 		private Dictionary<string, DevicesCombined.AllInputDeviceInfo> _deviceMapping;
@@ -29,21 +29,25 @@ namespace x360ce.App.Input.States
 				BuildDeviceMapping(devicesCombined);
 
 			// Check each Gaming Input device
-			foreach (var giDevice in devicesCombined.GamingInputDevicesList)
+			foreach (var giDeviceInfo in devicesCombined.GamingInputDevicesList)
 			{
-				if (giDevice?.GamingInputDevice == null)
+				if (giDeviceInfo?.GamingInputDevice == null)
 					continue;
 
-				// Get the current state as ListTypeState and check for button presses
-				var listState = _statesConverter.GetGamingInputStateAsListTypeState(giDevice);
-				if (listState == null)
+                // Get the latest GamingInput device state (non-blocking)
+                var giState = _statesGamingInput.GetGamingInputDeviceState(giDeviceInfo);
+				if (giState == null) continue;
+
+                // Convert GamingInput state to ListTypeState format (non-blocking)
+                var listState = StatesGamingInputConvertToListType.ConvertToListTypeState(giState.Value);
+                if (listState == null)
 					continue;
 
 				// Determine if any button is pressed by checking if button list contains value '1'
 				bool anyButtonPressed = IsAnyButtonPressed(listState);
 	
 				// Use cached mapping for faster lookup using CommonIdentifier
-				if (_deviceMapping.TryGetValue(giDevice.CommonIdentifier, out var allDevice))
+				if (_deviceMapping.TryGetValue(giDeviceInfo.CommonIdentifier, out var allDevice))
 				{
 					allDevice.ButtonPressed = anyButtonPressed;
 				}

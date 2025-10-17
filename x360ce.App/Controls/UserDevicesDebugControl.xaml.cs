@@ -64,10 +64,10 @@ namespace x360ce.App.Controls
 
         // Input device management and state checking components
         private readonly DevicesCombined _devicesCombined = new DevicesCombined();
-        private readonly StatesAnyButtonIsPressedDirectInput _statesAnyButtonIsPressedDirectInput = new StatesAnyButtonIsPressedDirectInput();
-        private readonly StatesAnyButtonIsPressedXInput _statesAnyButtonIsPressedXInput = new StatesAnyButtonIsPressedXInput();
-        private readonly StatesAnyButtonIsPressedGamingInput _statesAnyButtonIsPressedGamingInput = new StatesAnyButtonIsPressedGamingInput();
-        private readonly StatesAnyButtonIsPressedRawInput _statesAnyButtonIsPressedRawInput = new StatesAnyButtonIsPressedRawInput();
+        private readonly StatesDirectInputAnyButtonIsPressed _statesAnyButtonIsPressedDirectInput = new StatesDirectInputAnyButtonIsPressed();
+        private readonly StatesXInputAnyButtonIsPressed _statesAnyButtonIsPressedXInput = new StatesXInputAnyButtonIsPressed();
+        private readonly StatesGamingInputAnyButtonIsPressed _statesAnyButtonIsPressedGamingInput = new StatesGamingInputAnyButtonIsPressed();
+        private readonly StatesRawInputAnyButtonIsPressed _statesAnyButtonIsPressedRawInput = new StatesRawInputAnyButtonIsPressed();
 
         private void RefreshButton_Click(object sender, RoutedEventArgs e)
         {

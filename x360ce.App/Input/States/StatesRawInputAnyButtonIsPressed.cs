@@ -18,9 +18,9 @@ namespace x360ce.App.Input.States
 	/// • Checks if button list contains value '1' for simple, reliable detection
 	/// • Works with ALL device layouts (buttons before/after axes)
 	/// </remarks>
-	internal class StatesAnyButtonIsPressedRawInput
+	internal class StatesRawInputAnyButtonIsPressed
 	{
-		private readonly StatesConvertToListType _statesConverter = new StatesConvertToListType();
+        private readonly StatesRawInput _statesRawInput = new StatesRawInput();
 		private Dictionary<string, DevicesCombined.AllInputDeviceInfo> _deviceMapping;
 		private int _lastDeviceCount;
 		private DateTime _lastDebugOutput = DateTime.MinValue;
@@ -54,22 +54,29 @@ namespace x360ce.App.Input.States
 				_lastDebugOutput = DateTime.Now;
 	
 			// Check each RawInput device
-			foreach (var riDevice in rawInputList)
+			foreach (var riDeviceInfo in rawInputList)
 			{
 				// Skip invalid devices
-				if (riDevice?.InterfacePath == null)
+				if (riDeviceInfo?.InterfacePath == null)
 					continue;
 		
 				// Fast lookup - single dictionary access
-				if (!_deviceMapping.TryGetValue(riDevice.InterfacePath, out var allDevice))
+				if (!_deviceMapping.TryGetValue(riDeviceInfo.InterfacePath, out var allDevice))
 					continue;
 		
-				// Convert RawInput state to ListTypeState format (non-blocking)
-				var listState = _statesConverter.GetRawInputStateAsListTypeState(riDevice);
-				
-				// Always update ButtonPressed value, even if listState is null
-				// If listState is null, no buttons/POVs are pressed
-				bool buttonPressed = false;
+				// Get the latest RawInput device state (non-blocking)
+                var riState = _statesRawInput.GetRawInputDeviceState(riDeviceInfo);
+				if (riState == null)
+					continue;
+
+                // Convert RawInput state to ListTypeState format (non-blocking)
+                var listState = StatesRawInputConvertToListType.ConvertToListTypeState(riState, riDeviceInfo);
+                if (listState == null)
+                    continue;
+
+                // Always update ButtonPressed value, even if listState is null
+                // If listState is null, no buttons/POVs are pressed
+                bool buttonPressed = false;
 				if (listState != null)
 				{
 					// Check if any button is pressed by looking for value '1' in button list
@@ -81,7 +88,7 @@ namespace x360ce.App.Input.States
 				allDevice.ButtonPressed = buttonPressed;
 	
 				// Debug output for gamepads only (exclude keyboard and mouse)
-				if (shouldDebug && IsGamepad(riDevice))
+				if (shouldDebug && IsGamepad(riDeviceInfo))
 				{
 					string deviceName = allDevice.ProductName ?? "Unknown";
 					string stateStr = listState?.ToString() ?? "null";

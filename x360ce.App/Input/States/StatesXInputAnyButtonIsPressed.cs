@@ -6,9 +6,9 @@ namespace x360ce.App.Input.States
 	/// <summary>
 	/// Provides methods to check if any button is pressed on XInput devices.
 	/// </summary>
-	internal class StatesAnyButtonIsPressedXInput
+	internal class StatesXInputAnyButtonIsPressed
 	{
-		private readonly StatesConvertToListType _statesConverter = new StatesConvertToListType();
+        private readonly StatesXInput _statesXInput = new StatesXInput();
 
 		// Cache for XInput device to AllInputDeviceInfo mapping
 		private Dictionary<string, DevicesCombined.AllInputDeviceInfo> _deviceMapping;
@@ -28,13 +28,18 @@ namespace x360ce.App.Input.States
 				BuildDeviceMapping(devicesCombined);
 
 			// Check each XInput device
-			foreach (var xiDevice in devicesCombined.XInputDevicesList)
+			foreach (var xiDeviceInfo in devicesCombined.XInputDevicesList)
 			{
-				if (xiDevice == null)
+				if (xiDeviceInfo == null)
 					continue;
 
-				// Get the current state as ListTypeState and check for button presses
-				var listState = _statesConverter.GetXInputStateAsListTypeState(xiDevice);
+                // Get the latest XInput device state (non-blocking)
+                var xiState = _statesXInput.GetXInputDeviceState(xiDeviceInfo);
+				if (xiState == null)
+					continue;
+
+                // Convert XInput state to ListTypeState format (non-blocking)
+                var listState = StatesXInputConvertToListType.ConvertToListTypeState(xiState.Value);
 				if (listState == null)
 					continue;
 
@@ -42,7 +47,7 @@ namespace x360ce.App.Input.States
 				bool anyButtonPressed = IsAnyButtonPressed(listState);
 	
 				// Use cached mapping for faster lookup using CommonIdentifier
-				if (_deviceMapping.TryGetValue(xiDevice.CommonIdentifier, out var allDevice))
+				if (_deviceMapping.TryGetValue(xiDeviceInfo.CommonIdentifier, out var allDevice))
 				{
 					allDevice.ButtonPressed = anyButtonPressed;
 				}
