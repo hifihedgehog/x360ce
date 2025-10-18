@@ -85,6 +85,7 @@
                     </Style>
                     <Style TargetType="DataGridCell">
                         <Setter Property="IsTabStop" Value="False" />
+                        <Setter Property="BorderThickness" Value="0"/>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" />
@@ -96,7 +97,7 @@
                     <Style TargetType="TextBox">
                         <Setter Property="IsReadOnly" Value="True"/>
                         <Setter Property="BorderThickness" Value="0"/>
-                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Padding" Value="1"/>
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="IsTabStop" Value="False"/>
                         <Style.Triggers>
@@ -114,7 +115,7 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="CommonIdentifier" SortMemberPath="CommonIdentifier" Width="*">
+                    <DataGridTemplateColumn Header="CommonIdentifier" SortMemberPath="CommonIdentifier" Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBox Text="{Binding CommonIdentifier, Mode=OneWay}"/>
@@ -125,6 +126,7 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="TextAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="1"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
@@ -132,6 +134,7 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="TextAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="1"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
@@ -139,6 +142,7 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="TextAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="1"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
@@ -146,6 +150,7 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="TextAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="1"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
@@ -153,13 +158,15 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="TextAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="1"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn x:Name="ProductName" Header="ProductName" Binding="{Binding ProductName}" Width="*" SortMemberPath="ProductName" >
+                    <DataGridTextColumn x:Name="ProductName" Header="ProductName" Binding="{Binding ProductName}" Width="Auto" SortMemberPath="ProductName" >
                         <DataGridTextColumn.CellStyle>
                             <Style TargetType="DataGridCell">
+                                <Setter Property="BorderThickness" Value="0"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding ButtonPressed}" Value="True">
                                         <Setter Property="Background" Value="#88ff0000"/>
@@ -169,7 +176,7 @@
                         </DataGridTextColumn.CellStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTemplateColumn Header="InterfacePath" SortMemberPath="InterfacePath" Width="2*">
+                    <DataGridTemplateColumn Header="InterfacePath" SortMemberPath="InterfacePath" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBox Text="{Binding InterfacePath, Mode=OneWay}"/>

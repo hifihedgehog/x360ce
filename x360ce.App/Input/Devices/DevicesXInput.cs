@@ -197,7 +197,7 @@ namespace x360ce.App.Input.Devices
 					IsOnline = true,
 					LastPacketNumber = (uint)controllerState.PacketNumber,
 					DeviceId = "",
-					InterfacePath = "",
+					InterfacePath = XInputProductGuid.ToString(),
 					HardwareIds = ""
 				};
 			}

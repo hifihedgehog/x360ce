@@ -302,8 +302,17 @@ namespace x360ce.App.Input.Devices
 					}
 					
 					var deviceInfo = CreateDeviceInfo(gamepads[i], i, reading);
-					deviceList.Add(deviceInfo);
-					LogDeviceInfo(deviceInfo, deviceList.Count);
+					
+					// Filter out virtual/converted devices
+					if (!IsVirtualConvertedDevice(deviceInfo))
+					{
+						deviceList.Add(deviceInfo);
+						LogDeviceInfo(deviceInfo, deviceList.Count);
+					}
+					else
+					{
+						Debug.WriteLine($"DevicesGamingInput: Skipping virtual/converted device at index {i}");
+					}
 				}
 				catch (Exception ex)
 				{
@@ -358,7 +367,7 @@ namespace x360ce.App.Input.Devices
 				
 				// Device identification - GamingInput API does not provide native device paths
 				DeviceId = "",
-				InterfacePath = "",
+				InterfacePath = GenerateGamingInputProductGuid().ToString(),
 				HardwareIds = "",
 				ParentDeviceId = "",
 				
@@ -732,7 +741,61 @@ namespace x360ce.App.Input.Devices
 		}
 
 		#endregion
+
+		#region Virtual Device Filtering
+
+		/// <summary>
+		/// Determines if a device is a virtual/converted device that should be excluded.
+		/// Checks for "ConvertedDevice" text in InterfacePath or DeviceId.
+		/// </summary>
+		/// <param name="deviceInfo">Device info to check</param>
+		/// <returns>True if device is a virtual/converted device</returns>
+		private bool IsVirtualConvertedDevice(GamingInputDeviceInfo deviceInfo)
+		{
+			if (deviceInfo == null)
+				return false;
+
+			// Check InterfacePath for "ConvertedDevice" marker
+			if (!string.IsNullOrEmpty(deviceInfo.InterfacePath) &&
+				deviceInfo.InterfacePath.IndexOf("ConvertedDevice", StringComparison.OrdinalIgnoreCase) >= 0)
+			{
+				return true;
+			}
+
+			// Check DeviceId for "ConvertedDevice" marker
+			if (!string.IsNullOrEmpty(deviceInfo.DeviceId) &&
+				deviceInfo.DeviceId.IndexOf("ConvertedDevice", StringComparison.OrdinalIgnoreCase) >= 0)
+			{
+				return true;
+			}
+
+			// Check for Input Configuration Devices and Portable Device Control
+			var instanceName = (deviceInfo.InstanceName ?? "").ToLowerInvariant();
+			var productName = (deviceInfo.ProductName ?? "").ToLowerInvariant();
+			var combinedText = $"{instanceName} {productName}";
+			
+			if (combinedText.Contains("input configuration") ||
+			    combinedText.Contains("input_config") ||
+			    combinedText.Contains("inputconfig") ||
+			    combinedText.Contains("portable device control") ||
+			    combinedText.Contains("portable_device") ||
+			    combinedText.Contains("portabledevice"))
+			{
+				return true;
+			}
+			
+			// Check for Intel platform endpoints (HID Event Filter) - platform hotkey controllers
+			// Examples: VID_494E54&PID_33D2 (INT33D2), VID_8087&PID_0000 (INTC816)
+			var upperName = instanceName.ToUpperInvariant();
+			if (upperName.Contains("INT33D2") || upperName.Contains("INTC816") ||
+			    upperName.Contains("494E54") || upperName.Contains("8087"))
+			{
+				return true;
+			}
+
+			return false;
+		}
+
+		#endregion
 	}
 }
-		/// Event handler for gamepad removed events (used for testing event registration).
-		///

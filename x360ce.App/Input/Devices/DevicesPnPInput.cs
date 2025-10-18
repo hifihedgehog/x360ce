@@ -325,6 +325,15 @@ namespace x360ce.App.Input.Devices
                     deviceList = uniqueDevices;
                 }
 
+                // Filter out MI-only devices (USB composite parent nodes) when sibling COL devices exist
+                // This prevents double-counting the same physical device
+                var filteredDevices = FilterMiOnlyDevices(deviceList);
+                if (filteredDevices.Count != deviceList.Count)
+                {
+                    Debug.WriteLine($"DevicesPnPInput: Filtered out {deviceList.Count - filteredDevices.Count} MI-only transport nodes");
+                    deviceList = filteredDevices;
+                }
+
                 // Generate SortingString for each device
                 foreach (var device in deviceList)
                 {
@@ -438,7 +447,7 @@ namespace x360ce.App.Input.Devices
                     try
                     {
                         var deviceInfo = CreateDeviceInfo(deviceInfoSet, deviceInfoData);
-                        if (deviceInfo != null && IsInputDevice(deviceInfo))
+                        if (deviceInfo != null && IsInputDevice(deviceInfo) && !IsVirtualConvertedDevice(deviceInfo))
                         {
                             deviceListIndex++;
                             deviceList.Add(deviceInfo);
@@ -612,7 +621,28 @@ namespace x360ce.App.Input.Devices
         /// <returns>True if device is an input device</returns>
         private bool IsInputDevice(PnPInputDeviceInfo deviceInfo)
         {
-            // Early accept: Keyboards and Mice from their specific classes are always input devices
+            // Get hardware IDs early for all device classes
+            var hardwareIds = deviceInfo.HardwareIds ?? "";
+            
+            // Early reject: No identification information at all
+            if (string.IsNullOrEmpty(hardwareIds) && string.IsNullOrEmpty(deviceInfo.DeviceDescription))
+            {
+                return false;
+            }
+
+            // Cache case conversion once for performance
+            var upperHardwareIds = hardwareIds.ToUpperInvariant();
+            
+            // Early reject: Intel platform endpoints (HID Event Filter) - applies to ALL device classes
+            // These are platform hotkey controllers (volume/brightness/etc.), not standalone user peripherals
+            // Must check BEFORE accepting Keyboard/Mouse classes to filter out Intel platform endpoints
+            if (ContainsIntelPlatformPattern(upperHardwareIds))
+            {
+                return false;
+            }
+            
+            // Early accept: Keyboards and Mice from their specific classes are input devices
+            // (after filtering out Intel platform endpoints above)
             if (deviceInfo.ClassGuid == GUID_DEVCLASS_KEYBOARD ||
                 deviceInfo.ClassGuid == GUID_DEVCLASS_MOUSE)
             {
@@ -626,19 +656,9 @@ namespace x360ce.App.Input.Devices
             }
 
             // For HID devices, apply strict filtering with early exits
-            var hardwareIds = deviceInfo.HardwareIds ?? "";
             var description = deviceInfo.DeviceDescription ?? "";
 
-            // Early reject: No identification information
-            if (string.IsNullOrEmpty(hardwareIds) && string.IsNullOrEmpty(description))
-            {
-                return false;
-            }
-
-            // Cache case conversions once for performance
-            var upperHardwareIds = hardwareIds.ToUpperInvariant();
-            
-            // Early reject: Vendor-defined usage pages (FF00-FFFF) - fastest check first
+            // Early reject: Vendor-defined usage pages (FF00-FFFF and 01FF) - fastest check first
             if (ContainsVendorDefinedPattern(upperHardwareIds))
             {
                 return false;
@@ -669,6 +689,7 @@ namespace x360ce.App.Input.Devices
         /// <summary>
         /// Efficiently checks if text contains vendor-defined HID usage page patterns.
         /// Optimized for the most common case (UP:FF prefix).
+        /// Includes custom/vendor page 0x01FF and standard vendor-defined pages (0xF8-0xFF).
         /// </summary>
         /// <param name="upperText">Text to search in (must be uppercase)</param>
         /// <returns>True if vendor-defined pattern is found</returns>
@@ -677,7 +698,11 @@ namespace x360ce.App.Input.Devices
             if (string.IsNullOrEmpty(upperText))
                 return false;
 
-            // Check most common patterns first for early exit
+            // Check custom/vendor page 0x01FF (configuration/feature collections, not direct input)
+            if (upperText.Contains("UP:01FF") || upperText.Contains("&UP:01FF"))
+                return true;
+
+            // Check most common vendor-defined patterns (0xF8-0xFF) for early exit
             return upperText.Contains("UP:FF") || upperText.Contains("&UP:FF") ||
                    upperText.Contains("UP:FE") || upperText.Contains("&UP:FE") ||
                    upperText.Contains("UP:FD") || upperText.Contains("&UP:FD") ||
@@ -686,6 +711,36 @@ namespace x360ce.App.Input.Devices
                    upperText.Contains("UP:FA") || upperText.Contains("&UP:FA") ||
                    upperText.Contains("UP:F9") || upperText.Contains("&UP:F9") ||
                    upperText.Contains("UP:F8") || upperText.Contains("&UP:F8");
+        }
+
+        /// <summary>
+        /// Checks if text contains Intel platform endpoint patterns (HID Event Filter).
+        /// These are platform hotkey controllers (volume/brightness/etc.), not standalone user peripherals.
+        /// Examples: HID\INT33D2&COL01 (VID_494E54&PID_33D2), HID\INTC816&COL01 (VID_8087&PID_0000)
+        /// </summary>
+        /// <param name="upperText">Text to search in (must be uppercase)</param>
+        /// <returns>True if Intel platform pattern is found</returns>
+        private static bool ContainsIntelPlatformPattern(string upperText)
+        {
+            if (string.IsNullOrEmpty(upperText))
+                return false;
+
+            // Intel HID Event Filter endpoints - platform hotkey controllers, not user peripherals
+            // Pattern 1: HID\INT33D2 or HID\INTC816 (device ID format)
+            if (upperText.Contains("HID\\INT33D2") || upperText.Contains("HID\\INTC816") ||
+                upperText.Contains("HID/INT33D2") || upperText.Contains("HID/INTC816"))
+                return true;
+            
+            // Pattern 2: VID_494E54 (ASCII "INT") or VID_8087 (Intel vendor ID) with platform device markers
+            if ((upperText.Contains("VID_494E54") || upperText.Contains("VID_8087")) &&
+                (upperText.Contains("&COL") || upperText.Contains("\\COL")))
+                return true;
+            
+            // Pattern 3: VEN_INT with DEV_33D2 (alternative vendor/device format)
+            if (upperText.Contains("VEN_INT") && upperText.Contains("DEV_33D2"))
+                return true;
+
+            return false;
         }
 
         /// <summary>
@@ -740,7 +795,9 @@ namespace x360ce.App.Input.Devices
             // Firmware and BIOS
             "firmware", "bios", "uefi", "tpm",
             // Virtual devices
-            "virtual", "software", "null", "teredo"
+            "virtual", "software", "null", "teredo",
+            // Input configuration and portable device control (non-gaming input)
+            "input_config", "inputconfig", "portable_device", "portabledevice"
         };
 
         /// <summary>
@@ -757,7 +814,9 @@ namespace x360ce.App.Input.Devices
             "printer", "scanner", "fax", "modem", "serial",
             "battery", "power", "thermal", "fan", "temperature",
             "sensor", "accelerometer", "gyroscope", "magnetometer", "proximity",
-            "hub", "controller", "host", "firmware", "bios", "virtual"
+            "hub", "controller", "host", "firmware", "bios", "virtual",
+            // Input configuration and portable device control (non-gaming input)
+            "input configuration", "portable device control"
         };
 
         /// <summary>
@@ -781,6 +840,34 @@ namespace x360ce.App.Input.Devices
         };
 
         #endregion
+
+        /// <summary>
+        /// Determines if a device is a virtual/converted device that should be excluded.
+        /// Checks for "ConvertedDevice" text in DeviceInstanceId or InterfacePath.
+        /// </summary>
+        /// <param name="deviceInfo">Device information</param>
+        /// <returns>True if device is a virtual/converted device</returns>
+        private bool IsVirtualConvertedDevice(PnPInputDeviceInfo deviceInfo)
+        {
+            if (deviceInfo == null)
+                return false;
+
+            // Check DeviceInstanceId for "ConvertedDevice" marker
+            if (!string.IsNullOrEmpty(deviceInfo.DeviceInstanceId) &&
+                deviceInfo.DeviceInstanceId.IndexOf("ConvertedDevice", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            // Check InterfacePath for "ConvertedDevice" marker
+            if (!string.IsNullOrEmpty(deviceInfo.InterfacePath) &&
+                deviceInfo.InterfacePath.IndexOf("ConvertedDevice", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// Determines if a device is a gamepad based on hardware IDs and description.
@@ -1504,6 +1591,44 @@ namespace x360ce.App.Input.Devices
                 $"Windows PnP does not provide capability information (AxeCount, SliderCount, ButtonCount, KeyCount, PovCount, HasForceFeedback, Usage, UsagePage) - use DirectInput for device capabilities");
         }
 
+        /// <summary>
+        /// Filters out HID-class MI-only devices (USB composite parent nodes) that don't have COL values.
+        /// This prevents double-counting the same physical device and removes ambiguous transport nodes.
+        /// IMPORTANT: Only filters HID-class devices. Keyboard and Mouse class devices with MI are kept
+        /// because they represent actual input endpoints, not transport nodes.
+        /// </summary>
+        /// <param name="deviceList">List of devices to filter</param>
+        /// <returns>Filtered list with HID-class MI-only transport nodes removed</returns>
+        private List<PnPInputDeviceInfo> FilterMiOnlyDevices(List<PnPInputDeviceInfo> deviceList)
+        {
+            var filteredList = new List<PnPInputDeviceInfo>();
+            
+            foreach (var device in deviceList)
+            {
+                // Check both DeviceInstanceId and HardwareIds for MI/COL patterns
+                bool hasMi = !string.IsNullOrEmpty(device.MiValue) ||
+                            device.DeviceInstanceId?.IndexOf("&MI_", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            device.HardwareIds?.IndexOf("&MI_", StringComparison.OrdinalIgnoreCase) >= 0;
+                
+                bool hasCol = !string.IsNullOrEmpty(device.ColValue) ||
+                             device.DeviceInstanceId?.IndexOf("&COL", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             device.HardwareIds?.IndexOf("&COL", StringComparison.OrdinalIgnoreCase) >= 0;
+                
+                // Only filter HID-class devices with MI but no COL
+                // Keyboard and Mouse class devices are always kept, even with MI but no COL
+                if (hasMi && !hasCol && device.ClassGuid == GUID_DEVCLASS_HIDCLASS)
+                {
+                    // Skip this HID-class MI-only device as it's just the parent transport node
+                    Debug.WriteLine($"DevicesPnPInput: Filtering out HID-class MI-only transport node: {device.DeviceInstanceId}");
+                    continue;
+                }
+                
+                // Keep this device (either has COL, or is Keyboard/Mouse class, or has no MI)
+                filteredList.Add(device);
+            }
+            
+            return filteredList;
+        }
 
         #endregion
     }

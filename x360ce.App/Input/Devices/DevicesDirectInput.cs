@@ -136,11 +136,20 @@ namespace x360ce.App.Input.Devices
 					foreach (var deviceInstance in inputDevices)
 					{
 						var deviceInfo = ProcessDevice(directInput, deviceInstance, ref deviceIndex, debugLines);
-						if (deviceInfo != null)
+						if (deviceInfo != null && !IsVirtualConvertedDevice(deviceInfo))
 							deviceList.Add(deviceInfo);
 					}
 				}
-
+	
+				// Filter out MI-only devices (USB composite parent nodes) when sibling COL devices exist
+				// This prevents double-counting the same physical device
+				var filteredDevices = FilterMiOnlyDevices(deviceList);
+				if (filteredDevices.Count != deviceList.Count)
+				{
+					Debug.WriteLine($"DeviceDirectInput: Filtered out {deviceList.Count - filteredDevices.Count} MI-only transport nodes");
+					deviceList = filteredDevices;
+				}
+	
 				// Generate summary statistics
 				stopwatch.Stop();
 				LogSummary(deviceList, stopwatch, debugLines);
@@ -635,6 +644,31 @@ namespace x360ce.App.Input.Devices
 		/// </summary>
 		private bool IsInputDevice(DeviceInstance deviceInstance)
 		{
+			// Check device name/description for non-gaming input patterns
+			var deviceName = (deviceInstance.InstanceName ?? "").ToLowerInvariant();
+			var productName = (deviceInstance.ProductName ?? "").ToLowerInvariant();
+			var combinedText = $"{deviceName} {productName}";
+			
+			// Filter out Input Configuration Devices and Portable Device Control
+			if (combinedText.Contains("input configuration") ||
+			    combinedText.Contains("input_config") ||
+			    combinedText.Contains("inputconfig") ||
+			    combinedText.Contains("portable device control") ||
+			    combinedText.Contains("portable_device") ||
+			    combinedText.Contains("portabledevice"))
+			{
+				return false;
+			}
+			
+			// Filter out Intel platform endpoints (HID Event Filter) - platform hotkey controllers
+			// Examples: VID_494E54&PID_33D2 (INT33D2), VID_8087&PID_0000 (INTC816)
+			var upperName = deviceName.ToUpperInvariant();
+			if (upperName.Contains("INT33D2") || upperName.Contains("INTC816") ||
+			    upperName.Contains("494E54") || upperName.Contains("8087"))
+			{
+				return false;
+			}
+			
 			switch (deviceInstance.Type)
 			{
 				// Input devices to enumerate
@@ -652,5 +686,73 @@ namespace x360ce.App.Input.Devices
 					return false;
 			}
 		}
+
+		/// <summary>
+		/// Determines if a device is a virtual/converted device that should be excluded.
+		/// Checks for "ConvertedDevice" text in InterfacePath or DeviceId.
+		/// </summary>
+		/// <param name="deviceInfo">Device info to check</param>
+		/// <returns>True if device is a virtual/converted device</returns>
+		private bool IsVirtualConvertedDevice(DirectInputDeviceInfo deviceInfo)
+		{
+			if (deviceInfo == null)
+				return false;
+
+			// Check InterfacePath for "ConvertedDevice" marker
+			if (!string.IsNullOrEmpty(deviceInfo.InterfacePath) &&
+				deviceInfo.InterfacePath.IndexOf("ConvertedDevice", StringComparison.OrdinalIgnoreCase) >= 0)
+			{
+				return true;
+			}
+
+			// Check DeviceId for "ConvertedDevice" marker
+			if (!string.IsNullOrEmpty(deviceInfo.DeviceId) &&
+				deviceInfo.DeviceId.IndexOf("ConvertedDevice", StringComparison.OrdinalIgnoreCase) >= 0)
+			{
+				return true;
+			}
+
+			return false;
+		}
+	
+		/// <summary>
+		/// Filters out non-Keyboard/Mouse MI-only devices (USB composite parent nodes) that don't have COL values.
+		/// This prevents double-counting the same physical device and removes ambiguous transport nodes.
+		/// IMPORTANT: Only filters devices that are NOT Keyboard or Mouse types. Keyboard and Mouse type devices
+		/// with MI are kept because they represent actual input endpoints, not transport nodes.
+		/// </summary>
+		/// <param name="deviceList">List of devices to filter</param>
+		/// <returns>Filtered list with non-Keyboard/Mouse MI-only transport nodes removed</returns>
+		private List<DirectInputDeviceInfo> FilterMiOnlyDevices(List<DirectInputDeviceInfo> deviceList)
+		{
+		    var filteredList = new List<DirectInputDeviceInfo>();
+		    
+		    foreach (var device in deviceList)
+		    {
+		        // Check InterfacePath for MI/COL patterns
+		        var interfacePath = device.InterfacePath ?? "";
+		        bool hasMi = interfacePath.IndexOf("&MI_", StringComparison.OrdinalIgnoreCase) >= 0 ||
+		                    interfacePath.IndexOf("\\MI_", StringComparison.OrdinalIgnoreCase) >= 0;
+		        
+		        bool hasCol = interfacePath.IndexOf("&COL", StringComparison.OrdinalIgnoreCase) >= 0 ||
+		                     interfacePath.IndexOf("\\COL", StringComparison.OrdinalIgnoreCase) >= 0;
+		        
+		        // Only filter non-Keyboard/Mouse devices with MI but no COL
+		        // Keyboard and Mouse type devices are always kept, even with MI but no COL
+		        bool isKeyboardOrMouse = device.DeviceType == DeviceType.Keyboard || device.DeviceType == DeviceType.Mouse;
+		        
+		        if (hasMi && !hasCol && !isKeyboardOrMouse)
+		        {
+		            // Skip this non-Keyboard/Mouse MI-only device as it's just the parent transport node
+		            Debug.WriteLine($"DeviceDirectInput: Filtering out MI-only transport node: {device.InterfacePath}");
+		            continue;
+		        }
+		        
+		        // Keep this device (either has COL, or is Keyboard/Mouse type, or has no MI)
+		        filteredList.Add(device);
+		    }
+		    
+		    return filteredList;
+		}
 	}
-}
+	}
