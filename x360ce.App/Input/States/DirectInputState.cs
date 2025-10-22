@@ -9,7 +9,7 @@ namespace x360ce.App.Input.States
 	/// Provides methods to retrieve DirectInput device states.
 	/// Handles state reading for Joystick, Keyboard, and Mouse devices.
 	/// </summary>
-	internal class StatesDirectInput
+	internal class DirectInputState
 	{
 		/// <summary>
 		/// Returns the current state of a DirectInput device.
@@ -27,7 +27,7 @@ namespace x360ce.App.Input.States
 		/// The device must be acquired before reading. If acquisition fails,
 		/// this method will attempt to acquire it automatically.
 		/// </remarks>
-		public object GetDirectInputDeviceState(DirectInputDeviceInfo diDeviceInfo)
+		public object GetDirectInputState(DirectInputDeviceInfo diDeviceInfo)
 		{
 			if (diDeviceInfo?.DirectInputDevice == null)
 				return null;
@@ -67,12 +67,12 @@ namespace x360ce.App.Input.States
 			{
 				// Device may be unplugged or access lost
 				// Return null to indicate state unavailable
-				System.Diagnostics.Debug.WriteLine($"StatesDirectInput: Error reading state for {diDeviceInfo.InstanceName}: {ex.Message}");
+				System.Diagnostics.Debug.WriteLine($"DirectInputState: Error reading state for {diDeviceInfo.InstanceName}: {ex.Message}");
 				return null;
 			}
 			catch (Exception ex)
 			{
-				System.Diagnostics.Debug.WriteLine($"StatesDirectInput: Unexpected error reading state for {diDeviceInfo.InstanceName}: {ex.Message}");
+				System.Diagnostics.Debug.WriteLine($"DirectInputState: Unexpected error reading state for {diDeviceInfo.InstanceName}: {ex.Message}");
 				return null;
 			}
 		}

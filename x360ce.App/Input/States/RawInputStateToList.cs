@@ -9,7 +9,7 @@ namespace x360ce.App.Input.States
 	/// Handles raw HID reports from RawInput API for gamepads, mice, and keyboards.
 	/// Uses proper HID API (HidP_GetUsages, HidP_GetUsageValue) for accurate parsing.
 	/// </summary>
-	internal static class StatesRawInputConvertToListType
+	internal static class RawInputStateToList
 	{
 		#region HID API Declarations
 
@@ -110,7 +110,7 @@ namespace x360ce.App.Input.States
 		/// This implementation uses proper HID API calls (HidP_GetUsages, HidP_GetUsageValue)
 		/// with PreparsedData for accurate device-specific parsing.
 		/// </remarks>
-		public static ListTypeState ConvertToListTypeState(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+		public static InputStateAsList ConvertRawInputStateToList(byte[] rawReport, RawInputDeviceInfo deviceInfo)
 		{
 			if (rawReport == null || deviceInfo == null)
 				return null;
@@ -145,9 +145,9 @@ namespace x360ce.App.Input.States
 		/// Note: RawInput mouse reports don't include position data in the cached state,
 		/// only button states. Position is relative movement, not absolute axes.
 		/// </remarks>
-		private static ListTypeState ConvertMouseReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+		private static InputStateAsList ConvertMouseReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
 		{
-			var result = new ListTypeState();
+			var result = new InputStateAsList();
 
 			if (rawReport == null || rawReport.Length < 1)
 				return result;
@@ -186,9 +186,9 @@ namespace x360ce.App.Input.States
 		/// Note: This converts scan codes to button indices. A full implementation
 		/// would map scan codes to virtual key codes for proper key identification.
 		/// </remarks>
-		private static ListTypeState ConvertKeyboardReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+		private static InputStateAsList ConvertKeyboardReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
 		{
-			var result = new ListTypeState();
+			var result = new InputStateAsList();
 
 			// Initialize all 256 buttons as released
 			for (int i = 0; i < 256; i++)
@@ -230,9 +230,9 @@ namespace x360ce.App.Input.States
 		/// 
 		/// This replaces the previous placeholder implementation with real HID API calls.
 		/// </remarks>
-		private static ListTypeState ConvertHidReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+		private static InputStateAsList ConvertHidReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
 		{
-			var result = new ListTypeState();
+			var result = new InputStateAsList();
 
 			if (rawReport == null || rawReport.Length == 0)
 				return result;
@@ -275,7 +275,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Reads axis values from HID report using HidP_GetUsageValue.
 		/// </summary>
-		private static void ReadAxesFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, ListTypeState result)
+		private static void ReadAxesFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, InputStateAsList result)
 		{
 			// Standard axes: X(0x30), Y(0x31), Z(0x32), RX(0x33), RY(0x34), RZ(0x35)
 			ushort[] axisUsages = { 
@@ -318,7 +318,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Reads slider values from HID report using HidP_GetUsageValue.
 		/// </summary>
-		private static void ReadSlidersFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, ListTypeState result)
+		private static void ReadSlidersFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, InputStateAsList result)
 		{
 			// Slider controls: Slider(0x36), Dial(0x37), Wheel(0x38)
 			ushort[] sliderUsages = { 
@@ -384,7 +384,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Reads POV/Hat Switch values from HID report using HidP_GetUsageValue.
 		/// </summary>
-		private static void ReadPovsFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, ListTypeState result)
+		private static void ReadPovsFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, InputStateAsList result)
 		{
 			// POV Hat Switch (0x39)
 			int value;
@@ -417,7 +417,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Reads button states from HID report using HidP_GetUsages.
 		/// </summary>
-		private static void ReadButtonsFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, ListTypeState result)
+		private static void ReadButtonsFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, InputStateAsList result)
 		{
 			// HidP_GetUsages returns the list of pressed buttons
 			uint usageLength = (uint)deviceInfo.ButtonCount;
@@ -539,9 +539,9 @@ namespace x360ce.App.Input.States
 		/// Fallback HID report parsing when PreparsedData is not available.
 		/// Uses the basic button offset parsing from the original implementation.
 		/// </summary>
-		private static ListTypeState ConvertHidReportFallback(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+		private static InputStateAsList ConvertHidReportFallback(byte[] rawReport, RawInputDeviceInfo deviceInfo)
 		{
-			var result = new ListTypeState();
+			var result = new InputStateAsList();
 
 			// Add placeholder axes based on device capability count
 			for (int i = 0; i < deviceInfo.AxeCount; i++)

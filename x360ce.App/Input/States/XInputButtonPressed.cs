@@ -6,40 +6,40 @@ namespace x360ce.App.Input.States
 	/// <summary>
 	/// Provides methods to check if any button is pressed on XInput devices.
 	/// </summary>
-	internal class StatesXInputAnyButtonIsPressed
+	internal class XInputButtonPressed
 	{
-        private readonly StatesXInput _statesXInput = new StatesXInput();
+        private readonly XInputState _statesXInput = new XInputState();
 
 		// Cache for XInput device to AllInputDeviceInfo mapping
-		private Dictionary<string, DevicesCombined.AllInputDeviceInfo> _deviceMapping;
+		private Dictionary<string, UnifiedInputDevice.UnifiedInputDeviceInfo> _deviceMapping;
 
 		/// <summary>
 		/// Checks each XInput device for button presses and updates the ButtonPressed property
 		/// in AllInputDevicesList.
 		/// </summary>
 		/// <param name="devicesCombined">The combined devices instance containing device lists</param>
-		public void CheckXInputDevicesIfAnyButtonIsPressed(DevicesCombined devicesCombined)
+		public void IsXInputButtonPressed(UnifiedInputDevice devicesCombined)
 		{
-			if (devicesCombined.XInputDevicesList == null || devicesCombined.AllInputDevicesList == null)
+			if (devicesCombined.XInputDeviceInfoList == null || devicesCombined.UnifiedInputDeviceInfoList == null)
 				return;
 
 			// Build mapping cache on first run or when device list changes
-			if (_deviceMapping == null || _deviceMapping.Count != devicesCombined.XInputDevicesList.Count)
+			if (_deviceMapping == null || _deviceMapping.Count != devicesCombined.XInputDeviceInfoList.Count)
 				BuildDeviceMapping(devicesCombined);
 
 			// Check each XInput device
-			foreach (var xiDeviceInfo in devicesCombined.XInputDevicesList)
+			foreach (var xiDeviceInfo in devicesCombined.XInputDeviceInfoList)
 			{
 				if (xiDeviceInfo == null)
 					continue;
 
                 // Get the latest XInput device state (non-blocking)
-                var xiState = _statesXInput.GetXInputDeviceState(xiDeviceInfo);
+                var xiState = _statesXInput.GetXInputState(xiDeviceInfo);
 				if (xiState == null)
 					continue;
 
                 // Convert XInput state to ListTypeState format (non-blocking)
-                var listState = StatesXInputConvertToListType.ConvertToListTypeState(xiState.Value);
+                var listState = XInputStateToList.ConvertXInputStateToList(xiState.Value);
 				if (listState == null)
 					continue;
 
@@ -58,11 +58,11 @@ namespace x360ce.App.Input.States
 		/// Builds a mapping dictionary from CommonIdentifier to AllInputDeviceInfo for fast lookups.
 		/// </summary>
 		/// <param name="devicesCombined">The combined devices instance containing device lists</param>
-		private void BuildDeviceMapping(DevicesCombined devicesCombined)
+		private void BuildDeviceMapping(UnifiedInputDevice devicesCombined)
 		{
-			_deviceMapping = new Dictionary<string, DevicesCombined.AllInputDeviceInfo>();
+			_deviceMapping = new Dictionary<string, UnifiedInputDevice.UnifiedInputDeviceInfo>();
 
-			foreach (var device in devicesCombined.AllInputDevicesList)
+			foreach (var device in devicesCombined.UnifiedInputDeviceInfoList)
 			{
 				if (device.InputType == "XInput" && !string.IsNullOrEmpty(device.CommonIdentifier))
 				{
@@ -88,7 +88,7 @@ namespace x360ce.App.Input.States
 		/// Returns true if the Buttons list contains at least one value of 1 or POVs list contains any value > -1.
 		/// Returns false if the Buttons list is empty or contains only 0 values and POVs list is empty or contains only -1 values.
 		/// </remarks>
-		private static bool IsAnyButtonPressed(ListTypeState listState)
+		private static bool IsAnyButtonPressed(InputStateAsList listState)
 		{
 			// Check if Buttons list exists and contains any pressed button (value 1)
 			// or if POVs list exists and contains any pressed POV (value > -1)

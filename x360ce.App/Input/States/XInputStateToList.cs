@@ -6,7 +6,7 @@ namespace x360ce.App.Input.States
 	/// Converts XInput device states to standardized ListTypeState format.
 	/// Handles XInput State structure with Gamepad data.
 	/// </summary>
-	internal static class StatesXInputConvertToListType
+	internal static class XInputStateToList
 	{
 		/// <summary>
 		/// Converts XInput State to ListTypeState format.
@@ -23,9 +23,9 @@ namespace x360ce.App.Input.States
 		///   DPadUp, DPadDown, DPadLeft, DPadRight, Guide (if available)
 		/// • 0 POVs: XInput D-Pad is represented as 4 separate buttons, not a POV
 		/// </remarks>
-		public static ListTypeState ConvertToListTypeState(State state)
+		public static InputStateAsList ConvertXInputStateToList(State state)
 		{
-			var result = new ListTypeState();
+			var result = new InputStateAsList();
 			var gamepad = state.Gamepad;
 
 			// Convert axes (6 axes in XInput)

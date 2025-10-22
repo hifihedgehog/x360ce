@@ -20,7 +20,7 @@ namespace x360ce.App.Input.States
 	/// This is a lightweight, self-contained implementation that doesn't depend on
 	/// RawInputProcessor or any other processor classes.
 	/// </remarks>
-	internal class StatesRawInput : IDisposable
+	internal class RawInputState : IDisposable
 	{
 		#region Windows Raw Input API
 	
@@ -136,9 +136,9 @@ namespace x360ce.App.Input.States
 		private class RawInputMessageWindow : System.Windows.Forms.NativeWindow, IDisposable
 		{
 			private const int WM_INPUT = 0x00FF;
-			private readonly StatesRawInput _parent;
+			private readonly RawInputState _parent;
 
-			public RawInputMessageWindow(StatesRawInput parent)
+			public RawInputMessageWindow(RawInputState parent)
 			{
 				_parent = parent;
 				CreateHandle(new System.Windows.Forms.CreateParams
@@ -189,7 +189,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Initializes the RawInput message receiver (non-blocking).
 		/// </summary>
-		public StatesRawInput()
+		public RawInputState()
 		{
 			try
 			{
@@ -234,7 +234,7 @@ namespace x360ce.App.Input.States
 				if (!success)
 				{
 					uint errorCode = GetLastError();
-					System.Diagnostics.Debug.WriteLine($"StatesRawInput: RegisterRawInputDevices failed with error code: {errorCode}");
+					System.Diagnostics.Debug.WriteLine($"RawInputState: RegisterRawInputDevices failed with error code: {errorCode}");
 				}
 				_isInitialized = success;
 			}
@@ -423,7 +423,7 @@ namespace x360ce.App.Input.States
 		/// Returns cached RawInput device state (non-blocking).
 		/// For mouse and keyboard devices, polls ACTUAL current state using GetAsyncKeyState to ensure accuracy.
 		/// </summary>
-		public byte[] GetRawInputDeviceState(RawInputDeviceInfo riDeviceInfo)
+		public byte[] GetRawInputState(RawInputDeviceInfo riDeviceInfo)
 		{
 			if (riDeviceInfo?.InterfacePath == null)
 				return null;
@@ -551,18 +551,6 @@ namespace x360ce.App.Input.States
 	
 			// Get and remove cached state in one operation (non-blocking, thread-safe)
 			_cachedStates.TryRemove(deviceInfo.InterfacePath, out byte[] cachedState);
-			return cachedState;
-		}
-
-		/// <summary>
-		/// Returns cached state by interface path (non-blocking).
-		/// </summary>
-		public byte[] GetRawInputState(string interfacePath)
-		{
-			if (string.IsNullOrEmpty(interfacePath))
-				return null;
-			
-			_cachedStates.TryGetValue(interfacePath, out byte[] cachedState);
 			return cachedState;
 		}
 

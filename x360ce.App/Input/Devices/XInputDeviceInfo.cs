@@ -85,7 +85,7 @@ namespace x360ce.App.Input.Devices
 	/// Self-contained XInput device enumeration with minimal external dependencies.
 	/// Discovers XInput-compatible controllers and returns live controller objects for input reading.
 	/// </summary>
-	internal class DevicesXInput
+	internal class XInputDevice
 	{
 		// XInput API constants
 		private const int MaxXInputControllers = 4;
@@ -107,7 +107,7 @@ namespace x360ce.App.Input.Devices
 		/// Enumerates all XInput devices and returns list with live controller objects.
 		/// Call Dispose() on each XInputDeviceInfo when no longer needed.
 		/// </summary>
-		public List<XInputDeviceInfo> GetXInputDeviceList()
+		public List<XInputDeviceInfo> GetXInputDeviceInfoList()
 		{
 			var stopwatch = Stopwatch.StartNew();
 			var deviceList = new List<XInputDeviceInfo>();
@@ -115,16 +115,16 @@ namespace x360ce.App.Input.Devices
 			try
 			{
 				Debug.WriteLine("\n" + new string('-', 109) + "\n");
-				Debug.WriteLine("DevicesXInput: Starting XInput device enumeration...");
+				Debug.WriteLine("XInputDevice: Starting XInput device enumeration...");
 				
 				if (!EnsureXInputLibraryLoaded())
 				{
-					Debug.WriteLine("DevicesXInput: XInput library not available");
+					Debug.WriteLine("XInputDevice: XInput library not available");
 					LogSummary(deviceList, stopwatch);
 					return deviceList;
 				}
 				
-				Debug.WriteLine("DevicesXInput: XInput library loaded");
+				Debug.WriteLine("XInputDevice: XInput library loaded");
 				
 				for (int slotIndex = 0; slotIndex < MaxXInputControllers; slotIndex++)
 				{
@@ -140,7 +140,7 @@ namespace x360ce.App.Input.Devices
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"DevicesXInput: Fatal error: {ex.Message}");
+				Debug.WriteLine($"XInputDevice: Fatal error: {ex.Message}");
 			}
 
 			return deviceList;
@@ -160,7 +160,7 @@ namespace x360ce.App.Input.Devices
 				// Early exit if controller not connected
 				if (!controller.GetState(out State controllerState))
 				{
-					Debug.WriteLine($"\n{slotIndex + 1}. DevicesXInput: No controller in slot {slotIndex}");
+					Debug.WriteLine($"\n{slotIndex + 1}. XInputDevice: No controller in slot {slotIndex}");
 					return null;
 				}
 				
@@ -203,7 +203,7 @@ namespace x360ce.App.Input.Devices
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"DevicesXInput: Error in slot {slotIndex}: {ex.Message}");
+				Debug.WriteLine($"XInputDevice: Error in slot {slotIndex}: {ex.Message}");
 				return null;
 			}
 		}
@@ -262,7 +262,7 @@ namespace x360ce.App.Input.Devices
 		{
 			if (deviceList == null) return;
 			
-			Debug.WriteLine($"DevicesXInput: Disposing {deviceList.Count} devices");
+			Debug.WriteLine($"XInputDevice: Disposing {deviceList.Count} devices");
 			
 			foreach (var deviceInfo in deviceList)
 			{
@@ -272,7 +272,7 @@ namespace x360ce.App.Input.Devices
 				}
 				catch (Exception ex)
 				{
-					Debug.WriteLine($"DevicesXInput: Error disposing {deviceInfo?.InstanceName}: {ex.Message}");
+					Debug.WriteLine($"XInputDevice: Error disposing {deviceInfo?.InstanceName}: {ex.Message}");
 				}
 			}
 		}
@@ -287,7 +287,7 @@ namespace x360ce.App.Input.Devices
 				if (SharpDX.XInput.Controller.IsLoaded)
 					return true;
 				
-				Debug.WriteLine("DevicesXInput: Loading XInput library...");
+				Debug.WriteLine("XInputDevice: Loading XInput library...");
 				
 				var libraries = new[] { "xinput1_4.dll", "xinput1_3.dll", "xinput9_1_0.dll" };
 				
@@ -297,18 +297,18 @@ namespace x360ce.App.Input.Devices
 					
 					if (SharpDX.XInput.Controller.IsLoaded)
 					{
-						Debug.WriteLine($"DevicesXInput: Loaded {library}");
+						Debug.WriteLine($"XInputDevice: Loaded {library}");
 						return true;
 					}
 					
-					Debug.WriteLine($"DevicesXInput: Failed {library}: {loadError?.Message}");
+					Debug.WriteLine($"XInputDevice: Failed {library}: {loadError?.Message}");
 				}
 				
 				return false;
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"DevicesXInput: Library load exception: {ex.Message}");
+				Debug.WriteLine($"XInputDevice: Library load exception: {ex.Message}");
 				return false;
 			}
 		}

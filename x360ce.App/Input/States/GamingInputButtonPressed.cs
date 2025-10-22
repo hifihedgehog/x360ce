@@ -7,39 +7,39 @@ namespace x360ce.App.Input.States
 	/// Provides methods to check if any button is pressed on Gaming Input devices.
 	/// Supports Gaming Input devices (modern gamepads using Windows.Gaming.Input API).
 	/// </summary>
-	internal class StatesGamingInputAnyButtonIsPressed
+	internal class GamingInputButtonPressed
 	{
-        private readonly StatesGamingInput _statesGamingInput = new StatesGamingInput();
+        private readonly GamingInputState _statesGamingInput = new GamingInputState();
 
 		// Cache for Gaming Input device to AllInputDeviceInfo mapping
-		private Dictionary<string, DevicesCombined.AllInputDeviceInfo> _deviceMapping;
+		private Dictionary<string, UnifiedInputDevice.UnifiedInputDeviceInfo> _deviceMapping;
 
 		/// <summary>
 		/// Checks each Gaming Input device for button presses and updates the ButtonPressed property
 		/// in AllInputDevicesList.
 		/// </summary>
 		/// <param name="devicesCombined">The combined devices instance containing device lists</param>
-		public void CheckGamingInputDevicesIfAnyButtonIsPressed(DevicesCombined devicesCombined)
+		public void IsGamingInputButtonPressed(UnifiedInputDevice devicesCombined)
 		{
-			if (devicesCombined.GamingInputDevicesList == null || devicesCombined.AllInputDevicesList == null)
+			if (devicesCombined.GamingInputDeviceInfoList == null || devicesCombined.UnifiedInputDeviceInfoList == null)
 				return;
 
 			// Build mapping cache on first run or when device list changes
-			if (_deviceMapping == null || _deviceMapping.Count != devicesCombined.GamingInputDevicesList.Count)
+			if (_deviceMapping == null || _deviceMapping.Count != devicesCombined.GamingInputDeviceInfoList.Count)
 				BuildDeviceMapping(devicesCombined);
 
 			// Check each Gaming Input device
-			foreach (var giDeviceInfo in devicesCombined.GamingInputDevicesList)
+			foreach (var giDeviceInfo in devicesCombined.GamingInputDeviceInfoList)
 			{
 				if (giDeviceInfo?.GamingInputDevice == null)
 					continue;
 
                 // Get the latest GamingInput device state (non-blocking)
-                var giState = _statesGamingInput.GetGamingInputDeviceState(giDeviceInfo);
+                var giState = _statesGamingInput.GetGamingInputState(giDeviceInfo);
 				if (giState == null) continue;
 
                 // Convert GamingInput state to ListTypeState format (non-blocking)
-                var listState = StatesGamingInputConvertToListType.ConvertToListTypeState(giState.Value);
+                var listState = GamingInputStateToList.ConvertGamingInputStateToList(giState.Value);
                 if (listState == null)
 					continue;
 
@@ -58,11 +58,11 @@ namespace x360ce.App.Input.States
 		/// Builds a mapping dictionary from CommonIdentifier to AllInputDeviceInfo for fast lookups.
 		/// </summary>
 		/// <param name="devicesCombined">The combined devices instance containing device lists</param>
-		private void BuildDeviceMapping(DevicesCombined devicesCombined)
+		private void BuildDeviceMapping(UnifiedInputDevice devicesCombined)
 		{
-			_deviceMapping = new Dictionary<string, DevicesCombined.AllInputDeviceInfo>();
+			_deviceMapping = new Dictionary<string, UnifiedInputDevice.UnifiedInputDeviceInfo>();
 
-			foreach (var device in devicesCombined.AllInputDevicesList)
+			foreach (var device in devicesCombined.UnifiedInputDeviceInfoList)
 			{
 				if (device.InputType == "GamingInput" && !string.IsNullOrEmpty(device.CommonIdentifier))
 				{
@@ -88,7 +88,7 @@ namespace x360ce.App.Input.States
 		/// Returns true if the button list contains at least one value of '1' or POVs list contains any value > -1.
 		/// Returns false if the button list is empty or contains no value of '1' and POVs list is empty or contains only -1 values.
 		/// </remarks>
-		private static bool IsAnyButtonPressed(ListTypeState listState)
+		private static bool IsAnyButtonPressed(InputStateAsList listState)
 		{
 			// Check if button list contains value '1' (pressed)
 			bool buttonPressed = listState?.Buttons != null && listState.Buttons.Contains(1);

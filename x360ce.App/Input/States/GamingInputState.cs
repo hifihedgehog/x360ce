@@ -25,7 +25,7 @@ namespace x360ce.App.Input.States
 	/// • RightThumbstickX/Y: Right stick position (-1.0 to 1.0)
 	/// • LeftTrigger/RightTrigger: Trigger pressure (0.0 to 1.0)
 	/// </remarks>
-	internal class StatesGamingInput
+	internal class GamingInputState
 	{
 		#region State Retrieval Methods
 
@@ -56,11 +56,11 @@ namespace x360ce.App.Input.States
 		/// • LeftTrigger: Left trigger (0.0 to 1.0, unpressed = 0.0)
 		/// • RightTrigger: Right trigger (0.0 to 1.0, unpressed = 0.0)
 		/// </remarks>
-		public GamepadReading? GetGamingInputDeviceState(GamingInputDeviceInfo giDeviceInfo)
+		public GamepadReading? GetGamingInputState(GamingInputDeviceInfo giDeviceInfo)
 		{
 			if (giDeviceInfo?.GamingInputDevice == null)
 			{
-				Debug.WriteLine("StatesGamingInput: Device info or gamepad is null");
+				Debug.WriteLine("GamingInputState: Device info or gamepad is null");
 				return null;
 			}
 
@@ -73,7 +73,7 @@ namespace x360ce.App.Input.States
 			catch (Exception ex)
 			{
 				// Device may be disconnected or access lost
-				Debug.WriteLine($"StatesGamingInput: Error reading state for {giDeviceInfo.InstanceName}: {ex.Message}");
+				Debug.WriteLine($"GamingInputState: Error reading state for {giDeviceInfo.InstanceName}: {ex.Message}");
 				return null;
 			}
 		}
@@ -91,7 +91,7 @@ namespace x360ce.App.Input.States
 		{
 			if (gamepad == null)
 			{
-				Debug.WriteLine("StatesGamingInput: Gamepad is null");
+				Debug.WriteLine("GamingInputState: Gamepad is null");
 				return null;
 			}
 
@@ -104,7 +104,7 @@ namespace x360ce.App.Input.States
 			catch (Exception ex)
 			{
 				// Device may be disconnected or access lost
-				Debug.WriteLine($"StatesGamingInput: Error reading state: {ex.Message}");
+				Debug.WriteLine($"GamingInputState: Error reading state: {ex.Message}");
 				return null;
 			}
 		}
@@ -135,7 +135,7 @@ namespace x360ce.App.Input.States
 				
 				if (gamepadIndex < 0 || gamepadIndex >= gamepads.Count)
 				{
-					Debug.WriteLine($"StatesGamingInput: Invalid gamepad index {gamepadIndex}. Available gamepads: {gamepads.Count}");
+					Debug.WriteLine($"GamingInputState: Invalid gamepad index {gamepadIndex}. Available gamepads: {gamepads.Count}");
 					return null;
 				}
 
@@ -144,7 +144,7 @@ namespace x360ce.App.Input.States
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"StatesGamingInput: Error reading state for index {gamepadIndex}: {ex.Message}");
+				Debug.WriteLine($"GamingInputState: Error reading state for index {gamepadIndex}: {ex.Message}");
 				return null;
 			}
 		}

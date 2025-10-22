@@ -6,7 +6,7 @@ namespace x360ce.App.Input.States
 	/// Converts DirectInput device states to standardized ListTypeState format.
 	/// Handles JoystickState, MouseState, and KeyboardState conversions.
 	/// </summary>
-	internal static class StatesDirectInputConvertToListType
+	internal static class DirectInputStateToList
 	{
 		/// <summary>
 		/// Converts DirectInput device state to ListTypeState format.
@@ -14,7 +14,7 @@ namespace x360ce.App.Input.States
 		/// </summary>
 		/// <param name="diState">DirectInput state object (JoystickState, MouseState, or KeyboardState)</param>
 		/// <returns>ListTypeState with standardized format, or null if state is null or unsupported type</returns>
-		public static ListTypeState ConvertToListTypeState(object diState)
+		public static InputStateAsList ConvertDirectInputStateToList(object diState)
 		{
 			if (diState == null)
 				return null;
@@ -43,9 +43,9 @@ namespace x360ce.App.Input.States
 		/// • Buttons (128 max): Button states as 0 or 1
 		/// • POVs (4 max): Point-of-view controllers (-1 or 0-35900 centidegrees)
 		/// </remarks>
-		private static ListTypeState ConvertJoystickState(JoystickState state)
+		private static InputStateAsList ConvertJoystickState(JoystickState state)
 		{
-			var result = new ListTypeState();
+			var result = new InputStateAsList();
 
 			// Convert axes (24 axes in DirectInput)
 			result.Axes.Add(state.X);
@@ -109,9 +109,9 @@ namespace x360ce.App.Input.States
 		/// • Buttons (8 max): Mouse button states as 0 or 1
 		/// • No sliders or POVs for mouse devices
 		/// </remarks>
-		private static ListTypeState ConvertMouseState(MouseState state)
+		private static InputStateAsList ConvertMouseState(MouseState state)
 		{
-			var result = new ListTypeState();
+			var result = new InputStateAsList();
 
 			// Convert axes (X, Y, Z for mouse)
 			result.Axes.Add(state.X);
@@ -140,9 +140,9 @@ namespace x360ce.App.Input.States
 		/// • No axes, sliders, or POVs for keyboard devices
 		/// • Uses PressedKeys collection to determine which keys are pressed
 		/// </remarks>
-		private static ListTypeState ConvertKeyboardState(KeyboardState state)
+		private static InputStateAsList ConvertKeyboardState(KeyboardState state)
 		{
-			var result = new ListTypeState();
+			var result = new InputStateAsList();
 
 			// Initialize all 256 buttons as released (0)
 			for (int i = 0; i < 256; i++)

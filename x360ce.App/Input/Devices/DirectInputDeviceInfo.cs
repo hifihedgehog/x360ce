@@ -77,7 +77,7 @@ namespace x360ce.App.Input.Devices
 	/// Provides functionality to discover and list DirectInput devices including gamepads, keyboards, and mice.
 	/// Returns live DirectInput device objects that can be used for input reading.
 	/// </summary>
-	internal class DevicesDirectInput
+	internal class DirectInputDevice
 	{
 		// Standard DirectInput slider offsets for capability detection
 		private static readonly JoystickOffset[] SliderOffsets = new[]
@@ -112,7 +112,7 @@ namespace x360ce.App.Input.Devices
 		/// </remarks>
 		/// 
 
-		public List<DirectInputDeviceInfo> GetDirectInputDeviceList()
+		public List<DirectInputDeviceInfo> GetDirectInputDeviceInfoList()
 		{
 			var stopwatch = Stopwatch.StartNew();
 			var deviceList = new List<DirectInputDeviceInfo>();

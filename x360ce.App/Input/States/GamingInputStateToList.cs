@@ -6,7 +6,7 @@ namespace x360ce.App.Input.States
 	/// Converts Gaming Input device states to standardized ListTypeState format.
 	/// Handles GamepadReading structure from Windows.Gaming.Input API.
 	/// </summary>
-	internal static class StatesGamingInputConvertToListType
+	internal static class GamingInputStateToList
 	{
 		/// <summary>
 		/// Converts Gaming Input GamepadReading to ListTypeState format.
@@ -23,9 +23,9 @@ namespace x360ce.App.Input.States
 		///   DPadUp, DPadDown, DPadLeft, DPadRight, Paddle1-4 (if available)
 		/// • 1 POV: D-Pad direction converted to centidegrees (-1 for neutral, 0-27000 for directions)
 		/// </remarks>
-		public static ListTypeState ConvertToListTypeState(GamepadReading reading)
+		public static InputStateAsList ConvertGamingInputStateToList(GamepadReading reading)
 		{
-			var result = new ListTypeState();
+			var result = new InputStateAsList();
 
 			// Convert axes (6 axes in Gaming Input)
 			// Thumbsticks: Convert from -1.0..1.0 to 0..65535

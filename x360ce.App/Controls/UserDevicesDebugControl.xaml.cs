@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using x360ce.App.Input.Devices;
 using x360ce.App.Input.States;
+using x360ce.App.Input.Triggers;
 
 namespace x360ce.App.Controls
 {
@@ -63,50 +64,67 @@ namespace x360ce.App.Controls
         }
 
         // Input device management and state checking components
-        private readonly DevicesCombined _devicesCombined = new DevicesCombined();
-        private readonly StatesDirectInputAnyButtonIsPressed _statesAnyButtonIsPressedDirectInput = new StatesDirectInputAnyButtonIsPressed();
-        private readonly StatesXInputAnyButtonIsPressed _statesAnyButtonIsPressedXInput = new StatesXInputAnyButtonIsPressed();
-        private readonly StatesGamingInputAnyButtonIsPressed _statesAnyButtonIsPressedGamingInput = new StatesGamingInputAnyButtonIsPressed();
-        private readonly StatesRawInputAnyButtonIsPressed _statesAnyButtonIsPressedRawInput = new StatesRawInputAnyButtonIsPressed();
+        private readonly UnifiedInputDevice _devicesCombined = new UnifiedInputDevice();
+        private readonly UnifiedInputDeviceConnection _deviceMonitor = new UnifiedInputDeviceConnection();
+        private readonly DirectInputButtonPressed _statesIsDiDeviceButtonPressed = new DirectInputButtonPressed();
+        private readonly XInputButtonPressed _statesIsXiDeviceButtonPressed = new XInputButtonPressed();
+        private readonly GamingInputButtonPressed _statesIsGiDeviceButtonPressed = new GamingInputButtonPressed();
+        private readonly RawInputButtonPressed _statesIsRiDeviceButtonPressed = new RawInputButtonPressed();
+
+        // Device connection triggers - monitor actual device connect/disconnect events
+        private readonly PnPInputDeviceConnection _pnpTrigger = new PnPInputDeviceConnection();
+        private readonly RawInputDeviceConnection _rawInputTrigger = new RawInputDeviceConnection();
+        private readonly DirectInputDeviceConnection _directInputTrigger = new DirectInputDeviceConnection();
+        private readonly XInputDeviceConnection _xinputTrigger = new XInputDeviceConnection();
+        private readonly GamingInputDeviceConnection _gamingInputTrigger = new GamingInputDeviceConnection();
 
         private void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
             // Refresh device list
-            _devicesCombined.CreateInputDevicesLists();
-            _viewSource.Source = _devicesCombined.AllInputDevicesList;
+            _devicesCombined.GetUnifiedInputDeviceList();
+            _viewSource.Source = _devicesCombined.UnifiedInputDeviceInfoList;
 
             // Clear caches when data source changes
             InvalidateVisualCache();
-            _statesAnyButtonIsPressedDirectInput.InvalidateCache();
-            _statesAnyButtonIsPressedXInput.InvalidateCache();
-            _statesAnyButtonIsPressedGamingInput.InvalidateCache();
-            _statesAnyButtonIsPressedRawInput.InvalidateCache();
+            _statesIsDiDeviceButtonPressed.InvalidateCache();
+            _statesIsXiDeviceButtonPressed.InvalidateCache();
+            _statesIsGiDeviceButtonPressed.InvalidateCache();
+            _statesIsRiDeviceButtonPressed.InvalidateCache();
 
             _viewSource.View.Refresh();
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
+            // Set dispatcher for UI thread synchronization
+            _devicesCombined.SetDispatcher(Dispatcher);
+
             // Create input devices lists: PnPInput, RawInput, DirectInput, XInput, GamingInput
-            _devicesCombined.CreateInputDevicesLists();
+            _devicesCombined.GetUnifiedInputDeviceList();
 
             // Set up CollectionViewSource for filtering
-            _viewSource = new CollectionViewSource { Source = _devicesCombined.AllInputDevicesList };
+            _viewSource = new CollectionViewSource { Source = _devicesCombined.UnifiedInputDeviceInfoList };
             _viewSource.Filter += ViewSource_Filter;
 
-            AllInputDevicesDataGrid.ItemsSource = _viewSource.View;
+            UnifiedInputDeviceInfoDataGrid.ItemsSource = _viewSource.View;
 
             // Cache filter properties once
-            if (_devicesCombined.AllInputDevicesList?.Count > 0)
+            if (_devicesCombined.UnifiedInputDeviceInfoList?.Count > 0)
             {
-                var firstItem = _devicesCombined.AllInputDevicesList[0];
+                var firstItem = _devicesCombined.UnifiedInputDeviceInfoList[0];
                 _cachedFilterProperties = firstItem.GetType().GetProperties()
                  .Where(p => !ExcludedSearchProperties.Contains(p.Name))
                  .ToArray();
             }
 
+            // Subscribe to device monitoring events for automatic updates
+            _deviceMonitor.UnifiedListUpdateRequired += DeviceMonitor_UnifiedListUpdateRequired;
+
+            // Start device connection monitoring - these trigger only on actual device connect/disconnect
+            StartDeviceConnectionMonitoring();
+
             // Attach handlers for row loading to support virtualization
-            AllInputDevicesDataGrid.LoadingRow += DataGrid_LoadingRow;
+            UnifiedInputDeviceInfoDataGrid.LoadingRow += DataGrid_LoadingRow;
 
             // Defer handler attachment until layout is complete
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(AttachTextBoxHandlers));
@@ -114,6 +132,79 @@ namespace x360ce.App.Controls
             // Initialize button check timer and visibility handling
             InitializeButtonCheckTimer();
             InitializeVisibilityHandling();
+        }
+
+        /// <summary>
+        /// Starts monitoring for actual device connection/disconnection events.
+        /// These triggers use Windows messages and polling to detect when devices are added/removed.
+        /// </summary>
+        private void StartDeviceConnectionMonitoring()
+        {
+            // Subscribe to device connection events from all trigger sources
+            _pnpTrigger.DeviceChanged += OnDeviceConnectionChanged;
+            _rawInputTrigger.DeviceChanged += OnDeviceConnectionChanged;
+            _directInputTrigger.DeviceChanged += OnDeviceConnectionChanged;
+            _xinputTrigger.DeviceChanged += OnDeviceConnectionChanged;
+            _gamingInputTrigger.DeviceChanged += OnDeviceConnectionChanged;
+
+            // Start monitoring for device changes
+            _pnpTrigger.StartMonitoring();
+            _rawInputTrigger.StartMonitoring();
+            _directInputTrigger.StartMonitoring();
+            _xinputTrigger.StartMonitoring();
+            _gamingInputTrigger.StartMonitoring();
+        }
+
+        /// <summary>
+        /// Stops monitoring for device connection/disconnection events.
+        /// </summary>
+        private void StopDeviceConnectionMonitoring()
+        {
+            _pnpTrigger.StopMonitoring();
+            _rawInputTrigger.StopMonitoring();
+            _directInputTrigger.StopMonitoring();
+            _xinputTrigger.StopMonitoring();
+            _gamingInputTrigger.StopMonitoring();
+
+            _pnpTrigger.DeviceChanged -= OnDeviceConnectionChanged;
+            _rawInputTrigger.DeviceChanged -= OnDeviceConnectionChanged;
+            _directInputTrigger.DeviceChanged -= OnDeviceConnectionChanged;
+            _xinputTrigger.DeviceChanged -= OnDeviceConnectionChanged;
+            _gamingInputTrigger.DeviceChanged -= OnDeviceConnectionChanged;
+        }
+
+        /// <summary>
+        /// Handles device connection/disconnection events from any trigger source.
+        /// Refreshes device lists and updates the unified list when devices change.
+        /// </summary>
+        private void OnDeviceConnectionChanged(object sender, DeviceConnectionEventArgs e)
+        {
+            // Refresh all device lists when a connection change is detected
+            _devicesCombined.GetUnifiedInputDeviceList();
+
+            // Monitor the refreshed lists to detect what changed
+            _deviceMonitor.MonitorPnPInputDeviceList(_devicesCombined.PnPInputDeviceInfoList);
+            _deviceMonitor.MonitorRawInputDeviceList(_devicesCombined.RawInputDeviceInfoList);
+            _deviceMonitor.MonitorDirectInputDeviceList(_devicesCombined.DirectInputDeviceInfoList);
+            _deviceMonitor.MonitorXInputDeviceList(_devicesCombined.XInputDeviceInfoList);
+            _deviceMonitor.MonitorGamingInputDeviceList(_devicesCombined.GamingInputDeviceInfoList);
+        }
+
+        /// <summary>
+        /// Handles device list changes from the monitoring system.
+        /// Updates the unified device list incrementally when devices connect/disconnect.
+        /// </summary>
+        private void DeviceMonitor_UnifiedListUpdateRequired(object sender, UnifiedDeviceListUpdateEventArgs e)
+        {
+            // Invalidate caches when device list changes
+            InvalidateVisualCache();
+            _statesIsDiDeviceButtonPressed.InvalidateCache();
+            _statesIsXiDeviceButtonPressed.InvalidateCache();
+            _statesIsGiDeviceButtonPressed.InvalidateCache();
+            _statesIsRiDeviceButtonPressed.InvalidateCache();
+
+            // Refresh the view to reflect changes
+            _viewSource?.View?.Refresh();
         }
 
         /// <summary>
@@ -133,12 +224,13 @@ namespace x360ce.App.Controls
 
         private void StatesAllInputAnyButtonIsPressed()
         {
-            // Check all input methods - each will only update its own device type
+            // Check all input methods for button states - each will only update its own device type
             // Using logical OR in each checker preserves button states across methods
-            _statesAnyButtonIsPressedDirectInput.CheckDirectInputDevicesIfAnyButtonIsPressed(_devicesCombined);
-            _statesAnyButtonIsPressedXInput.CheckXInputDevicesIfAnyButtonIsPressed(_devicesCombined);
-            _statesAnyButtonIsPressedGamingInput.CheckGamingInputDevicesIfAnyButtonIsPressed(_devicesCombined);
-            _statesAnyButtonIsPressedRawInput.CheckRawInputDevicesIfAnyButtonIsPressed(_devicesCombined);
+            // NOTE: Device monitoring is handled separately by connection triggers, not here
+            _statesIsDiDeviceButtonPressed.IsDirectInputButtonPressed(_devicesCombined);
+            _statesIsXiDeviceButtonPressed.IsXInputButtonPressed(_devicesCombined);
+            _statesIsGiDeviceButtonPressed.IsGamingInputButtonPressed(_devicesCombined);
+            _statesIsRiDeviceButtonPressed.IsRawInputButtonPressed(_devicesCombined);
         }
 
 
@@ -153,10 +245,10 @@ namespace x360ce.App.Controls
                 {
                     // Invalidate all input method caches when control becomes visible again
                     // This ensures device mappings are rebuilt if devices changed while hidden
-                    _statesAnyButtonIsPressedDirectInput.InvalidateCache();
-                    _statesAnyButtonIsPressedXInput.InvalidateCache();
-                    _statesAnyButtonIsPressedGamingInput.InvalidateCache();
-                    _statesAnyButtonIsPressedRawInput.InvalidateCache();
+                    _statesIsDiDeviceButtonPressed.InvalidateCache();
+                    _statesIsXiDeviceButtonPressed.InvalidateCache();
+                    _statesIsGiDeviceButtonPressed.InvalidateCache();
+                    _statesIsRiDeviceButtonPressed.InvalidateCache();
                     _buttonCheckTimer.Start();
                 }
                 else
@@ -205,13 +297,13 @@ namespace x360ce.App.Controls
         /// </summary>
         private void AttachTextBoxHandlers()
         {
-            if (AllInputDevicesDataGrid.ItemsSource == null)
+            if (UnifiedInputDeviceInfoDataGrid.ItemsSource == null)
                 return;
 
-            AllInputDevicesDataGrid.UpdateLayout();
+            UnifiedInputDeviceInfoDataGrid.UpdateLayout();
 
             // Build cache and attach handlers only to new TextBoxes
-            foreach (var textBox in FindVisualChildren<TextBox>(AllInputDevicesDataGrid))
+            foreach (var textBox in FindVisualChildren<TextBox>(UnifiedInputDeviceInfoDataGrid))
             {
                 if (_attachedTextBoxes.Add(textBox))
                 {
@@ -382,8 +474,8 @@ namespace x360ce.App.Controls
                 _cachedTextBoxes.Clear();
                 _cachedRows.Clear();
 
-                _cachedTextBoxes.AddRange(FindVisualChildren<TextBox>(AllInputDevicesDataGrid));
-                _cachedRows.AddRange(FindVisualChildren<DataGridRow>(AllInputDevicesDataGrid));
+                _cachedTextBoxes.AddRange(FindVisualChildren<TextBox>(UnifiedInputDeviceInfoDataGrid));
+                _cachedRows.AddRange(FindVisualChildren<DataGridRow>(UnifiedInputDeviceInfoDataGrid));
             }
         }
 
@@ -483,6 +575,19 @@ namespace x360ce.App.Controls
             }
 
             return false;
+        }
+
+        private void UserControl_Unloaded(object sender, RoutedEventArgs e)
+        {
+            // Stop button check timer
+            _buttonCheckTimer?.Stop();
+
+            // Stop device connection monitoring
+            StopDeviceConnectionMonitoring();
+
+            // Unsubscribe from device monitoring events
+            if (_deviceMonitor != null)
+                _deviceMonitor.UnifiedListUpdateRequired -= DeviceMonitor_UnifiedListUpdateRequired;
         }
 
         private void ClearButton_Click(object sender, RoutedEventArgs e)

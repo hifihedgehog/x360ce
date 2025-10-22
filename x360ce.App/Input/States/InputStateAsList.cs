@@ -16,7 +16,7 @@ namespace x360ce.App.Input.States
 	/// Example: ((0,0,0,1,0,0,0,0,0,0),(),(32100,3566,0,0,31540),(-1,0))
 	/// Note: Empty collections are represented as empty lists (), not null
 	/// </remarks>
-	public class ListTypeState
+	public class InputStateAsList
 	{
 		/// <summary>
 		/// Axis values in 0-65535 range.
@@ -47,7 +47,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Initializes a new ListTypeState with empty collections.
 		/// </summary>
-		public ListTypeState()
+		public InputStateAsList()
 		{
 			Axes = new List<int>();
 			Sliders = new List<int>();

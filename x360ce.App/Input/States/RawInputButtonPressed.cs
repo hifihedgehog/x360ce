@@ -18,10 +18,10 @@ namespace x360ce.App.Input.States
 	/// • Checks if button list contains value '1' for simple, reliable detection
 	/// • Works with ALL device layouts (buttons before/after axes)
 	/// </remarks>
-	internal class StatesRawInputAnyButtonIsPressed
+	internal class RawInputButtonPressed
 	{
-        private readonly StatesRawInput _statesRawInput = new StatesRawInput();
-		private Dictionary<string, DevicesCombined.AllInputDeviceInfo> _deviceMapping;
+        private readonly RawInputState _statesRawInput = new RawInputState();
+		private Dictionary<string, UnifiedInputDevice.UnifiedInputDeviceInfo> _deviceMapping;
 		private int _lastDeviceCount;
 		private DateTime _lastDebugOutput = DateTime.MinValue;
 
@@ -32,10 +32,10 @@ namespace x360ce.App.Input.States
 		/// Button state persists until a new WM_INPUT message arrives with different state.
 		/// </summary>
 		/// <param name="devicesCombined">The combined devices instance containing device lists</param>
-		public void CheckRawInputDevicesIfAnyButtonIsPressed(DevicesCombined devicesCombined)
+		public void IsRawInputButtonPressed(UnifiedInputDevice devicesCombined)
 		{
-			var rawInputList = devicesCombined?.RawInputDevicesList;
-			var allDevicesList = devicesCombined?.AllInputDevicesList;
+			var rawInputList = devicesCombined?.RawInputDeviceInfoList;
+			var allDevicesList = devicesCombined?.UnifiedInputDeviceInfoList;
 			
 			if (rawInputList == null || allDevicesList == null)
 				return;
@@ -65,12 +65,12 @@ namespace x360ce.App.Input.States
 					continue;
 		
 				// Get the latest RawInput device state (non-blocking)
-                var riState = _statesRawInput.GetRawInputDeviceState(riDeviceInfo);
+                var riState = _statesRawInput.GetRawInputState(riDeviceInfo);
 				if (riState == null)
 					continue;
 
                 // Convert RawInput state to ListTypeState format (non-blocking)
-                var listState = StatesRawInputConvertToListType.ConvertToListTypeState(riState, riDeviceInfo);
+                var listState = RawInputStateToList.ConvertRawInputStateToList(riState, riDeviceInfo);
                 if (listState == null)
                     continue;
 
@@ -101,10 +101,10 @@ namespace x360ce.App.Input.States
 		/// Builds a mapping dictionary from InterfacePath to AllInputDeviceInfo for fast lookups.
 		/// </summary>
 		private void BuildDeviceMapping(
-			System.Collections.ObjectModel.ObservableCollection<DevicesCombined.AllInputDeviceInfo> allDevicesList)
+			System.Collections.ObjectModel.ObservableCollection<UnifiedInputDevice.UnifiedInputDeviceInfo> allDevicesList)
 		{
 			// Pre-allocate with estimated capacity to reduce resizing
-			_deviceMapping = new Dictionary<string, DevicesCombined.AllInputDeviceInfo>(allDevicesList.Count);
+			_deviceMapping = new Dictionary<string, UnifiedInputDevice.UnifiedInputDeviceInfo>(allDevicesList.Count);
 		
 			foreach (var device in allDevicesList)
 			{

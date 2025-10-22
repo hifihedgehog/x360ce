@@ -7,41 +7,41 @@ namespace x360ce.App.Input.States
 	/// Provides methods to check if any button is pressed on DirectInput devices.
 	/// Supports DirectInput devices (joysticks, keyboards, mice).
 	/// </summary>
-	internal class StatesDirectInputAnyButtonIsPressed
+	internal class DirectInputButtonPressed
 	{
-        private readonly StatesDirectInput _statesDirectInput = new StatesDirectInput();
+        private readonly DirectInputState _statesDirectInput = new DirectInputState();
 		
 		// Cache for DirectInput device to AllInputDeviceInfo mapping
-		private Dictionary<string, DevicesCombined.AllInputDeviceInfo> _deviceMapping;
+		private Dictionary<string, UnifiedInputDevice.UnifiedInputDeviceInfo> _deviceMapping;
 
 		/// <summary>
 		/// Checks each DirectInput device for button presses and updates the ButtonPressed property
 		/// in AllInputDevicesList.
 		/// </summary>
 		/// <param name="devicesCombined">The combined devices instance containing device lists</param>
-		public void CheckDirectInputDevicesIfAnyButtonIsPressed(DevicesCombined devicesCombined)
+		public void IsDirectInputButtonPressed(UnifiedInputDevice devicesCombined)
 		{
-			if (devicesCombined.DirectInputDevicesList == null || devicesCombined.AllInputDevicesList == null)
+			if (devicesCombined.DirectInputDeviceInfoList == null || devicesCombined.UnifiedInputDeviceInfoList == null)
 				return;
 			
 			// Build mapping cache on first run or when device list changes
-			if (_deviceMapping == null || _deviceMapping.Count != devicesCombined.DirectInputDevicesList.Count)
+			if (_deviceMapping == null || _deviceMapping.Count != devicesCombined.DirectInputDeviceInfoList.Count)
 				BuildDeviceMapping(devicesCombined);
 			
 			// Check each DirectInput device
-			foreach (var diDeviceInfo in devicesCombined.DirectInputDevicesList)
+			foreach (var diDeviceInfo in devicesCombined.DirectInputDeviceInfoList)
 			{
 				if (diDeviceInfo?.DirectInputDevice == null)
 					continue;
 
 
                 // Get the latest DirectInput device state (non-blocking)
-                var diState = _statesDirectInput.GetDirectInputDeviceState(diDeviceInfo);
+                var diState = _statesDirectInput.GetDirectInputState(diDeviceInfo);
 				if (diState == null)
 					continue;
 
                 // Convert DirectInput state to ListTypeState format (non-blocking)
-                var listState = StatesDirectInputConvertToListType.ConvertToListTypeState(diState);
+                var listState = DirectInputStateToList.ConvertDirectInputStateToList(diState);
 				if (listState == null)
 					continue;
 			
@@ -62,11 +62,11 @@ namespace x360ce.App.Input.States
 		/// Builds a mapping dictionary from InterfacePath to AllInputDeviceInfo for fast lookups.
 		/// </summary>
 		/// <param name="devicesCombined">The combined devices instance containing device lists</param>
-		private void BuildDeviceMapping(DevicesCombined devicesCombined)
+		private void BuildDeviceMapping(UnifiedInputDevice devicesCombined)
 		{
-			_deviceMapping = new Dictionary<string, DevicesCombined.AllInputDeviceInfo>();
+			_deviceMapping = new Dictionary<string, UnifiedInputDevice.UnifiedInputDeviceInfo>();
 			
-			foreach (var device in devicesCombined.AllInputDevicesList)
+			foreach (var device in devicesCombined.UnifiedInputDeviceInfoList)
 			{
 				if (device.InputType == "DirectInput" && !string.IsNullOrEmpty(device.InterfacePath))
 				{

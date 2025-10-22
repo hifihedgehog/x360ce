@@ -134,7 +134,7 @@ namespace x360ce.App.Input.Devices
     /// Provides functionality to discover and list physical plug and play input devices.
     /// Enumerates devices through Windows Device Manager for comprehensive hardware information.
     /// </summary>
-    internal class DevicesPnPInput
+    internal class PnPInputDevice
     {
         #region Win32 API Constants and Structures
 
@@ -284,7 +284,7 @@ namespace x360ce.App.Input.Devices
         /// IMPORTANT: The returned PnPInputDeviceInfo objects contain Windows device information.
         /// Call Dispose() on each PnPInputDeviceInfo when no longer needed to free resources.
         /// </remarks>
-        public List<PnPInputDeviceInfo> GetPnPInputDeviceList()
+        public List<PnPInputDeviceInfo> GetPnPInputDeviceInfoList()
         {
             var stopwatch = Stopwatch.StartNew();
             var deviceList = new List<PnPInputDeviceInfo>();
@@ -294,7 +294,7 @@ namespace x360ce.App.Input.Devices
             try
             {
                 Debug.WriteLine("\n-----------------------------------------------------------------------------------------------------------------\n\n" +
-                    "DevicesPnPInput: Starting PnP input device enumeration...");
+                    "PnPInputDevice: Starting PnP input device enumeration...");
 
                 // Only enumerate specific input device classes - be very restrictive
                 var inputClassGuids = new[]
@@ -306,7 +306,7 @@ namespace x360ce.App.Input.Devices
 
                 foreach (var classGuid in inputClassGuids)
                 {
-                    Debug.WriteLine($"DevicesPnPInput: Enumerating devices for class {classGuid}");
+                    Debug.WriteLine($"PnPInputDevice: Enumerating devices for class {classGuid}");
                     EnumerateDeviceClass(classGuid, ref deviceListIndex, deviceList, deviceListDebugLines);
                 }
 
@@ -321,7 +321,7 @@ namespace x360ce.App.Input.Devices
 
                 if (uniqueDevices.Count != deviceList.Count)
                 {
-                    Debug.WriteLine($"DevicesPnPInput: Removed {deviceList.Count - uniqueDevices.Count} duplicate devices");
+                    Debug.WriteLine($"PnPInputDevice: Removed {deviceList.Count - uniqueDevices.Count} duplicate devices");
                     deviceList = uniqueDevices;
                 }
 
@@ -330,7 +330,7 @@ namespace x360ce.App.Input.Devices
                 var filteredDevices = FilterMiOnlyDevices(deviceList);
                 if (filteredDevices.Count != deviceList.Count)
                 {
-                    Debug.WriteLine($"DevicesPnPInput: Filtered out {deviceList.Count - filteredDevices.Count} MI-only transport nodes");
+                    Debug.WriteLine($"PnPInputDevice: Filtered out {deviceList.Count - filteredDevices.Count} MI-only transport nodes");
                     deviceList = filteredDevices;
                 }
 
@@ -372,8 +372,8 @@ namespace x360ce.App.Input.Devices
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"DevicesPnPInput: Fatal error during PnP input device enumeration: {ex.Message}");
-                Debug.WriteLine($"DevicesPnPInput: Stack trace: {ex.StackTrace}");
+                Debug.WriteLine($"PnPInputDevice: Fatal error during PnP input device enumeration: {ex.Message}");
+                Debug.WriteLine($"PnPInputDevice: Stack trace: {ex.StackTrace}");
             }
 
             foreach (var debugLine in deviceListDebugLines) { Debug.WriteLine(debugLine); }
@@ -390,7 +390,7 @@ namespace x360ce.App.Input.Devices
         {
             if (deviceList == null) return;
 
-            Debug.WriteLine($"DevicesPnPInput: Disposing {deviceList.Count} PnP input devices...");
+            Debug.WriteLine($"PnPInputDevice: Disposing {deviceList.Count} PnP input devices...");
 
             foreach (var deviceInfo in deviceList)
             {
@@ -398,17 +398,17 @@ namespace x360ce.App.Input.Devices
                 {
                     if (deviceInfo != null)
                     {
-                        Debug.WriteLine($"DevicesPnPInput: Disposing device - {deviceInfo.DisplayName}");
+                        Debug.WriteLine($"PnPInputDevice: Disposing device - {deviceInfo.DisplayName}");
                         deviceInfo.Dispose();
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"DevicesPnPInput: Error disposing device {deviceInfo?.DisplayName}: {ex.Message}");
+                    Debug.WriteLine($"PnPInputDevice: Error disposing device {deviceInfo?.DisplayName}: {ex.Message}");
                 }
             }
 
-            Debug.WriteLine("DevicesPnPInput: All PnP input devices disposed.");
+            Debug.WriteLine("PnPInputDevice: All PnP input devices disposed.");
         }
 
         #region Private Helper Methods
@@ -433,7 +433,7 @@ namespace x360ce.App.Input.Devices
                 if (deviceInfoSet == IntPtr.Zero || deviceInfoSet.ToInt64() == -1)
                 {
                     uint error = GetLastError();
-                    Debug.WriteLine($"DevicesPnPInput: Failed to get device info set for class {classGuid}. Error: {error}");
+                    Debug.WriteLine($"PnPInputDevice: Failed to get device info set for class {classGuid}. Error: {error}");
                     return;
                 }
 
@@ -455,7 +455,7 @@ namespace x360ce.App.Input.Devices
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"DevicesPnPInput: Error processing device {deviceIndex} in class {classGuid}: {ex.Message}");
+                        Debug.WriteLine($"PnPInputDevice: Error processing device {deviceIndex} in class {classGuid}: {ex.Message}");
                     }
 
                     deviceIndex++;
@@ -465,12 +465,12 @@ namespace x360ce.App.Input.Devices
                 uint lastError = GetLastError();
                 if (lastError != ERROR_NO_MORE_ITEMS)
                 {
-                    Debug.WriteLine($"DevicesPnPInput: Enumeration ended with error {lastError} for class {classGuid}");
+                    Debug.WriteLine($"PnPInputDevice: Enumeration ended with error {lastError} for class {classGuid}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"DevicesPnPInput: Error enumerating device class {classGuid}: {ex.Message}");
+                Debug.WriteLine($"PnPInputDevice: Error enumerating device class {classGuid}: {ex.Message}");
             }
             finally
             {
@@ -564,7 +564,7 @@ namespace x360ce.App.Input.Devices
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"DevicesPnPInput: Error creating device info: {ex.Message}");
+                Debug.WriteLine($"PnPInputDevice: Error creating device info: {ex.Message}");
                 return null;
             }
         }
@@ -607,7 +607,7 @@ namespace x360ce.App.Input.Devices
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"DevicesPnPInput: Error getting device property {property}: {ex.Message}");
+                Debug.WriteLine($"PnPInputDevice: Error getting device property {property}: {ex.Message}");
             }
 
             return "";
@@ -992,7 +992,7 @@ namespace x360ce.App.Input.Devices
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"DevicesPnPInput: Error extracting VID/PID: {ex.Message}");
+                Debug.WriteLine($"PnPInputDevice: Error extracting VID/PID: {ex.Message}");
                 return (0, 0);
             }
         }
@@ -1280,7 +1280,7 @@ namespace x360ce.App.Input.Devices
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"DevicesPnPInput: Error generating sorting string: {ex.Message}");
+                Debug.WriteLine($"PnPInputDevice: Error generating sorting string: {ex.Message}");
                 deviceInfo.SortingString = "VID_0000&PID_0000";
                 deviceInfo.CommonIdentifier = "VID_0000&PID_0000";
                 deviceInfo.MiValue = "";
@@ -1415,7 +1415,7 @@ namespace x360ce.App.Input.Devices
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"DevicesPnPInput: Error extracting parent device key from '{deviceInstanceId}': {ex.Message}");
+                Debug.WriteLine($"PnPInputDevice: Error extracting parent device key from '{deviceInstanceId}': {ex.Message}");
             }
 
             return "";
@@ -1619,7 +1619,7 @@ namespace x360ce.App.Input.Devices
                 if (hasMi && !hasCol && device.ClassGuid == GUID_DEVCLASS_HIDCLASS)
                 {
                     // Skip this HID-class MI-only device as it's just the parent transport node
-                    Debug.WriteLine($"DevicesPnPInput: Filtering out HID-class MI-only transport node: {device.DeviceInstanceId}");
+                    Debug.WriteLine($"PnPInputDevice: Filtering out HID-class MI-only transport node: {device.DeviceInstanceId}");
                     continue;
                 }
                 

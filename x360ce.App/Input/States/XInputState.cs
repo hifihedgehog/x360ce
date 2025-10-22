@@ -25,7 +25,7 @@ namespace x360ce.App.Input.States
 	///   - RightThumbX/Y: Right stick position (-32768 to 32767)
 	///   - LeftTrigger/RightTrigger: Trigger pressure (0-255)
 	/// </remarks>
-	internal class StatesXInput
+	internal class XInputState
 	{
 		#region XInput Controller Management
 
@@ -42,7 +42,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Initializes the XInput state reader with controllers for all 4 slots.
 		/// </summary>
-		public StatesXInput()
+		public XInputState()
 		{
 			_controllers = new Controller[MaxControllers];
 			for (int i = 0; i < MaxControllers; i++)
@@ -80,7 +80,7 @@ namespace x360ce.App.Input.States
 		/// • Gamepad.LeftTrigger: Left trigger (0-255)
 		/// • Gamepad.RightTrigger: Right trigger (0-255)
 		/// </remarks>
-		public State? GetXInputDeviceState(XInputDeviceInfo xiDeviceInfo)
+		public State? GetXInputState(XInputDeviceInfo xiDeviceInfo)
 		{
 			if (xiDeviceInfo == null)
 				return null;
@@ -89,7 +89,7 @@ namespace x360ce.App.Input.States
 
 			if (slotIndex < 0 || slotIndex >= MaxControllers)
 			{
-				Debug.WriteLine($"StatesXInput: Invalid slot index {slotIndex}. Must be 0-3.");
+				Debug.WriteLine($"XInputState: Invalid slot index {slotIndex}. Must be 0-3.");
 				return null;
 			}
 
@@ -111,7 +111,7 @@ namespace x360ce.App.Input.States
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine($"StatesXInput: Error reading state for slot {slotIndex}: {ex.Message}");
+				Debug.WriteLine($"XInputState: Error reading state for slot {slotIndex}: {ex.Message}");
 				return null;
 			}
 		}
@@ -198,7 +198,7 @@ namespace x360ce.App.Input.States
 				{
 					// Create a temporary XInputDeviceInfo for diagnostic purposes
 					var tempDevice = new XInputDeviceInfo { SlotIndex = i };
-					var state = GetXInputDeviceState(tempDevice);
+					var state = GetXInputState(tempDevice);
 					if (state.HasValue)
 					{
 						info.AppendLine($"  PacketNumber: {state.Value.PacketNumber}");
