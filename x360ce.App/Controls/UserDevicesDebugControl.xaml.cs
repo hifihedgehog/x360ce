@@ -71,6 +71,9 @@ namespace x360ce.App.Controls
         private readonly GamingInputButtonPressed _statesIsGiDeviceButtonPressed = new GamingInputButtonPressed();
         private readonly RawInputButtonPressed _statesIsRiDeviceButtonPressed = new RawInputButtonPressed();
 
+        // Device selection handler
+        private DevicesTab_DeviceSelected _deviceSelectedHandler;
+
         // Device connection triggers - monitor actual device connect/disconnect events
         private readonly PnPInputDeviceConnection _pnpTrigger = new PnPInputDeviceConnection();
         private readonly RawInputDeviceConnection _rawInputTrigger = new RawInputDeviceConnection();
@@ -108,6 +111,12 @@ namespace x360ce.App.Controls
 
             UnifiedInputDeviceInfoDataGrid.ItemsSource = _viewSource.View;
 
+            // Initialize device selection handler
+            _deviceSelectedHandler = new DevicesTab_DeviceSelected(_devicesCombined);
+
+            // Attach SelectionChanged event handler
+            UnifiedInputDeviceInfoDataGrid.SelectionChanged += UnifiedInputDeviceInfoDataGrid_SelectionChanged;
+
             // Cache filter properties once
             if (_devicesCombined.UnifiedInputDeviceInfoList?.Count > 0)
             {
@@ -128,6 +137,17 @@ namespace x360ce.App.Controls
 
             // Defer handler attachment until layout is complete
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(AttachTextBoxHandlers));
+
+            // Select first device and display its information if available
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+            {
+                if (UnifiedInputDeviceInfoDataGrid.Items.Count > 0)
+                {
+                    UnifiedInputDeviceInfoDataGrid.SelectedIndex = 0;
+                    // Manually trigger the display since SelectionChanged might not fire for initial selection
+                    DisplaySelectedDeviceInformation();
+                }
+            }));
 
             // Initialize button check timer and visibility handling
             InitializeButtonCheckTimer();
@@ -588,11 +608,47 @@ namespace x360ce.App.Controls
             // Unsubscribe from device monitoring events
             if (_deviceMonitor != null)
                 _deviceMonitor.UnifiedListUpdateRequired -= DeviceMonitor_UnifiedListUpdateRequired;
+
+            // Detach SelectionChanged event handler
+            UnifiedInputDeviceInfoDataGrid.SelectionChanged -= UnifiedInputDeviceInfoDataGrid_SelectionChanged;
+        }
+
+        /// <summary>
+        /// Handles device selection in the DataGrid and displays device information.
+        /// </summary>
+        private void UnifiedInputDeviceInfoDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            DisplaySelectedDeviceInformation();
+        }
+
+        /// <summary>
+        /// Displays information for the currently selected device.
+        /// </summary>
+        private void DisplaySelectedDeviceInformation()
+        {
+            // Clear previous content
+            SelectedDeviceInformationStackPanel.Children.Clear();
+
+            // Get selected device
+            if (UnifiedInputDeviceInfoDataGrid.SelectedItem is UnifiedInputDevice.UnifiedInputDeviceInfo selectedDevice)
+            {
+                // Get device information as XAML elements
+                var deviceInfoElement = _deviceSelectedHandler?.GetDeviceInformationAsXamlElements(
+                    selectedDevice.InputType,
+                    selectedDevice.InterfacePath);
+
+                // Add to StackPanel if we got valid content
+                if (deviceInfoElement != null)
+                {
+                    SelectedDeviceInformationStackPanel.Children.Add(deviceInfoElement);
+                }
+            }
         }
 
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
             InputDeviceSearch.Text = string.Empty;
         }
+
     }
 }
