@@ -270,7 +270,7 @@
                         </Style>
                     </ScrollViewer.Resources>
 
-                    <StackPanel Name="SelectedDeviceInputStackPanel" Margin="3,0,3,3" MinWidth="200">
+                    <StackPanel Name="SelectedDeviceInputStackPanel" Margin="1,1,0,1" MinWidth="250">
                         <StackPanel.Resources>
                             <Style TargetType="Label" BasedOn="{StaticResource InputLabel}" />
                         </StackPanel.Resources>
