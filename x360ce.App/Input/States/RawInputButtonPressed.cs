@@ -20,7 +20,6 @@ namespace x360ce.App.Input.States
 	/// </remarks>
 	internal class RawInputButtonPressed
 	{
-        private readonly RawInputState _statesRawInput = new RawInputState();
 		private Dictionary<string, UnifiedInputDeviceInfo> _deviceMapping;
 		private int _lastDeviceCount;
 		private DateTime _lastDebugOutput = DateTime.MinValue;
@@ -64,8 +63,8 @@ namespace x360ce.App.Input.States
 				if (!_deviceMapping.TryGetValue(riDeviceInfo.InterfacePath, out var allDevice))
 					continue;
 		
-				// Get the latest RawInput device state (non-blocking)
-                var riState = _statesRawInput.GetRawInputState(riDeviceInfo);
+				// Get the latest RawInput device state (non-blocking) using singleton
+				            var riState = RawInputState.Instance.GetRawInputState(riDeviceInfo);
 				if (riState == null)
 					continue;
 

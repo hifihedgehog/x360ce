@@ -114,7 +114,7 @@ namespace x360ce.App.Controls
 
             // Initialize device selection handlers
             _devicesTab_DeviceSelectedInfo = new DevicesTab_DeviceSelectedInfo(_unifiedInputDeviceInfo);
-            //_devicesTab_DeviceSelectedInput = new DevicesTab_DeviceSelectedInput(_unifiedInputDeviceInfo);
+            _devicesTab_DeviceSelectedInput = new DevicesTab_DeviceSelectedInput(_unifiedInputDeviceInfo);
 
             // Attach SelectionChanged event handler
             UnifiedInputDeviceInfoDataGrid.SelectionChanged += UnifiedInputDeviceInfoDataGrid_SelectionChanged;
@@ -630,7 +630,7 @@ namespace x360ce.App.Controls
         {
             // Clear previous content
             SelectedDeviceInformationStackPanel.Children.Clear();
-            //SelectedDeviceInputStackPanel.Children.Clear();
+            SelectedDeviceInputStackPanel.Children.Clear();
 
             // Get selected device
             if (UnifiedInputDeviceInfoDataGrid.SelectedItem is UnifiedInputDeviceInfo selectedDevice)

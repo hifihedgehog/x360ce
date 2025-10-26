@@ -22,6 +22,35 @@ namespace x360ce.App.Input.States
 	/// </remarks>
 	internal class RawInputState : IDisposable
 	{
+		#region Singleton Pattern
+
+		private static readonly object _lock = new object();
+		private static RawInputState _instance;
+
+		/// <summary>
+		/// Gets the singleton instance of RawInputState.
+		/// CRITICAL: Only ONE instance can exist to prevent WM_INPUT message routing conflicts.
+		/// </summary>
+		public static RawInputState Instance
+		{
+			get
+			{
+				if (_instance == null)
+				{
+					lock (_lock)
+					{
+						if (_instance == null)
+						{
+							_instance = new RawInputState();
+						}
+					}
+				}
+				return _instance;
+			}
+		}
+
+		#endregion
+
 		#region Windows Raw Input API
 	
 		[DllImport("user32.dll", SetLastError = true)]

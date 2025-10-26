@@ -16,12 +16,15 @@ namespace x360ce.App.Input.Triggers
     internal class DevicesTab_DeviceSelectedInput
     {
         private readonly UnifiedInputDeviceManager _unifiedInputDeviceInfoInternal;
+        private readonly DirectInputState _statesDirectInput = new DirectInputState();
+        private readonly XInputState _statesXInput = new XInputState();
+        private readonly GamingInputState _statesGamingInput = new GamingInputState();
 
         /// <summary>
         /// Initializes a new instance with reference to the unified device collection.
         /// </summary>
         /// <param name="unifiedDeviceInfo">The unified device collection containing all device lists</param>
-		public DevicesTab_DeviceSelectedInput(UnifiedInputDeviceManager unifiedInputDevice)
+  public DevicesTab_DeviceSelectedInput(UnifiedInputDeviceManager unifiedInputDevice)
         {
             _unifiedInputDeviceInfoInternal = unifiedInputDevice ?? throw new ArgumentNullException(nameof(unifiedInputDevice));
         }
@@ -44,11 +47,6 @@ namespace x360ce.App.Input.Triggers
             // Create layout
             return CreateInputLayout(deviceStateAsList);
         }
-
-        private readonly RawInputState _statesRawInput = new RawInputState();
-        private readonly DirectInputState _statesDirectInput = new DirectInputState();
-        private readonly XInputState _statesXInput = new XInputState();
-        private readonly GamingInputState _statesGamingInput = new GamingInputState();
 
 
         /// <summary>
@@ -74,8 +72,8 @@ namespace x360ce.App.Input.Triggers
                 case "RawInput":
                     RawInputDeviceInfo riInfo = _unifiedInputDeviceInfoInternal.RawInputDeviceInfoList?
                         .FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
-                    // Get the latest RawInput device state (non-blocking)
-                    var riState = _statesRawInput.GetRawInputState(riInfo);
+                    // Get the latest RawInput device state (non-blocking) using singleton
+                    var riState = RawInputState.Instance.GetRawInputState(riInfo);
                     // Convert RawInput state to ListTypeState format (non-blocking)
                     listState = RawInputStateToList.ConvertRawInputStateToList(riState, riInfo);
                     break;
@@ -156,7 +154,7 @@ namespace x360ce.App.Input.Triggers
                     // UniformGrid
                     var uniformGrid = new UniformGrid();
 
-                    for (int i = 0; i < currentList.Count; i++)
+                    for (int i = 1; i < currentList.Count; i++)
                     {
                         var item = currentList[i];
 
