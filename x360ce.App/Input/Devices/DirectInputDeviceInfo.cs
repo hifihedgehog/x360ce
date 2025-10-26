@@ -228,18 +228,43 @@ namespace x360ce.App.Input.Devices
 		{
 			try
 			{
+				Device device = null;
+				
 				switch (deviceInstance.Type)
 				{
 					case DeviceType.Mouse:
-						return new Mouse(directInput);
+						device = new Mouse(directInput);
+						// Set cooperative level for mouse (non-exclusive, background access)
+						try
+						{
+							device.SetCooperativeLevel(IntPtr.Zero, CooperativeLevel.NonExclusive | CooperativeLevel.Background);
+						}
+						catch (Exception ex)
+						{
+							Debug.WriteLine($"DeviceDirectInput: Warning - Could not set cooperative level for mouse: {ex.Message}");
+						}
+						return device;
+						
 					case DeviceType.Keyboard:
-						return new Keyboard(directInput);
+						device = new Keyboard(directInput);
+						// Set cooperative level for keyboard (non-exclusive, background access)
+						try
+						{
+							device.SetCooperativeLevel(IntPtr.Zero, CooperativeLevel.NonExclusive | CooperativeLevel.Background);
+						}
+						catch (Exception ex)
+						{
+							Debug.WriteLine($"DeviceDirectInput: Warning - Could not set cooperative level for keyboard: {ex.Message}");
+						}
+						return device;
+						
 					case DeviceType.Joystick:
 					case DeviceType.Gamepad:
 					case DeviceType.FirstPerson:
 					case DeviceType.Flight:
 					case DeviceType.Driving:
 						return new Joystick(directInput, deviceInstance.InstanceGuid);
+						
 					default:
 						Debug.WriteLine($"DeviceDirectInput: Unexpected device type {deviceInstance.Type} - {deviceInstance.InstanceName}");
 						return null;

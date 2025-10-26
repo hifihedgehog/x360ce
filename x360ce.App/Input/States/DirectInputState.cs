@@ -1,6 +1,8 @@
 ﻿using SharpDX;
 using SharpDX.DirectInput;
 using System;
+using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using x360ce.App.Input.Devices;
 
 namespace x360ce.App.Input.States
@@ -8,24 +10,61 @@ namespace x360ce.App.Input.States
 	/// <summary>
 	/// Provides methods to retrieve DirectInput device states.
 	/// Handles state reading for Joystick, Keyboard, and Mouse devices.
+	/// For keyboard and mouse, uses GetAsyncKeyState polling (same as RawInput) for reliable button detection.
 	/// </summary>
 	internal class DirectInputState
 	{
+		#region Windows API for Keyboard/Mouse Polling
+		
+		/// <summary>
+		/// Gets the current state of a virtual key (including mouse buttons and keyboard keys).
+		/// Returns non-zero if the key is currently pressed.
+		/// </summary>
+		[DllImport("user32.dll")]
+		private static extern short GetAsyncKeyState(int vKey);
+		
+		// Virtual key codes for mouse buttons
+		private const int VK_LBUTTON = 0x01;  // Left mouse button
+		private const int VK_RBUTTON = 0x02;  // Right mouse button
+		private const int VK_MBUTTON = 0x04;  // Middle mouse button
+		private const int VK_XBUTTON1 = 0x05; // X1 mouse button
+		private const int VK_XBUTTON2 = 0x06; // X2 mouse button
+		
+		#endregion
+		
+		#region State Caching for Keyboard/Mouse
+		
+		// Cache for keyboard and mouse states (keyed by device InterfacePath)
+		private readonly ConcurrentDictionary<string, CachedKeyboardMouseState> _cachedStates = new ConcurrentDictionary<string, CachedKeyboardMouseState>();
+		
+		/// <summary>
+		/// Cached state for keyboard or mouse device.
+		/// Stores the polled state as InputStateAsList for direct use.
+		/// </summary>
+		private class CachedKeyboardMouseState
+		{
+			public InputStateAsList State { get; set; }
+			public DateTime LastUpdate { get; set; }
+		}
+		
+		#endregion
+		
 		/// <summary>
 		/// Returns the current state of a DirectInput device.
-		/// The device must be acquired before reading state.
+		/// For joysticks, returns JoystickState. For keyboard/mouse, returns cached InputStateAsList.
 		/// </summary>
 		/// <param name="diDeviceInfo">DirectInputDeviceInfo containing the device to read</param>
-		/// <returns>Device state object (JoystickState, KeyboardState, or MouseState) or null if failed</returns>
+		/// <returns>Device state object (JoystickState for joysticks, or InputStateAsList for keyboard/mouse) or null if failed</returns>
 		/// <remarks>
 		/// This method reads the current input state from a DirectInput device.
 		/// The returned object type depends on the device type:
 		/// - Joystick/Gamepad: JoystickState (axes, sliders, buttons, POVs)
-		/// - Keyboard: KeyboardState (key states)
-		/// - Mouse: MouseState (position, buttons, wheel)
-		/// 
-		/// The device must be acquired before reading. If acquisition fails,
-		/// this method will attempt to acquire it automatically.
+		/// - Keyboard: InputStateAsList (polled using GetAsyncKeyState for reliability)
+		/// - Mouse: InputStateAsList (polled using GetAsyncKeyState for reliability)
+		///
+		/// IMPORTANT: For keyboard and mouse devices, we bypass DirectInput's GetCurrentState()
+		/// and return InputStateAsList directly from GetAsyncKeyState polling (same as RawInput).
+		/// This ensures button presses are detected correctly.
 		/// </remarks>
 		public object GetDirectInputState(DirectInputDeviceInfo diDeviceInfo)
 		{
@@ -36,29 +75,32 @@ namespace x360ce.App.Input.States
 
 			try
 			{
-				// Attempt to acquire the device if not already acquired
-				try
-				{
-					device.Acquire();
-				}
-				catch (SharpDXException)
-				{
-					// Device may already be acquired or temporarily unavailable
-					// Continue to attempt state reading
-				}
-
-				// Poll the device to update state (required for some devices)
-				device.Poll();
-
 				// Read state based on device type
 				switch (device)
 				{
 					case Joystick joystick:
+						// Joysticks use standard DirectInput polling
+						try
+						{
+							joystick.Acquire();
+						}
+						catch (SharpDXException)
+						{
+							// Device may already be acquired
+						}
+						joystick.Poll();
 						return joystick.GetCurrentState();
+						
 					case Keyboard keyboard:
-						return keyboard.GetCurrentState();
+						// For keyboards, return InputStateAsList directly from polling
+						// This bypasses DirectInput's unreliable GetCurrentState()
+						return GetCurrentKeyboardStateAsListPolled(diDeviceInfo.InterfacePath);
+						
 					case Mouse mouse:
-						return mouse.GetCurrentState();
+						// For mice, return InputStateAsList directly from polling
+						// This bypasses DirectInput's unreliable GetCurrentState()
+						return GetCurrentMouseStateAsListPolled(diDeviceInfo.InterfacePath);
+						
 					default:
 						return null;
 				}
@@ -66,7 +108,6 @@ namespace x360ce.App.Input.States
 			catch (SharpDXException ex)
 			{
 				// Device may be unplugged or access lost
-				// Return null to indicate state unavailable
 				System.Diagnostics.Debug.WriteLine($"DirectInputState: Error reading state for {diDeviceInfo.InstanceName}: {ex.Message}");
 				return null;
 			}
@@ -75,6 +116,79 @@ namespace x360ce.App.Input.States
 				System.Diagnostics.Debug.WriteLine($"DirectInputState: Unexpected error reading state for {diDeviceInfo.InstanceName}: {ex.Message}");
 				return null;
 			}
+		}
+		
+		/// <summary>
+		/// Polls the ACTUAL current keyboard state using GetAsyncKeyState and returns InputStateAsList.
+		/// This ensures we detect key holds reliably, same approach as RawInput.
+		/// </summary>
+		private InputStateAsList GetCurrentKeyboardStateAsListPolled(string interfacePath)
+		{
+			var result = new InputStateAsList();
+			
+			// Initialize all 256 buttons as released (0)
+			for (int i = 0; i < 256; i++)
+			{
+				result.Buttons.Add(0);
+			}
+			
+			// Scan virtual key codes to find pressed keys
+			// Skip 0x00-0x07 (undefined/mouse buttons) and 0xFF (reserved)
+			for (int vKey = 0x08; vKey <= 0xFE; vKey++)
+			{
+				// Skip mouse button virtual keys
+				if (vKey <= VK_XBUTTON2)
+					continue;
+				
+				// Check if key is currently pressed (high bit set)
+				if ((GetAsyncKeyState(vKey) & 0x8000) != 0)
+				{
+					// Set button state to 1 (pressed)
+					if (vKey < 256)
+					{
+						result.Buttons[vKey] = 1;
+					}
+				}
+			}
+			
+			// Cache the state
+			_cachedStates[interfacePath] = new CachedKeyboardMouseState
+			{
+				State = result,
+				LastUpdate = DateTime.Now
+			};
+			
+			return result;
+		}
+		
+		/// <summary>
+		/// Polls the ACTUAL current mouse button state using GetAsyncKeyState and returns InputStateAsList.
+		/// This ensures we detect button holds reliably, same approach as RawInput.
+		/// </summary>
+		private InputStateAsList GetCurrentMouseStateAsListPolled(string interfacePath)
+		{
+			var result = new InputStateAsList();
+			
+			// Add placeholder axes (mouse doesn't have absolute position in DirectInput)
+			result.Axes.Add(32767); // X (centered)
+			result.Axes.Add(32767); // Y (centered)
+			result.Axes.Add(0);     // Z (wheel, neutral)
+			
+			// Poll actual current button state using GetAsyncKeyState
+			result.Buttons.Add((GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0 ? 1 : 0);  // Left button
+			result.Buttons.Add((GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0 ? 1 : 0);  // Right button
+			result.Buttons.Add((GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0 ? 1 : 0);  // Middle button
+			result.Buttons.Add((GetAsyncKeyState(VK_XBUTTON1) & 0x8000) != 0 ? 1 : 0); // X1 button
+			result.Buttons.Add((GetAsyncKeyState(VK_XBUTTON2) & 0x8000) != 0 ? 1 : 0); // X2 button
+			
+			// Cache the state
+			_cachedStates[interfacePath] = new CachedKeyboardMouseState
+			{
+				State = result,
+				LastUpdate = DateTime.Now
+			};
+			
+			return result;
 		}
 	}
 }

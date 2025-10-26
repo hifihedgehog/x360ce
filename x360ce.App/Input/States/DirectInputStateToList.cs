@@ -10,14 +10,23 @@ namespace x360ce.App.Input.States
 	{
 		/// <summary>
 		/// Converts DirectInput device state to ListTypeState format.
-		/// Automatically detects state type (JoystickState, MouseState, or KeyboardState).
+		/// Automatically detects state type (JoystickState, MouseState, KeyboardState, or InputStateAsList).
 		/// </summary>
-		/// <param name="diState">DirectInput state object (JoystickState, MouseState, or KeyboardState)</param>
+		/// <param name="diState">DirectInput state object (JoystickState, MouseState, KeyboardState, or InputStateAsList)</param>
 		/// <returns>ListTypeState with standardized format, or null if state is null or unsupported type</returns>
+		/// <remarks>
+		/// For keyboard and mouse devices, DirectInputState now returns InputStateAsList directly
+		/// (polled using GetAsyncKeyState) instead of KeyboardState/MouseState objects.
+		/// This ensures reliable button detection.
+		/// </remarks>
 		public static InputStateAsList ConvertDirectInputStateToList(object diState)
 		{
 			if (diState == null)
 				return null;
+
+			// If already InputStateAsList (keyboard/mouse polled state), return directly
+			if (diState is InputStateAsList listState)
+				return listState;
 
 			// Detect state type and convert accordingly
 			if (diState is JoystickState joystickState)

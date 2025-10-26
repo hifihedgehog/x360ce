@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using x360ce.App.Input.Devices;
+using x360ce.App.Input.Triggers;
 
 namespace x360ce.App.Input.States
 {
@@ -10,9 +11,21 @@ namespace x360ce.App.Input.States
 	internal class DirectInputButtonPressed
 	{
         private readonly DirectInputState _statesDirectInput = new DirectInputState();
-		
-		// Cache for DirectInput device to AllInputDeviceInfo mapping
-		private Dictionary<string, UnifiedInputDeviceInfo> _deviceMapping;
+
+        // Cache for DirectInput device to AllInputDeviceInfo mapping
+        private Dictionary<string, UnifiedInputDeviceInfo> _deviceMapping;
+
+        // Reference to the device input handler for updating value labels
+        private DevicesTab_DeviceSelectedInput _deviceSelectedInput;
+
+		/// <summary>
+		/// Sets the reference to the device input handler for updating value labels.
+		/// </summary>
+		/// <param name="deviceSelectedInput">The device input handler instance</param>
+		public void SetDeviceSelectedInput(DevicesTab_DeviceSelectedInput deviceSelectedInput)
+		{
+			_deviceSelectedInput = deviceSelectedInput;
+		}
 
 		/// <summary>
 		/// Checks each DirectInput device for button presses and updates the ButtonPressed property
@@ -44,7 +57,7 @@ namespace x360ce.App.Input.States
                 var listState = DirectInputStateToList.ConvertDirectInputStateToList(diState);
 				if (listState == null)
 					continue;
-			
+		
 				// Check if any button is pressed (button list contains value '1')
 				// or if any POV is pressed (value > -1, where -1 is neutral)
 				bool anyButtonPressed = (listState.Buttons != null && listState.Buttons.Contains(1)) ||
@@ -55,14 +68,20 @@ namespace x360ce.App.Input.States
 				{
 					allDevice.ButtonPressed = anyButtonPressed;
 				}
+	
+				// Update value labels if device input handler is set
+				if (_deviceSelectedInput != null)
+				{
+					_deviceSelectedInput.UpdateValueLabels(diDeviceInfo.InterfacePath, listState);
+				}
 			}
 		}
 
-		/// <summary>
-		/// Builds a mapping dictionary from InterfacePath to AllInputDeviceInfo for fast lookups.
-		/// </summary>
-		/// <param name="devicesCombined">The combined devices instance containing device lists</param>
-		private void BuildDeviceMapping(UnifiedInputDeviceManager devicesCombined)
+        /// <summary>
+        /// Builds a mapping dictionary from InterfacePath to AllInputDeviceInfo for fast lookups.
+        /// </summary>
+        /// <param name="devicesCombined">The combined devices instance containing device lists</param>
+        private void BuildDeviceMapping(UnifiedInputDeviceManager devicesCombined)
 		{
 			_deviceMapping = new Dictionary<string, UnifiedInputDeviceInfo>();
 			

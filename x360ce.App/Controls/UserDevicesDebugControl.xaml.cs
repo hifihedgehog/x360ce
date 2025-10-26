@@ -116,6 +116,9 @@ namespace x360ce.App.Controls
             _devicesTab_DeviceSelectedInfo = new DevicesTab_DeviceSelectedInfo(_unifiedInputDeviceInfo);
             _devicesTab_DeviceSelectedInput = new DevicesTab_DeviceSelectedInput(_unifiedInputDeviceInfo);
 
+            // Set the device input handler reference in button pressed checkers
+            _statesIsDiDeviceButtonPressed.SetDeviceSelectedInput(_devicesTab_DeviceSelectedInput);
+
             // Attach SelectionChanged event handler
             UnifiedInputDeviceInfoDataGrid.SelectionChanged += UnifiedInputDeviceInfoDataGrid_SelectionChanged;
 
@@ -635,6 +638,9 @@ namespace x360ce.App.Controls
             // Get selected device
             if (UnifiedInputDeviceInfoDataGrid.SelectedItem is UnifiedInputDeviceInfo selectedDevice)
             {
+                // Set the selected device in the input handler so it knows which device to update
+                _devicesTab_DeviceSelectedInput?.SetSelectedDevice(selectedDevice.InterfacePath);
+
                 // Get device information as XAML elements
                 var deviceInfoElement = _devicesTab_DeviceSelectedInfo?.GetDeviceInformationAsXamlElements(
                     selectedDevice.InputType,
