@@ -17,9 +17,6 @@ namespace x360ce.App.Input.Triggers
     internal class DevicesTab_DeviceSelectedInput
     {
         private readonly UnifiedInputDeviceManager _unifiedInputDeviceInfoInternal;
-        private readonly DirectInputState _statesDirectInput = new DirectInputState();
-        private readonly XInputState _statesXInput = new XInputState();
-        private readonly GamingInputState _statesGamingInput = new GamingInputState();
 
         /// <summary>
         /// Initializes a new instance with reference to the unified device collection.
@@ -31,7 +28,7 @@ namespace x360ce.App.Input.Triggers
         }
 
         /// <summary>
-        /// Gets axe, slider, button, key and pov information from device state as XAML elements for display.
+        /// Gets axe, slider, button, and pov information from device state as XAML elements for display.
         /// Extracts properties from the appropriate device list based on input type.
         /// </summary>
         /// <param name="inputType">The input type (DirectInput, RawInput, etc.)</param>
@@ -62,46 +59,32 @@ namespace x360ce.App.Input.Triggers
 
             switch (inputType)
             {
-                //case "PnPInput":
-                //    PnPInputDeviceInfo pnpInputDeviceInfo = _unifiedInputDeviceInfo.PnPInputDeviceInfoList?
-                //        .FirstOrDefault(d => string.Equals(d.HardwareIds, interfacePath, StringComparison.OrdinalIgnoreCase) ||
-                //                             string.Equals(d.DeviceInstanceId, interfacePath, StringComparison.OrdinalIgnoreCase));
-                //    break;
                 case "RawInput":
-                    RawInputDeviceInfo riInfo = _unifiedInputDeviceInfoInternal.RawInputDeviceInfoList?
+                    RawInputDeviceInfo rawInputDeviceInfo = _unifiedInputDeviceInfoInternal.RawInputDeviceInfoList?
                         .FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
-                    // Get the latest RawInput device state (non-blocking) using singleton
-                    var riState = RawInputState.Instance.GetRawInputState(riInfo);
-                    // Convert RawInput state to ListTypeState format (non-blocking)
-                    listState = RawInputStateToList.ConvertRawInputStateToList(riState, riInfo);
+                    // Get RawInput state.
+                    listState = rawInputDeviceInfo.StateList;
                     break;
 
                 case "DirectInput":
                     DirectInputDeviceInfo directInputDeviceInfo = _unifiedInputDeviceInfoInternal.DirectInputDeviceInfoList?
                         .FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
-                    // Get the latest DirectInput device state (non-blocking)
-                    var diState = _statesDirectInput.GetDirectInputState(directInputDeviceInfo);
-                    // Convert DirectInput state to ListTypeState format (non-blocking)
-                    listState = DirectInputStateToList.ConvertDirectInputStateToList(diState);
+                    // Get DirectInput state.
+                    listState = directInputDeviceInfo.StateList;
                     break;
 
                 case "XInput":
                     XInputDeviceInfo xInputDeviceInfo = _unifiedInputDeviceInfoInternal.XInputDeviceInfoList?
                         .FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
-                    // Get the latest XInput device state (non-blocking)
-                    var xiState = _statesXInput.GetXInputState(xInputDeviceInfo);
-                    // Convert XInput state to ListTypeState format (non-blocking)
-                    if (xiState.HasValue)
-                        listState = XInputStateToList.ConvertXInputStateToList(xiState.Value);
+                    // Get XInput state.
+                    listState = xInputDeviceInfo.StateList;
                     break;
 
                 case "GamingInput":
                     GamingInputDeviceInfo gamingInputDeviceInfo = _unifiedInputDeviceInfoInternal.GamingInputDeviceInfoList?
                         .FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
-                    // Get the latest GamingInput device state (non-blocking)
-                    var giState = _statesGamingInput.GetGamingInputState(gamingInputDeviceInfo);
-                    // Convert GamingInput state to ListTypeState format (non-blocking)
-                    listState = GamingInputStateToList.ConvertGamingInputStateToList(giState);
+                    // Get GamingInput state.
+                    listState = gamingInputDeviceInfo.StateList;
                     break;
             }
 
@@ -118,7 +101,7 @@ namespace x360ce.App.Input.Triggers
         private UIElement CreateInputLayout(UnifiedInputDeviceInfo deviceInfo, InputStateAsList inputStateAsList)
         {
             // Check if device has any inputs
-            if (deviceInfo.AxeCount == 0 && deviceInfo.SliderCount == 0 && deviceInfo.ButtonCount == 0 && deviceInfo.KeyCount == 0 && deviceInfo.PovCount == 0)
+            if (deviceInfo.AxeCount == 0 && deviceInfo.SliderCount == 0 && deviceInfo.ButtonCount == 0 && deviceInfo.PovCount == 0)
                 return null;
 
             var mainStackPanel = new StackPanel();
@@ -127,7 +110,6 @@ namespace x360ce.App.Input.Triggers
             CreateInputGroup(mainStackPanel, "Axes", deviceInfo.AxeCount, inputStateAsList?.Axes);
             CreateInputGroup(mainStackPanel, "Sliders", deviceInfo.SliderCount, inputStateAsList?.Sliders);
             CreateInputGroup(mainStackPanel, "Buttons", deviceInfo.ButtonCount, inputStateAsList?.Buttons);
-            CreateInputGroup(mainStackPanel, "Keys", deviceInfo.KeyCount, inputStateAsList?.Buttons);
             CreateInputGroup(mainStackPanel, "POVs", deviceInfo.PovCount, inputStateAsList?.POVs);
 
             return mainStackPanel;

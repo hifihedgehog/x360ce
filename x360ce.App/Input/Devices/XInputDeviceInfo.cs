@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using x360ce.App.Input.States;
 
 namespace x360ce.App.Input.Devices
 {
@@ -33,13 +34,13 @@ namespace x360ce.App.Input.Devices
 		public int ProductId { get; set; }
 		public string CommonIdentifier { get; set; }
 		public string InputType { get; set; }
-		
-		// Capabilities
-		public int AxeCount { get; set; }
-		public int SliderCount { get; set; }
-		public int ButtonCount { get; set; }
-		public int KeyCount { get; set; }
-		public int PovCount { get; set; }
+        public InputStateAsList StateList { get; set; }
+
+        // Capabilities
+        public int AxeCount { get; set; }
+  public int SliderCount { get; set; }
+  public int ButtonCount { get; set; }
+  public int PovCount { get; set; }
 		public bool HasForceFeedback { get; set; }
 		
 		// Version information
@@ -94,7 +95,6 @@ namespace x360ce.App.Input.Devices
 		private const int XInputAxeCount = 6;
 		private const int XInputSliderCount = 0;
 		private const int XInputButtonCount = 15;
-		private const int XInputKeyCount = 0;
 		private const int XInputPovCount = 0;
 		private const int XInputVersion = 0x0104;
 		private const int GameControlsUsage = 0x05;
@@ -185,7 +185,6 @@ namespace x360ce.App.Input.Devices
 					AxeCount = XInputAxeCount,
 					SliderCount = XInputSliderCount,
 					ButtonCount = XInputButtonCount,
-					KeyCount = XInputKeyCount,
 					PovCount = XInputPovCount,
 					HasForceFeedback = true,
 					DriverVersion = XInputVersion,
@@ -232,7 +231,6 @@ namespace x360ce.App.Input.Devices
 				$"AxeCount: {deviceInfo.AxeCount}, " +
 				$"SliderCount: {deviceInfo.SliderCount}, " +
 				$"ButtonCount: {deviceInfo.ButtonCount}, " +
-				$"KeyCount: {deviceInfo.KeyCount}, " +
 				$"PovCount: {deviceInfo.PovCount}, " +
 				$"HasForceFeedback: {deviceInfo.HasForceFeedback}");
 			

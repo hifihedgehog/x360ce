@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using x360ce.App.Input.States;
 
 namespace x360ce.App.Input.Devices
 {
@@ -21,11 +22,11 @@ namespace x360ce.App.Input.Devices
 		public int Usage { get; set; }
 		public int UsagePage { get; set; }
 		public string InputType { get; set; }
-		public int AxeCount { get; set; }
-		public int SliderCount { get; set; }
-		public int ButtonCount { get; set; }
-		public int KeyCount { get; set; }
-		public int PovCount { get; set; }
+        public InputStateAsList StateList { get; set; }
+        public int AxeCount { get; set; }
+  public int SliderCount { get; set; }
+  public int ButtonCount { get; set; }
+  public int PovCount { get; set; }
 		public bool HasForceFeedback { get; set; }
 		public int DriverVersion { get; set; }
 		public int HardwareRevision { get; set; }
@@ -284,8 +285,7 @@ namespace x360ce.App.Input.Devices
 		{
 			var capabilities = device.Capabilities;
 			deviceInfo.AxeCount = capabilities.AxeCount;
-			deviceInfo.ButtonCount = capabilities.ButtonCount;
-			deviceInfo.KeyCount = 0; // Keyboards report keys as ButtonCount
+			deviceInfo.ButtonCount = capabilities.ButtonCount; // Keyboards report keys as ButtonCount
 			deviceInfo.PovCount = capabilities.PovCount;
 			deviceInfo.HasForceFeedback = capabilities.Flags.HasFlag(DeviceFlags.ForceFeedback);
 			deviceInfo.DriverVersion = capabilities.DriverVersion;
@@ -571,7 +571,6 @@ namespace x360ce.App.Input.Devices
 				$"AxeCount: {deviceInfo.AxeCount}, " +
 				$"SliderCount: {deviceInfo.SliderCount}, " +
 				$"ButtonCount: {deviceInfo.ButtonCount}, " +
-				$"KeyCount: {deviceInfo.KeyCount}, " +
 				$"PovCount: {deviceInfo.PovCount}, " +
 				$"HasForceFeedback: {deviceInfo.HasForceFeedback}");
 		}

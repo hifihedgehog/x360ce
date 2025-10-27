@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using x360ce.App.Input.States;
 
 namespace x360ce.App.Input.Devices
 {
@@ -26,6 +27,9 @@ namespace x360ce.App.Input.Devices
 
         // Cache for DirectInput product names to avoid repeated lookups
         private Dictionary<string, string> _directInputNameCache;
+		
+		// State collection manager for all device types
+		private readonly GetAndSaveStates _stateCollector = GetAndSaveStates.Instance;
 		
 		// Dispatcher for UI thread synchronization
 		private System.Windows.Threading.Dispatcher _dispatcher;
@@ -72,6 +76,9 @@ namespace x360ce.App.Input.Devices
 
    // Update the unified list incrementally instead of clearing
    UpdateUnifiedInputDeviceList();
+   
+   // Collect and save states for all devices after enumeration
+   CollectDeviceStates();
   }
 
   /// <summary>
@@ -177,7 +184,6 @@ namespace x360ce.App.Input.Devices
      existingDevice.AxeCount = device.AxeCount;
      existingDevice.SliderCount = device.SliderCount;
      existingDevice.ButtonCount = device.ButtonCount;
-     existingDevice.KeyCount = device.KeyCount;
      existingDevice.PovCount = device.PovCount;
      existingDevice.ProductName = getProductName(item, commonId);
      existingDevice.InterfacePath = getInterfacePath(item);
@@ -193,12 +199,10 @@ namespace x360ce.App.Input.Devices
       AxeCount = device.AxeCount,
       SliderCount = device.SliderCount,
       ButtonCount = device.ButtonCount,
-      KeyCount = device.KeyCount,
       PovCount = device.PovCount,
       AxePressed = false,
       SliderPressed = false,
       ButtonPressed = false,
-      KeyPressed = false,
       PovPressed = false,
       ProductName = getProductName(item, commonId),
       InterfacePath = getInterfacePath(item)
@@ -309,6 +313,19 @@ namespace x360ce.App.Input.Devices
 			return _directInputNameCache.TryGetValue(key, out var productName)
 				? productName + " • "
 				: string.Empty;
+		}
+
+		/// <summary>
+		/// Collects and saves current states for all enumerated devices.
+		/// This populates the StateList property on each device info object.
+		/// </summary>
+		private void CollectDeviceStates()
+		{
+			// Collect states for all device types
+			_stateCollector.GetAndSaveRawInputStates(RawInputDeviceInfoList);
+			_stateCollector.GetAndSaveDirectInputStates(DirectInputDeviceInfoList);
+			_stateCollector.GetAndSaveXInputStates(XInputDeviceInfoList);
+			_stateCollector.GetAndSaveGamingInputStates(GamingInputDeviceInfoList);
 		}
 
 	}

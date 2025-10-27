@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using JocysCom.ClassLibrary.IO;
+using System.Collections.Generic;
 using x360ce.App.Input.Devices;
+using x360ce.App.Input.Triggers;
 
 namespace x360ce.App.Input.States
 {
@@ -8,10 +10,22 @@ namespace x360ce.App.Input.States
 	/// </summary>
 	internal class XInputButtonPressed
 	{
-        private readonly XInputState _statesXInput = new XInputState();
+	       private readonly XInputState _statesXInput = new XInputState();
 
 		// Cache for XInput device to AllInputDeviceInfo mapping
 		private Dictionary<string, UnifiedInputDeviceInfo> _deviceMapping;
+
+		// Reference to the device input handler for updating value labels
+		private DevicesTab_DeviceSelectedInput _deviceSelectedInput;
+
+		/// <summary>
+		/// Sets the reference to the device input handler for updating value labels.
+		/// </summary>
+		/// <param name="deviceSelectedInput">The device input handler instance</param>
+		public void SetDeviceSelectedInput(DevicesTab_DeviceSelectedInput deviceSelectedInput)
+		{
+			_deviceSelectedInput = deviceSelectedInput;
+		}
 
 		/// <summary>
 		/// Checks each XInput device for button presses and updates the ButtonPressed property
@@ -33,23 +47,24 @@ namespace x360ce.App.Input.States
 				if (xiDeviceInfo == null)
 					continue;
 
-                // Get the latest XInput device state (non-blocking)
-                var xiState = _statesXInput.GetXInputState(xiDeviceInfo);
-				if (xiState == null)
-					continue;
+			             // Get device state from StateList property.
+			             var listState = xiDeviceInfo.StateList;
+			             if (listState == null)
+			                 continue;
 
-                // Convert XInput state to ListTypeState format (non-blocking)
-                var listState = XInputStateToList.ConvertXInputStateToList(xiState.Value);
-				if (listState == null)
-					continue;
-
-				// Determine if any button is pressed by checking if Buttons list contains value 1
-				bool anyButtonPressed = IsAnyButtonPressed(listState);
+			             // Determine if any button is pressed by checking if Buttons list contains value 1
+			             bool anyButtonPressed = IsAnyButtonPressed(listState);
 	
 				// Use cached mapping for faster lookup using CommonIdentifier
 				if (_deviceMapping.TryGetValue(xiDeviceInfo.CommonIdentifier, out var allDevice))
 				{
 					allDevice.ButtonPressed = anyButtonPressed;
+				}
+
+				// Update value labels if device input handler is set
+				if (_deviceSelectedInput != null)
+				{
+					_deviceSelectedInput.UpdateValueLabels(xiDeviceInfo.InterfacePath, listState);
 				}
 			}
 		}

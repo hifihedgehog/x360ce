@@ -168,14 +168,6 @@
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
-                                <DataGridTextColumn x:Name="KeyColumn" Header="K" Binding="{Binding KeyCount}" Width="Auto">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="TextAlignment" Value="Center"/>
-                                            <Setter Property="Padding" Value="1"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
                                 <DataGridTextColumn x:Name="PovColumn" Header="P" Binding="{Binding PovCount}" Width="Auto">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">

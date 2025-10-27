@@ -47,20 +47,14 @@ namespace x360ce.App.Input.States
 				if (diDeviceInfo?.DirectInputDevice == null)
 					continue;
 
+                // Get device state from StateList property.
+                var listState = diDeviceInfo.StateList;
+                if (listState == null)
+                    continue;
 
-                // Get the latest DirectInput device state (non-blocking)
-                var diState = _statesDirectInput.GetDirectInputState(diDeviceInfo);
-				if (diState == null)
-					continue;
-
-                // Convert DirectInput state to ListTypeState format (non-blocking)
-                var listState = DirectInputStateToList.ConvertDirectInputStateToList(diState);
-				if (listState == null)
-					continue;
-		
-				// Check if any button is pressed (button list contains value '1')
-				// or if any POV is pressed (value > -1, where -1 is neutral)
-				bool anyButtonPressed = (listState.Buttons != null && listState.Buttons.Contains(1)) ||
+                // Check if any button is pressed (button list contains value '1')
+                // or if any POV is pressed (value > -1, where -1 is neutral)
+                bool anyButtonPressed = (listState.Buttons != null && listState.Buttons.Contains(1)) ||
 					(listState.POVs != null && listState.POVs.Exists(pov => pov > -1));
 			
 				// Use cached mapping for faster lookup

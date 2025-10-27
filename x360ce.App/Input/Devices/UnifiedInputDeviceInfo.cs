@@ -14,7 +14,6 @@ namespace x360ce.App.Input.Devices
 		public int AxeCount { get; set; }
 		public int SliderCount { get; set; }
 		public int ButtonCount { get; set; }
-		public int KeyCount { get; set; }
 		public int PovCount { get; set; }
 		public string ProductName { get; set; }
 		public string InterfacePath { get; set; }
@@ -22,7 +21,6 @@ namespace x360ce.App.Input.Devices
 		private bool _axePressed;
 		private bool _sliderPressed;
 		private bool _buttonPressed;
-		private bool _keyPressed;
 		private bool _povPressed;
 
 		/// <summary>
@@ -58,7 +56,7 @@ namespace x360ce.App.Input.Devices
 		}
 
 		/// <summary>
-		/// Gets or sets whether any button is currently pressed.
+		/// Gets or sets whether any button or key is currently pressed.
 		/// </summary>
 		public bool ButtonPressed
 		{
@@ -68,22 +66,6 @@ namespace x360ce.App.Input.Devices
 				if (_buttonPressed != value)
 				{
 					_buttonPressed = value;
-					OnPropertyChanged();
-				}
-			}
-		}
-
-		/// <summary>
-		/// Gets or sets whether any key is currently pressed.
-		/// </summary>
-		public bool KeyPressed
-		{
-			get => _keyPressed;
-			set
-			{
-				if (_keyPressed != value)
-				{
-					_keyPressed = value;
 					OnPropertyChanged();
 				}
 			}

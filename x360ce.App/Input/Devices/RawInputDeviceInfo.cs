@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using x360ce.App.Input.States;
 
 namespace x360ce.App.Input.Devices
 {
@@ -32,10 +33,10 @@ namespace x360ce.App.Input.Devices
         public int Usage { get; set; }
         public int UsagePage { get; set; }
         public string InputType { get; set; }
+        public InputStateAsList StateList { get; set; }
         public int AxeCount { get; set; }
         public int SliderCount { get; set; }
         public int ButtonCount { get; set; }
-        public int KeyCount { get; set; }
         public int PovCount { get; set; }
         
         // Simulation Controls (Usage Page 0x02)
@@ -1452,8 +1453,7 @@ namespace x360ce.App.Input.Devices
 
                 case RIM_TYPEKEYBOARD:
                     var keyboard = ridDeviceInfo.union.keyboard;
-                    deviceInfo.KeyCount = (int)keyboard.dwNumberOfKeysTotal;
-                    deviceInfo.ButtonCount = 0; // Keyboards have keys, not buttons
+                    deviceInfo.ButtonCount = (int)keyboard.dwNumberOfKeysTotal; // Keyboards report keys as buttons
                     deviceInfo.ProductName = "Keyboard";
                     deviceInfo.DeviceSubtype = (int)keyboard.dwSubType;
                     break;
@@ -1480,7 +1480,6 @@ namespace x360ce.App.Input.Devices
                     deviceInfo.AxeCount = 0;
                     deviceInfo.SliderCount = 0;
                     deviceInfo.ButtonCount = 0;
-                    deviceInfo.KeyCount = 0; // HID gamepads have no keys
                     deviceInfo.PovCount = 0;
                     deviceInfo.HasForceFeedback = false;
                     break;
@@ -2196,7 +2195,7 @@ namespace x360ce.App.Input.Devices
                     sb.Append($"  Capabilities: ");
                     if (deviceInfo.RawInputDeviceType == RawInputDeviceType.Keyboard)
                     {
-                        sb.Append($"Keys: {deviceInfo.KeyCount}, Buttons: {deviceInfo.ButtonCount}");
+                        sb.Append($"Buttons (Keys): {deviceInfo.ButtonCount}");
                     }
                     else // Mouse
                     {

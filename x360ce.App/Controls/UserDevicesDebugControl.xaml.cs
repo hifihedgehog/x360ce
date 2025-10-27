@@ -21,7 +21,7 @@ namespace x360ce.App.Controls
     {
         private CollectionViewSource _viewSource;
         private string _highlightedText = string.Empty;
-        private static readonly string[] ExcludedSearchProperties = { "AxeCount", "SliderCount", "ButtonCount", "KeyCount", "PovCount" };
+        private static readonly string[] ExcludedSearchProperties = { "AxeCount", "SliderCount", "ButtonCount", "PovCount" };
         private static readonly Brush HighlightBackground = Brushes.Yellow;
         private static readonly Brush HighlightForeground = Brushes.Black;
 
@@ -39,7 +39,7 @@ namespace x360ce.App.Controls
 
         // Timer for checking DirectInput button states
         private DispatcherTimer _buttonCheckTimer;
-        private const int ButtonCheckIntervalMs = 1000; // Run every second
+        private const int ButtonCheckIntervalMs = 100; // Run 10 times per second
 
         public UserDevicesDebugControl()
         {
@@ -106,6 +106,10 @@ namespace x360ce.App.Controls
             // Create input devices lists: PnPInput, RawInput, DirectInput, XInput, GamingInput
             _unifiedInputDeviceInfo.GetUnifiedInputDeviceList();
 
+            // Start continuous state collection at 10Hz
+            // This populates StateList properties for all devices
+            GetAndSaveStates.Instance.StartStateCollection(_unifiedInputDeviceInfo);
+
             // Set up CollectionViewSource for filtering
             _viewSource = new CollectionViewSource { Source = _unifiedInputDeviceInfo.UnifiedInputDeviceInfoList };
             _viewSource.Filter += ViewSource_Filter;
@@ -116,8 +120,11 @@ namespace x360ce.App.Controls
             _devicesTab_DeviceSelectedInfo = new DevicesTab_DeviceSelectedInfo(_unifiedInputDeviceInfo);
             _devicesTab_DeviceSelectedInput = new DevicesTab_DeviceSelectedInput(_unifiedInputDeviceInfo);
 
-            // Set the device input handler reference in button pressed checkers
+            // Set the device input handler reference in button pressed checkers for all input methods
             _statesIsDiDeviceButtonPressed.SetDeviceSelectedInput(_devicesTab_DeviceSelectedInput);
+            _statesIsXiDeviceButtonPressed.SetDeviceSelectedInput(_devicesTab_DeviceSelectedInput);
+            _statesIsGiDeviceButtonPressed.SetDeviceSelectedInput(_devicesTab_DeviceSelectedInput);
+            _statesIsRiDeviceButtonPressed.SetDeviceSelectedInput(_devicesTab_DeviceSelectedInput);
 
             // Attach SelectionChanged event handler
             UnifiedInputDeviceInfoDataGrid.SelectionChanged += UnifiedInputDeviceInfoDataGrid_SelectionChanged;
@@ -249,9 +256,9 @@ namespace x360ce.App.Controls
 
         private void StatesAllInputAnyButtonIsPressed()
         {
-            // Check all input methods for button states - each will only update its own device type
-            // Using logical OR in each checker preserves button states across methods
-            // NOTE: Device monitoring is handled separately by connection triggers, not here
+            // Check all input methods for button states by reading from StateList property
+            // StateList is continuously updated by GetAndSaveStates at 10Hz
+            // This method only reads the cached states, it does not trigger state collection
             _statesIsDiDeviceButtonPressed.IsDirectInputButtonPressed(_unifiedInputDeviceInfo);
             _statesIsXiDeviceButtonPressed.IsXInputButtonPressed(_unifiedInputDeviceInfo);
             _statesIsGiDeviceButtonPressed.IsGamingInputButtonPressed(_unifiedInputDeviceInfo);
@@ -606,6 +613,9 @@ namespace x360ce.App.Controls
         {
             // Stop button check timer
             _buttonCheckTimer?.Stop();
+
+            // Stop continuous state collection
+            GetAndSaveStates.Instance.StopStateCollection();
 
             // Stop device connection monitoring
             StopDeviceConnectionMonitoring();

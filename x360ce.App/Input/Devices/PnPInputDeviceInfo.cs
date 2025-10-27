@@ -26,7 +26,6 @@ namespace x360ce.App.Input.Devices
         public int AxeCount { get; set; }
         public int SliderCount { get; set; }
         public int ButtonCount { get; set; }
-        public int KeyCount { get; set; }
         public int PovCount { get; set; }
         public bool HasForceFeedback { get; set; }
         public int DriverVersion { get; set; }
@@ -1211,8 +1210,7 @@ namespace x360ce.App.Input.Devices
             // Set all capability counts to 0 to indicate "unknown/not available"
             deviceInfo.AxeCount = 0;        // Unknown - PnP doesn't provide axis count
             deviceInfo.SliderCount = 0;     // Unknown - PnP doesn't provide slider count
-            deviceInfo.ButtonCount = 0;     // Unknown - PnP doesn't provide button count
-            deviceInfo.KeyCount = 0;        // Unknown - PnP doesn't provide key count
+            deviceInfo.ButtonCount = 0;     // Unknown - PnP doesn't provide button/key count
             deviceInfo.PovCount = 0;        // Unknown - PnP doesn't provide POV count
             deviceInfo.HasForceFeedback = false; // Unknown - PnP doesn't provide force feedback info
 
@@ -1588,7 +1586,7 @@ namespace x360ce.App.Input.Devices
                 FormatProperty("PhysicalDeviceObjectName", deviceInfo.PhysicalDeviceObjectName).TrimEnd(',', ' '));
             
             debugLines.Add($"{indentation}{deviceTypePrefix} Note: " +
-                $"Windows PnP does not provide capability information (AxeCount, SliderCount, ButtonCount, KeyCount, PovCount, HasForceFeedback, Usage, UsagePage) - use DirectInput for device capabilities");
+                $"Windows PnP does not provide capability information (AxeCount, SliderCount, ButtonCount, PovCount, HasForceFeedback, Usage, UsagePage) - use DirectInput for device capabilities");
         }
 
         /// <summary>

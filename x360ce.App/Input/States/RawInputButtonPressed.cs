@@ -1,7 +1,9 @@
-﻿using System;
+﻿using JocysCom.ClassLibrary.IO;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using x360ce.App.Input.Devices;
+using x360ce.App.Input.Triggers;
 
 namespace x360ce.App.Input.States
 {
@@ -23,6 +25,18 @@ namespace x360ce.App.Input.States
 		private Dictionary<string, UnifiedInputDeviceInfo> _deviceMapping;
 		private int _lastDeviceCount;
 		private DateTime _lastDebugOutput = DateTime.MinValue;
+
+		// Reference to the device input handler for updating value labels
+		private DevicesTab_DeviceSelectedInput _deviceSelectedInput;
+
+		/// <summary>
+		/// Sets the reference to the device input handler for updating value labels.
+		/// </summary>
+		/// <param name="deviceSelectedInput">The device input handler instance</param>
+		public void SetDeviceSelectedInput(DevicesTab_DeviceSelectedInput deviceSelectedInput)
+		{
+			_deviceSelectedInput = deviceSelectedInput;
+		}
 
 		/// <summary>
 		/// Checks each RawInput device for button presses using cached WM_INPUT message data.
@@ -62,29 +76,30 @@ namespace x360ce.App.Input.States
 				// Fast lookup - single dictionary access
 				if (!_deviceMapping.TryGetValue(riDeviceInfo.InterfacePath, out var allDevice))
 					continue;
-		
-				// Get the latest RawInput device state (non-blocking) using singleton
-				            var riState = RawInputState.Instance.GetRawInputState(riDeviceInfo);
-				if (riState == null)
-					continue;
 
-                // Convert RawInput state to ListTypeState format (non-blocking)
-                var listState = RawInputStateToList.ConvertRawInputStateToList(riState, riDeviceInfo);
+                // Get device state from StateList property.
+                var listState = riDeviceInfo.StateList;
                 if (listState == null)
                     continue;
 
                 // Always update ButtonPressed value, even if listState is null
                 // If listState is null, no buttons/POVs are pressed
                 bool buttonPressed = false;
-				if (listState != null)
-				{
-					// Check if any button is pressed by looking for value '1' in button list
-					// or if any POV is pressed (value > -1, where -1 is neutral)
-					buttonPressed = (listState.Buttons != null && listState.Buttons.Contains(1)) ||
-						(listState.POVs != null && listState.POVs.Exists(pov => pov > -1));
-				}
-				
-				allDevice.ButtonPressed = buttonPressed;
+    if (listState != null)
+    {
+     // Check if any button is pressed by looking for value '1' in button list
+     // or if any POV is pressed (value > -1, where -1 is neutral)
+     buttonPressed = (listState.Buttons != null && listState.Buttons.Contains(1)) ||
+      (listState.POVs != null && listState.POVs.Exists(pov => pov > -1));
+    }
+    
+    allDevice.ButtonPressed = buttonPressed;
+
+    // Update value labels if device input handler is set
+    if (_deviceSelectedInput != null && listState != null)
+    {
+     _deviceSelectedInput.UpdateValueLabels(riDeviceInfo.InterfacePath, listState);
+    }
 	
 				// Debug output for gamepads only (exclude keyboard and mouse)
 				if (shouldDebug && IsGamepad(riDeviceInfo))
