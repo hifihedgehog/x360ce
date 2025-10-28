@@ -66,10 +66,7 @@ namespace x360ce.App.Controls
         // Input device management and state checking components
         private readonly UnifiedInputDeviceManager _unifiedInputDeviceInfo = new UnifiedInputDeviceManager();
         private readonly UnifiedInputDeviceConnection _unifiedInputDeviceConnection = new UnifiedInputDeviceConnection();
-        private readonly DirectInputButtonPressed _statesIsDiDeviceButtonPressed = new DirectInputButtonPressed();
-        private readonly XInputButtonPressed _statesIsXiDeviceButtonPressed = new XInputButtonPressed();
-        private readonly GamingInputButtonPressed _statesIsGiDeviceButtonPressed = new GamingInputButtonPressed();
-        private readonly RawInputButtonPressed _statesIsRiDeviceButtonPressed = new RawInputButtonPressed();
+        private readonly UnifiedButtonPressed _unifiedButtonPressed = new UnifiedButtonPressed();
 
         // Device selection handlers
         private DevicesTab_DeviceSelectedInfo _devicesTab_DeviceSelectedInfo;
@@ -90,10 +87,7 @@ namespace x360ce.App.Controls
 
             // Clear caches when data source changes
             InvalidateVisualCache();
-            _statesIsDiDeviceButtonPressed.InvalidateCache();
-            _statesIsXiDeviceButtonPressed.InvalidateCache();
-            _statesIsGiDeviceButtonPressed.InvalidateCache();
-            _statesIsRiDeviceButtonPressed.InvalidateCache();
+            _unifiedButtonPressed.InvalidateCache();
 
             _viewSource.View.Refresh();
         }
@@ -120,11 +114,8 @@ namespace x360ce.App.Controls
             _devicesTab_DeviceSelectedInfo = new DevicesTab_DeviceSelectedInfo(_unifiedInputDeviceInfo);
             _devicesTab_DeviceSelectedInput = new DevicesTab_DeviceSelectedInput(_unifiedInputDeviceInfo);
 
-            // Set the device input handler reference in button pressed checkers for all input methods
-            _statesIsDiDeviceButtonPressed.SetDeviceSelectedInput(_devicesTab_DeviceSelectedInput);
-            _statesIsXiDeviceButtonPressed.SetDeviceSelectedInput(_devicesTab_DeviceSelectedInput);
-            _statesIsGiDeviceButtonPressed.SetDeviceSelectedInput(_devicesTab_DeviceSelectedInput);
-            _statesIsRiDeviceButtonPressed.SetDeviceSelectedInput(_devicesTab_DeviceSelectedInput);
+            // Set the device input handler reference in unified button pressed checker
+            _unifiedButtonPressed.SetDeviceSelectedInput(_devicesTab_DeviceSelectedInput);
 
             // Attach SelectionChanged event handler
             UnifiedInputDeviceInfoDataGrid.SelectionChanged += UnifiedInputDeviceInfoDataGrid_SelectionChanged;
@@ -230,10 +221,7 @@ namespace x360ce.App.Controls
         {
             // Invalidate caches when device list changes
             InvalidateVisualCache();
-            _statesIsDiDeviceButtonPressed.InvalidateCache();
-            _statesIsXiDeviceButtonPressed.InvalidateCache();
-            _statesIsGiDeviceButtonPressed.InvalidateCache();
-            _statesIsRiDeviceButtonPressed.InvalidateCache();
+            _unifiedButtonPressed.InvalidateCache();
 
             // Refresh the view to reflect changes
             _viewSource?.View?.Refresh();
@@ -259,10 +247,7 @@ namespace x360ce.App.Controls
             // Check all input methods for button states by reading from StateList property
             // StateList is continuously updated by GetAndSaveStates at 10Hz
             // This method only reads the cached states, it does not trigger state collection
-            _statesIsDiDeviceButtonPressed.IsDirectInputButtonPressed(_unifiedInputDeviceInfo);
-            _statesIsXiDeviceButtonPressed.IsXInputButtonPressed(_unifiedInputDeviceInfo);
-            _statesIsGiDeviceButtonPressed.IsGamingInputButtonPressed(_unifiedInputDeviceInfo);
-            _statesIsRiDeviceButtonPressed.IsRawInputButtonPressed(_unifiedInputDeviceInfo);
+            _unifiedButtonPressed.CheckAllInputMethods(_unifiedInputDeviceInfo);
         }
 
 
@@ -275,12 +260,9 @@ namespace x360ce.App.Controls
             {
                 if (IsVisible)
                 {
-                    // Invalidate all input method caches when control becomes visible again
+                    // Invalidate unified button pressed cache when control becomes visible again
                     // This ensures device mappings are rebuilt if devices changed while hidden
-                    _statesIsDiDeviceButtonPressed.InvalidateCache();
-                    _statesIsXiDeviceButtonPressed.InvalidateCache();
-                    _statesIsGiDeviceButtonPressed.InvalidateCache();
-                    _statesIsRiDeviceButtonPressed.InvalidateCache();
+                    _unifiedButtonPressed.InvalidateCache();
                     _buttonCheckTimer.Start();
                 }
                 else
