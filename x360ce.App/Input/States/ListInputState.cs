@@ -2,21 +2,21 @@ using System.Collections.Generic;
 
 namespace x360ce.App.Input.States
 {
-	/// <summary>
-	/// Standardized state representation for all input methods.
-	/// Provides a unified format: ((axes), (sliders), (buttons), (povs))
-	/// </summary>
-	/// <remarks>
-	/// Format Specification:
-	/// • Axes: List of axis values (0-65535 range), empty list if no axes
-	/// • Sliders: List of slider values (0-65535 range), empty list if no sliders
-	/// • Buttons: List of button states (0=released, 1=pressed), empty list if no buttons
-	/// • POVs: List of POV/D-Pad values (-1=neutral, 0-27000 in centidegrees), empty list if no POVs
-	///
-	/// Example: ((0,0,0,1,0,0,0,0,0,0),(),(32100,3566,0,0,31540),(-1,0))
-	/// Note: Empty collections are represented as empty lists (), not null
-	/// </remarks>
-	public class InputStateAsList
+    /// <summary>
+    /// Standardized state representation for all input methods (RawInput, DirectInput, XInput, GamingInput).
+    /// Provides a unified format: ((axes), (sliders), (buttons), (povs)).
+    /// </summary>
+    /// <remarks>
+    /// Format Specification:
+    /// • Axes: List of axis values (0-65535 range), empty list if no axes.
+    /// • Sliders: List of slider values (0-65535 range), empty list if no sliders.
+    /// • Buttons: List of button states (0=released, 1=pressed), empty list if no buttons.
+    /// • POVs: List of POV/D-Pad values (-1=neutral, 0-27000 = direction in centidegrees, 0 = North, 9000 = East, 18000 = South, 27000 = West), empty list if no POVs.
+    ///
+    /// Example: ((0,0,0,1,0,0,0,0,0,0),(),(32100,3566,0,0,31540),(-1,0))
+    /// Note: Empty collections are represented as empty lists (), not null
+    /// </remarks>
+    public class ListInputState
 	{
 		/// <summary>
 		/// Axis values in 0-65535 range.
@@ -47,7 +47,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Initializes a new ListTypeState with empty collections.
 		/// </summary>
-		public InputStateAsList()
+		public ListInputState()
 		{
 			Axes = new List<int>();
 			Sliders = new List<int>();

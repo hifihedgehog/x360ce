@@ -22,7 +22,7 @@ namespace x360ce.App.Input.Devices
 		public int Usage { get; set; }
 		public int UsagePage { get; set; }
 		public string InputType { get; set; }
-        public InputStateAsList StateList { get; set; }
+        public ListInputState ListInputState { get; set; }
         public int AxeCount { get; set; }
   public int SliderCount { get; set; }
   public int ButtonCount { get; set; }
@@ -37,33 +37,17 @@ namespace x360ce.App.Input.Devices
 		
 		// Common identifier for grouping devices from same physical hardware
 		public string CommonIdentifier { get; set; }
-		
-		/// <summary>
-		/// Mouse X-axis sensitivity multiplier for DirectInput mouse devices.
-		/// Determines how much StateList X value changes when DirectInput mouse X axis value changes by 1.
-		/// Default value is 10 (DirectInput change of 1 results in StateList change of 10).
-		/// Higher values increase horizontal movement sensitivity.
-		/// </summary>
-		public int MouseXAxisSensitivity { get; set; } = 20;
-		
-		/// <summary>
-		/// Mouse Y-axis sensitivity multiplier for DirectInput mouse devices.
-		/// Determines how much StateList Y value changes when DirectInput mouse Y axis value changes by 1.
-		/// Default value is 10 (DirectInput change of 1 results in StateList change of 10).
-		/// Higher values increase vertical movement sensitivity.
-		/// </summary>
+	
+		public int MouseXAxisSensitivity { get; set; } = 20;	
 		public int MouseYAxisSensitivity { get; set; } = 20;
-		
-		/// <summary>
-		/// Mouse Z-axis (wheel) sensitivity multiplier for DirectInput mouse devices.
-		/// Determines how much StateList Z value changes when DirectInput mouse wheel value changes by 1.
-		/// Default value is 20 (DirectInput change of 1 results in StateList change of 20).
-		/// Higher values increase wheel scroll sensitivity.
-		/// </summary>
 		public int MouseZAxisSensitivity { get; set; } = 50;
 
-		// Additional identification properties
-		public int VendorId { get; set; }
+        public int MouseXAxisAccumulated { get; set; } = 32767;
+        public int MouseYAxisAccumulated { get; set; } = 32767;
+        public int MouseZAxisAccumulated { get; set; } = 0;
+
+        // Additional identification properties
+        public int VendorId { get; set; }
 		public int ProductId { get; set; }
 		public Guid ClassGuid { get; set; }
 		public string HardwareIds { get; set; }

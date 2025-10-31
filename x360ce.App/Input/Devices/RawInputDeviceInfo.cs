@@ -33,7 +33,7 @@ namespace x360ce.App.Input.Devices
         public int Usage { get; set; }
         public int UsagePage { get; set; }
         public string InputType { get; set; }
-        public InputStateAsList StateList { get; set; }
+        public ListInputState ListInputState { get; set; }
         public int AxeCount { get; set; }
         public int SliderCount { get; set; }
         public int ButtonCount { get; set; }
@@ -61,7 +61,15 @@ namespace x360ce.App.Input.Devices
         
         // Common identifier for grouping devices from same physical hardware
         public string CommonIdentifier { get; set; }
-        
+
+        public int MouseXAxisSensitivity { get; set; } = 20;
+        public int MouseYAxisSensitivity { get; set; } = 20;
+        public int MouseZAxisSensitivity { get; set; } = 50;
+
+        public int MouseXAxisAccumulated { get; set; } = 32767;
+        public int MouseYAxisAccumulated { get; set; } = 32767;
+        public int MouseZAxisAccumulated { get; set; } = 0;
+
         // Additional identification properties
         public int VendorId { get; set; }
         public int ProductId { get; set; }

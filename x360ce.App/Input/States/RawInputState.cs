@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using x360ce.App.Input.Devices;
 
@@ -207,8 +208,16 @@ namespace x360ce.App.Input.States
 		private readonly ConcurrentDictionary<IntPtr, string> _handleToPath = new ConcurrentDictionary<IntPtr, string>();
 		private readonly ConcurrentDictionary<IntPtr, byte> _mouseButtonStates = new ConcurrentDictionary<IntPtr, byte>();
 		private readonly ConcurrentDictionary<IntPtr, byte[]> _keyboardKeyStates = new ConcurrentDictionary<IntPtr, byte[]>();
+		
+		// Per-device mouse axis accumulation to prevent conflicts between multiple mouse devices
+		private readonly ConcurrentDictionary<IntPtr, int> _mouseAccumulatedX = new ConcurrentDictionary<IntPtr, int>();
+		private readonly ConcurrentDictionary<IntPtr, int> _mouseAccumulatedY = new ConcurrentDictionary<IntPtr, int>();
+		private readonly ConcurrentDictionary<IntPtr, int> _mouseAccumulatedZ = new ConcurrentDictionary<IntPtr, int>();
 		private bool _isInitialized;
 		private bool _disposed;
+		
+		// Device list for immediate state conversion
+		private System.Collections.Generic.List<Devices.RawInputDeviceInfo> _deviceInfoList;
 		
 		// Cached struct sizes to avoid repeated Marshal.SizeOf calls
 		private static readonly int s_rawinputDeviceSize = Marshal.SizeOf(typeof(RAWINPUTDEVICE));
@@ -286,6 +295,9 @@ namespace x360ce.App.Input.States
 			uint sizeResult = GetRawInputData(lParam, RID_INPUT, IntPtr.Zero, ref dwSize, headerSize);
 			if (sizeResult == uint.MaxValue || dwSize == 0)
 				return;
+			
+			// Debug: Log ALL WM_INPUT messages to see what's arriving
+			// System.Diagnostics.Debug.WriteLine($"RawInputState: WM_INPUT message received, size: {dwSize}");
 	
 			IntPtr buffer = Marshal.AllocHGlobal((int)dwSize);
 			try
@@ -296,6 +308,12 @@ namespace x360ce.App.Input.States
 					return;
 	
 				var rawInput = Marshal.PtrToStructure<RAWINPUT>(buffer);
+				
+				// Debug: Log device type
+				string deviceTypeName = rawInput.header.dwType == RIM_TYPEHID ? "HID" :
+				                       rawInput.header.dwType == RIM_TYPEMOUSE ? "Mouse" :
+				                       rawInput.header.dwType == RIM_TYPEKEYBOARD ? "Keyboard" : "Unknown";
+				//System.Diagnostics.Debug.WriteLine($"RawInputState: Processing {deviceTypeName} input, Handle: 0x{rawInput.header.hDevice.ToInt64():X8}");
 				
 				// Process based on device type
 				if (rawInput.header.dwType == RIM_TYPEHID)
@@ -319,7 +337,6 @@ namespace x360ce.App.Input.States
 
 		/// <summary>
 		/// Processes HID device input (gamepads, joysticks).
-		/// CRITICAL FIX: Always caches report to ensure button release detection works correctly.
 		/// </summary>
 		private void ProcessHidInput(IntPtr buffer, uint dwSize, RAWINPUT rawInput)
 		{
@@ -329,14 +346,14 @@ namespace x360ce.App.Input.States
 			int hidReportSize = (int)rawInput.hid.dwSizeHid;
 			int hidCount = Math.Max(1, (int)rawInput.hid.dwCount);
 			int bytesToCopy = Math.Min(totalAvailable, hidReportSize * hidCount);
-
+	
 			if (bytesToCopy <= 0)
 				return;
-
+	
 			// Copy HID report data (handles multiple reports if dwCount > 1)
 			byte[] report = new byte[bytesToCopy];
 			Marshal.Copy(IntPtr.Add(buffer, offset), report, 0, bytesToCopy);
-
+	
 			// Get interface path from device handle (handles may change between enumeration and runtime)
 			string path = null;
 			if (!_handleToPath.TryGetValue(rawInput.header.hDevice, out path))
@@ -347,31 +364,50 @@ namespace x360ce.App.Input.States
 					_handleToPath[rawInput.header.hDevice] = path;
 				}
 			}
-
-			// CRITICAL FIX: Always update cached state, even if report hasn't changed
-			// This ensures GetRawInputDeviceState() always returns the current state
-			// and button release detection works correctly
+	
 			if (!string.IsNullOrEmpty(path))
 			{
+				// Check for button state changes before updating cache
+				if (_cachedStates.TryGetValue(path, out byte[] previousReport))
+				{
+					DetectHidButtonStateChanges(path, previousReport, report, rawInput.header.hDevice);
+				}
+				else
+				{
+					// First time seeing this device - log initial state
+					//Debug.WriteLine($"RawInputState: HID device first seen - Handle: 0x{rawInput.header.hDevice.ToInt64():X8}, Path: {path}, ReportSize: {bytesToCopy}");
+				}
+				
+				// Update cached state with report
 				_cachedStates[path] = report;
+				
+				// IMMEDIATE CONVERSION: Convert and save to device ListInputState property
+				ConvertAndUpdateDeviceState(path, report);
 			}
 		}
 
 		/// <summary>
-		/// Processes mouse input and creates a synthetic report with button states.
-		/// Maintains accumulated button state across multiple WM_INPUT messages.
-		/// CRITICAL FIX: Always caches report with current accumulated state, not just on button events.
-		/// This ensures button hold detection works correctly.
+		/// Processes mouse input and creates a raw report with button states and RAW axis deltas.
+		/// Report format: [0]=buttons, [1-4]=X delta (int), [5-8]=Y delta (int), [9-12]=Z delta (int)
 		/// </summary>
 		private void ProcessMouseInput(IntPtr buffer, RAWINPUT rawInput)
 		{
-			// Read RAWMOUSE structure from buffer
+			// Read RAWMOUSE structure from buffer at the correct offset
+			// RAWINPUTHEADER is followed immediately by the device-specific data
 			int mouseOffset = s_rawinputHeaderSize;
 			IntPtr mousePtr = IntPtr.Add(buffer, mouseOffset);
 			var mouse = Marshal.PtrToStructure<RAWMOUSE>(mousePtr);
+			
+			// Debug: Log the raw structure values to verify we're reading correctly
+			//System.Diagnostics.Debug.WriteLine($"RawInputState: RAWMOUSE structure - lLastX={mouse.lLastX}, lLastY={mouse.lLastY}, " +
+			//	$"usButtonFlags=0x{mouse.usButtonFlags:X4}, usButtonData={mouse.usButtonData}");
 	
 			// Get current button state for this device (or 0 if first time)
-			byte buttonState = _mouseButtonStates.GetOrAdd(rawInput.header.hDevice, 0);
+			byte previousButtonState = _mouseButtonStates.GetOrAdd(rawInput.header.hDevice, 0);
+			byte buttonState = previousButtonState;
+			
+			// Track button changes for debug output
+			bool hasButtonChanges = mouse.usButtonFlags != 0;
 			
 			// Update button state based on DOWN events (set bits)
 			if ((mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) != 0)
@@ -397,23 +433,94 @@ namespace x360ce.App.Input.States
 			if ((mouse.usButtonFlags & RI_MOUSE_BUTTON_5_UP) != 0)
 				buttonState &= unchecked((byte)~0x10);
 	
+			// Debug: Log mouse button state changes
+			if (hasButtonChanges && buttonState != previousButtonState)
+			{
+				string path = GetDeviceInterfacePath(rawInput.header.hDevice);
+				//Debug.WriteLine($"RawInputState: Mouse button change - Handle: 0x{rawInput.header.hDevice.ToInt64():X8}, " +
+				//              $"Flags: 0x{mouse.usButtonFlags:X4}, Previous: 0x{previousButtonState:X2}, New: 0x{buttonState:X2}, " +
+				 //             $"Path: {path ?? "Unknown"}");
+			}
+	
 			// Store updated button state for this device
 			_mouseButtonStates[rawInput.header.hDevice] = buttonState;
 	
-			// CRITICAL FIX: Always create and cache report with current accumulated state
-			// This ensures button hold detection works - the accumulated state persists
-			// even when usButtonFlags is 0 (no new button events)
-			byte[] report = new byte[1] { buttonState };
-	
-			// Get interface path from device handle (handles may change between enumeration and runtime)
-			string path = GetDeviceInterfacePath(rawInput.header.hDevice);
-			if (!string.IsNullOrEmpty(path))
+			// Get interface path
+			string devicePath = GetDeviceInterfacePath(rawInput.header.hDevice);
+		
+			// Get RAW axis deltas from WM_INPUT (NO accumulation, NO sensitivity)
+			int rawDeltaX = mouse.lLastX;
+			int rawDeltaY = mouse.lLastY;
+			int rawDeltaZ = 0;
+			
+			// Handle mouse wheel (Z axis) - usButtonData contains wheel delta when RI_MOUSE_WHEEL flag is set
+			if ((mouse.usButtonFlags & 0x0400) != 0) // RI_MOUSE_WHEEL = 0x0400
 			{
-				// CRITICAL: Always update cached state, even if buttonState hasn't changed
-				// This ensures GetRawInputDeviceState() always returns the current accumulated state
-				_cachedStates[path] = report;
+				// usButtonData is a signed short representing wheel delta (typically ±120 per notch)
+				rawDeltaZ = unchecked((short)mouse.usButtonData);
+			}
+			
+			// Debug: Log RAW deltas from WM_INPUT to verify they're being read correctly
+			if (rawDeltaX != 0 || rawDeltaY != 0 || rawDeltaZ != 0)
+			{
+				System.Diagnostics.Debug.WriteLine($"RawInputState: RAW WM_INPUT deltas - X={rawDeltaX}, Y={rawDeltaY}, Z={rawDeltaZ}, " +
+					$"ButtonFlags=0x{mouse.usButtonFlags:X4}, Handle=0x{rawInput.header.hDevice.ToInt64():X8}");
+			}
+			
+			// CRITICAL: Perform accumulation here per-device to prevent conflicts between multiple mice
+			// Get current accumulated values for this specific device handle
+			int currentX = _mouseAccumulatedX.GetOrAdd(rawInput.header.hDevice, 32767);
+			int currentY = _mouseAccumulatedY.GetOrAdd(rawInput.header.hDevice, 32767);
+			int currentZ = _mouseAccumulatedZ.GetOrAdd(rawInput.header.hDevice, 0);
+			
+			// Apply sensitivity and accumulate (default sensitivity: X=20, Y=20, Z=50)
+			int sensitivity = 20; // Could be made configurable per device later
+			int wheelSensitivity = 50;
+			
+			int newX = currentX + (rawDeltaX * sensitivity);
+			int newY = currentY + (rawDeltaY * sensitivity);
+			int newZ = currentZ + (rawDeltaZ * wheelSensitivity);
+			
+			// Clamp to 0-65535 range
+			newX = Math.Max(0, Math.Min(65535, newX));
+			newY = Math.Max(0, Math.Min(65535, newY));
+			newZ = Math.Max(0, Math.Min(65535, newZ));
+			
+			// Store accumulated values back to per-device dictionaries
+			_mouseAccumulatedX[rawInput.header.hDevice] = newX;
+			_mouseAccumulatedY[rawInput.header.hDevice] = newY;
+			_mouseAccumulatedZ[rawInput.header.hDevice] = newZ;
+			
+			// Debug: Log accumulation for this specific device
+			if (rawDeltaX != 0 || rawDeltaY != 0 || rawDeltaZ != 0)
+			{
+				System.Diagnostics.Debug.WriteLine($"RawInputState: Device 0x{rawInput.header.hDevice.ToInt64():X8} accumulated - " +
+					$"Deltas: X={rawDeltaX}, Y={rawDeltaY}, Z={rawDeltaZ}, " +
+					$"Accumulated: X={newX}, Y={newY}, Z={newZ}");
+			}
+		
+			// Create 13-byte report: [0]=buttons, [1-4]=X accumulated, [5-8]=Y accumulated, [9-12]=Z accumulated
+			byte[] report = new byte[13];
+			report[0] = buttonState;
+			
+			// Store ACCUMULATED axis values as int (little-endian, 4 bytes each)
+			byte[] xBytes = BitConverter.GetBytes(newX);
+			byte[] yBytes = BitConverter.GetBytes(newY);
+			byte[] zBytes = BitConverter.GetBytes(newZ);
+			
+			Array.Copy(xBytes, 0, report, 1, 4);
+			Array.Copy(yBytes, 0, report, 5, 4);
+			Array.Copy(zBytes, 0, report, 9, 4);
+	
+			if (!string.IsNullOrEmpty(devicePath))
+			{
+				// Update cached state with RAW report
+				_cachedStates[devicePath] = report;
 				// Also update handle-to-path mapping for future lookups
-				_handleToPath[rawInput.header.hDevice] = path;
+				_handleToPath[rawInput.header.hDevice] = devicePath;
+				
+				// IMMEDIATE CONVERSION: Convert and save to device ListInputState property
+				ConvertAndUpdateDeviceState(devicePath, report);
 			}
 		}
 
@@ -426,7 +533,7 @@ namespace x360ce.App.Input.States
 			int keyboardOffset = s_rawinputHeaderSize;
 			IntPtr keyboardPtr = IntPtr.Add(buffer, keyboardOffset);
 			var keyboard = Marshal.PtrToStructure<RAWKEYBOARD>(keyboardPtr);
-
+	
 			// Create a synthetic report with scan code
 			// Byte 0: Reserved (0)
 			// Byte 1: Reserved (0)
@@ -440,11 +547,34 @@ namespace x360ce.App.Input.States
 			{
 				report[2] = (byte)keyboard.MakeCode; // Store scan code in byte 2
 			}
-
-			// Cache the report by device handle
-			if (_handleToPath.TryGetValue(rawInput.header.hDevice, out string path))
+			
+			// Debug: Log keyboard state changes
+			if (keyboard.MakeCode != 0)
 			{
-				_cachedStates[path] = report;
+				string path = GetDeviceInterfacePath(rawInput.header.hDevice);
+				//Debug.WriteLine($"RawInputState: Keyboard {(isKeyDown ? "DOWN" : "UP")} - Handle: 0x{rawInput.header.hDevice.ToInt64():X8}, " +
+				//              $"VKey: 0x{keyboard.VKey:X2}, MakeCode: 0x{keyboard.MakeCode:X2}, " +
+				//              $"Path: {path ?? "Unknown"}");
+			}
+	
+			// Get interface path
+			string devicePath = null;
+			if (!_handleToPath.TryGetValue(rawInput.header.hDevice, out devicePath))
+			{
+				devicePath = GetDeviceInterfacePath(rawInput.header.hDevice);
+				if (!string.IsNullOrEmpty(devicePath))
+				{
+					_handleToPath[rawInput.header.hDevice] = devicePath;
+				}
+			}
+	
+			if (!string.IsNullOrEmpty(devicePath))
+			{
+				// Update cached state with report
+				_cachedStates[devicePath] = report;
+				
+				// IMMEDIATE CONVERSION: Convert and save to device ListInputState property
+				ConvertAndUpdateDeviceState(devicePath, report);
 			}
 		}
 
@@ -452,7 +582,49 @@ namespace x360ce.App.Input.States
 		/// Returns cached RawInput device state (non-blocking).
 		/// For mouse and keyboard devices, polls ACTUAL current state using GetAsyncKeyState to ensure accuracy.
 		/// </summary>
-		public byte[] GetRawInputState(RawInputDeviceInfo riDeviceInfo)
+		/// 
+
+		/// <summary>
+		/// Starts listening to WM_INPUT messages from RawInput devices.
+		/// Message window is already created in constructor and registered for WM_INPUT.
+		/// This method is called when state collection starts (event-driven, NOT timer-based).
+		/// </summary>
+		/// <param name="startListening">True to start listening (no-op, already listening)</param>
+		public void StartListeningWMInputMessagesFromRawInputDevices(bool startListening)
+		{
+			if (startListening)
+			{
+				// Message window is already created in constructor and registered for WM_INPUT
+				// No additional action needed - messages are automatically processed
+				//Debug.WriteLine("RawInputState: Started listening to WM_INPUT messages (event-driven, not timer-based)");
+			}
+			else
+			{
+				// This should not be called - use StopListeningWMInputMessagesFromRawInputDevices instead
+				//Debug.WriteLine("RawInputState: Warning - StartListeningWMInputMessagesFromRawInputDevices called with false");
+			}
+		}
+	
+		/// <summary>
+		/// Stops listening to WM_INPUT messages from RawInput devices.
+		/// Clears all cached states when stopping.
+		/// </summary>
+		/// <param name="stopListening">True to stop listening (clears caches)</param>
+		public void StopListeningWMInputMessagesFromRawInputDevices(bool stopListening)
+		{
+			if (stopListening)
+			{
+				// Clear cached states when stopping
+				_cachedStates.Clear();
+				_handleToPath.Clear();
+				_mouseButtonStates.Clear();
+				_keyboardKeyStates.Clear();
+				Debug.WriteLine("RawInputState: Stopped listening to WM_INPUT messages and cleared cached states");
+			}
+		}
+
+
+        public byte[] GetRawInputState(RawInputDeviceInfo riDeviceInfo)
 		{
 			if (riDeviceInfo?.InterfacePath == null)
 				return null;
@@ -463,20 +635,29 @@ namespace x360ce.App.Input.States
 				_handleToPath.TryAdd(riDeviceInfo.DeviceHandle, riDeviceInfo.InterfacePath);
 			}
 	
-			// For mouse devices, poll ACTUAL current button state directly
-			// This ensures we detect button holds even if WM_INPUT messages are missed between polling intervals
+			// For mouse devices, poll button state and return cached axis deltas from WM_INPUT
 			if (riDeviceInfo.RawInputDeviceType == RawInputDeviceType.Mouse)
 			{
 				// Poll actual current button state using GetAsyncKeyState
 				byte currentButtonState = GetCurrentMouseButtonState();
 				
-				// Create report with current polled state
-				byte[] report = new byte[1] { currentButtonState };
+				// Get cached report from ProcessMouseInput (contains RAW WM_INPUT deltas)
+				if (_cachedStates.TryGetValue(riDeviceInfo.InterfacePath, out byte[] cachedReport) && cachedReport != null && cachedReport.Length >= 13)
+				{
+					// Update button state in cached report
+					cachedReport[0] = currentButtonState;
+					return cachedReport;
+				}
 				
-				// Update cache with current polled state
+				// No cached report yet - return initial state with polled buttons
+				byte[] report = new byte[13];
+				report[0] = currentButtonState;
+				// Axes default to 0 (no movement)
+				
+				// Update cache
 				_cachedStates[riDeviceInfo.InterfacePath] = report;
 				
-				// Also update accumulated state for consistency with WM_INPUT processing
+				// Also update accumulated button state for consistency
 				if (riDeviceInfo.DeviceHandle != IntPtr.Zero)
 				{
 					_mouseButtonStates[riDeviceInfo.DeviceHandle] = currentButtonState;
@@ -563,6 +744,7 @@ namespace x360ce.App.Input.States
 			return report;
 		}
 
+
 		/// <summary>
 		/// Returns cached RawInput device state and clears it (non-blocking).
 		/// This ensures button detection only happens when NEW messages arrive between checks.
@@ -611,6 +793,141 @@ namespace x360ce.App.Input.States
 	private static extern uint GetRawInputDeviceInfo(IntPtr hDevice, uint uiCommand, IntPtr pData, ref uint pcbSize);
 
 	private const uint RIDI_DEVICENAME = 0x20000007;
+
+		/// <summary>
+		/// Detects button state changes in HID device reports and logs them for debugging.
+		/// This method analyzes the button data portion of HID reports to identify state changes.
+		/// </summary>
+		/// <param name="devicePath">Device interface path for identification</param>
+		/// <param name="previousReport">Previous HID report data</param>
+		/// <param name="currentReport">Current HID report data</param>
+		/// <param name="deviceHandle">Device handle for identification</param>
+		private void DetectHidButtonStateChanges(string devicePath, byte[] previousReport, byte[] currentReport, IntPtr deviceHandle)
+		{
+			// Skip if reports are null or different sizes
+			if (previousReport == null || currentReport == null || previousReport.Length != currentReport.Length)
+				return;
+			
+			// Compare reports byte by byte to detect changes
+			bool hasChanges = false;
+			for (int i = 0; i < Math.Min(previousReport.Length, currentReport.Length); i++)
+			{
+				if (previousReport[i] != currentReport[i])
+				{
+					hasChanges = true;
+					break;
+				}
+			}
+			
+			// Only log if there are actual changes
+			if (hasChanges)
+			{
+				// Create a compact hex representation of the changed bytes
+				var changedBytes = new System.Text.StringBuilder();
+				for (int i = 0; i < Math.Min(previousReport.Length, currentReport.Length); i++)
+				{
+					if (previousReport[i] != currentReport[i])
+					{
+						if (changedBytes.Length > 0) changedBytes.Append(" ");
+						changedBytes.Append($"[{i}]: 0x{previousReport[i]:X2}→0x{currentReport[i]:X2}");
+					}
+				}
+				
+				Debug.WriteLine($"RawInputState: HID button change - Handle: 0x{deviceHandle.ToInt64():X8}, " +
+				              $"Path: {devicePath}, Changes: {changedBytes}");
+			}
+		}
+
+		/// <summary>
+		/// Sets the device list for immediate state conversion.
+		/// This enables ConvertAndUpdateDeviceState to find and update device ListInputState properties.
+		/// </summary>
+		/// <param name="deviceList">List of RawInput devices to enable immediate conversion for</param>
+		public void SetDeviceList(System.Collections.Generic.List<RawInputDeviceInfo> deviceList)
+		{
+			_deviceInfoList = deviceList;
+			
+			// CRITICAL: Clear cached mouse reports when device list is updated
+			// This prevents stale cached deltas from previous enumeration cycles
+			var mouseDevicePaths = new System.Collections.Generic.List<string>();
+			foreach (var kvp in _cachedStates)
+			{
+				// Check if this cached state belongs to a mouse device
+				RawInputDeviceInfo mouseDevice = null;
+				if (deviceList != null)
+				{
+					foreach (var device in deviceList)
+					{
+						if (string.Equals(device.InterfacePath, kvp.Key, StringComparison.OrdinalIgnoreCase))
+						{
+							mouseDevice = device;
+							break;
+						}
+					}
+				}
+				
+				if (mouseDevice?.RawInputDeviceType == RawInputDeviceType.Mouse)
+				{
+					mouseDevicePaths.Add(kvp.Key);
+				}
+			}
+			
+			// Clear cached reports for mouse devices to prevent stale delta issues
+			foreach (var path in mouseDevicePaths)
+			{
+				_cachedStates.TryRemove(path, out _);
+				System.Diagnostics.Debug.WriteLine($"RawInputState: Cleared stale cached mouse report for device: {path}");
+			}
+			
+			//Debug.WriteLine($"RawInputState: Device list set with {deviceList?.Count ?? 0} devices for immediate conversion");
+		}
+
+		/// <summary>
+		/// Immediately converts RawInput state to ListInputState and updates the device's ListInputState property.
+		/// This method is called directly from WM_INPUT message processing for event-driven conversion.
+		/// </summary>
+		/// <param name="devicePath">Device interface path to identify the device</param>
+		/// <param name="rawReport">Raw HID/Mouse/Keyboard report from WM_INPUT message</param>
+		private void ConvertAndUpdateDeviceState(string devicePath, byte[] rawReport)
+		{
+			if (_deviceInfoList == null || string.IsNullOrEmpty(devicePath) || rawReport == null)
+				return;
+
+			// Find the device in our list by interface path
+			RawInputDeviceInfo device = null;
+			foreach (var d in _deviceInfoList)
+			{
+				if (string.Equals(d.InterfacePath, devicePath, StringComparison.OrdinalIgnoreCase))
+				{
+					device = d;
+					break;
+				}
+			}
+			
+			if (device == null)
+			{
+				// Debug: Only log occasionally to avoid spam for unknown devices
+				//Debug.WriteLine($"RawInputState: Device not found in list for immediate conversion - Path: {devicePath}");
+				return;
+			}
+
+			// Convert RawInput state to ListInputState and update device immediately
+			var listInputState = RawInputStateToListInputState.ConvertRawInputStateToListInputStateAndUpdate(rawReport, device);
+			
+			// Debug: Log the immediate conversion result
+			if (listInputState != null)
+			{
+				//Debug.WriteLine($"RawInputState: Immediate conversion and update successful - " +
+				//              $"Handle: 0x{device.DeviceHandle.ToInt64():X8}, " +
+				 //             $"Type: {device.RawInputDeviceType}");
+			}
+			else
+			{
+				//Debug.WriteLine($"RawInputState: Immediate conversion failed - " +
+				 //             $"Handle: 0x{device.DeviceHandle.ToInt64():X8}, " +
+				 //             $"Type: {device.RawInputDeviceType}");
+			}
+		}
 
 		public void Dispose()
 		{

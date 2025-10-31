@@ -171,45 +171,5 @@ namespace x360ce.App.Input.States
 		}
 
 		#endregion
-
-
-		#region Diagnostic Methods
-
-		/// <summary>
-		/// Gets diagnostic information about all XInput slots.
-		/// </summary>
-		/// <returns>String containing connection status for all 4 slots</returns>
-		/// <remarks>
-		/// Provides a quick overview of which XInput slots have controllers connected.
-		/// Useful for debugging and system diagnostics.
-		/// </remarks>
-		public string GetDiagnosticInfo()
-		{
-			var info = new System.Text.StringBuilder();
-			info.AppendLine("=== XInput Slot Status ===");
-
-			for (int i = 0; i < MaxControllers; i++)
-			{
-				bool connected = IsControllerConnected(i);
-				string status = connected ? "Connected" : "Empty";
-				info.AppendLine($"Slot {i + 1} (UserIndex.{(UserIndex)i}): {status}");
-
-				if (connected)
-				{
-					// Create a temporary XInputDeviceInfo for diagnostic purposes
-					var tempDevice = new XInputDeviceInfo { SlotIndex = i };
-					var state = GetXInputState(tempDevice);
-					if (state.HasValue)
-					{
-						info.AppendLine($"  PacketNumber: {state.Value.PacketNumber}");
-					}
-				}
-			}
-
-			info.AppendLine($"\nTotal Connected: {GetConnectedControllerCount()}/4");
-			return info.ToString();
-		}
-
-		#endregion
 	}
 }

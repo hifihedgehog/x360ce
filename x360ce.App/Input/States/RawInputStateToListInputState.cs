@@ -1,4 +1,5 @@
 using System;
+//using System.Diagnostics;
 using System.Runtime.InteropServices;
 using x360ce.App.Input.Devices;
 
@@ -9,7 +10,7 @@ namespace x360ce.App.Input.States
 	/// Handles raw HID reports from RawInput API for gamepads, mice, and keyboards.
 	/// Uses proper HID API (HidP_GetUsages, HidP_GetUsageValue) for accurate parsing.
 	/// </summary>
-	internal static class RawInputStateToList
+	internal static class RawInputStateToListInputState
 	{
 		#region HID API Declarations
 
@@ -110,66 +111,284 @@ namespace x360ce.App.Input.States
 		/// This implementation uses proper HID API calls (HidP_GetUsages, HidP_GetUsageValue)
 		/// with PreparsedData for accurate device-specific parsing.
 		/// </remarks>
-		public static InputStateAsList ConvertRawInputStateToList(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+		public static ListInputState ConvertRawInputStateToListInputState(byte[] rawReport, RawInputDeviceInfo deviceInfo)
 		{
 			if (rawReport == null || deviceInfo == null)
 				return null;
+
+			// Debug: Log when RawInput state conversion starts
+			//Debug.WriteLine($"RawInputStateToListInputState: Converting {deviceInfo.RawInputDeviceType} report - " +
+			//              $"Handle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
+			//              $"ReportSize: {rawReport.Length}, " +
+			//              $"Path: {deviceInfo.InterfacePath ?? "Unknown"}");
+
+			ListInputState result = null;
 
 			// Handle different device types
 			switch (deviceInfo.RawInputDeviceType)
 			{
 				case RawInputDeviceType.Mouse:
-					return ConvertMouseReport(rawReport, deviceInfo);
+					result = ConvertMouseReport(rawReport, deviceInfo);
+					break;
 				
 				case RawInputDeviceType.Keyboard:
-					return ConvertKeyboardReport(rawReport, deviceInfo);
+					result = ConvertKeyboardReport(rawReport, deviceInfo);
+					break;
 				
 				case RawInputDeviceType.HID:
-					return ConvertHidReport(rawReport, deviceInfo);
+					result = ConvertHidReport(rawReport, deviceInfo);
+					break;
 				
 				default:
+					//Debug.WriteLine($"RawInputStateToListInputState: Unknown device type: {deviceInfo.RawInputDeviceType}");
 					return null;
 			}
-		}
 
-		/// <summary>
-		/// Converts RawInput mouse report to ListTypeState format.
-		/// </summary>
-		/// <param name="rawReport">Raw mouse report (1 byte with button states)</param>
-		/// <param name="deviceInfo">Mouse device information</param>
-		/// <returns>ListTypeState with mouse axes and buttons</returns>
-		/// <remarks>
-		/// Mouse Report Format (synthetic from StatesRawInput):
-		/// • Byte 0: Button state bits (0x01=left, 0x02=right, 0x04=middle, 0x08=X1, 0x10=X2)
-		/// 
-		/// Note: RawInput mouse reports don't include position data in the cached state,
-		/// only button states. Position is relative movement, not absolute axes.
-		/// </remarks>
-		private static InputStateAsList ConvertMouseReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
-		{
-			var result = new InputStateAsList();
-
-			if (rawReport == null || rawReport.Length < 1)
-				return result;
-
-			// Mouse axes are not available in cached RawInput state (only relative movement)
-			// We'll add placeholder axes for compatibility
-			result.Axes.Add(32767); // X (centered)
-			result.Axes.Add(32767); // Y (centered)
-			result.Axes.Add(0);     // Z (wheel, neutral)
-
-			// Parse button states from byte 0
-			byte buttonState = rawReport[0];
-			result.Buttons.Add((buttonState & 0x01) != 0 ? 1 : 0); // Left button
-			result.Buttons.Add((buttonState & 0x02) != 0 ? 1 : 0); // Right button
-			result.Buttons.Add((buttonState & 0x04) != 0 ? 1 : 0); // Middle button
-			result.Buttons.Add((buttonState & 0x08) != 0 ? 1 : 0); // X1 button
-			result.Buttons.Add((buttonState & 0x10) != 0 ? 1 : 0); // X2 button
-
-			// Mice have no sliders or POVs
+			// Debug: Log the converted ListInputState and save it to deviceInfo
+			if (result != null)
+			{
+				// Save the converted state to the device's ListInputState property
+				deviceInfo.ListInputState = result;
+				
+				// Log the successful conversion with the formatted state
+				//Debug.WriteLine($"RawInputStateToListInputState: Successfully converted and saved - " +
+				//              $"Handle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
+				//              $"Type: {deviceInfo.RawInputDeviceType}, " +
+				//              $"ListInputState: {result}");
+			}
+			else
+			{
+				//Debug.WriteLine($"RawInputStateToListInputState: Conversion failed - " +
+				//              $"Handle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
+				//              $"Type: {deviceInfo.RawInputDeviceType}");
+			}
 
 			return result;
 		}
+
+		/// <summary>
+		/// Converts RawInput state to ListInputState format and immediately updates the device's ListInputState property.
+		/// This method is called directly from RawInputState WM_INPUT message processing for immediate event-driven conversion.
+		/// </summary>
+		/// <param name="rawReport">Raw HID/Mouse/Keyboard report from WM_INPUT message</param>
+		/// <param name="deviceInfo">RawInput device information with current ListInputState to update</param>
+		/// <returns>The converted ListInputState that was saved to deviceInfo.ListInputState</returns>
+		/// <remarks>
+		/// IMMEDIATE CONVERSION AND UPDATE FLOW:
+		/// 1. Converts raw WM_INPUT report to standardized ListInputState format
+		/// 2. Compares with previous ListInputState to detect changes
+		/// 3. Updates deviceInfo.ListInputState property immediately
+		/// 4. Logs conversion success/failure for debugging
+		///
+		/// This method provides the immediate event-driven conversion requested by the user,
+		/// where WM_INPUT messages → immediate conversion → device ListInputState update.
+		/// </remarks>
+		public static ListInputState ConvertRawInputStateToListInputStateAndUpdate(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+		{
+			if (rawReport == null || deviceInfo == null)
+			{
+				//Debug.WriteLine($"RawInputStateToListInputState: ConvertAndUpdate called with null parameters");
+				return null;
+			}
+
+			// Debug: Log the immediate conversion request
+			//Debug.WriteLine($"RawInputStateToListInputState: ConvertAndUpdate started - " +
+			 //             $"Handle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
+			 //             $"Type: {deviceInfo.RawInputDeviceType}, " +
+			 //             $"ReportSize: {rawReport.Length}, " +
+			 //             $"Path: {deviceInfo.InterfacePath ?? "Unknown"}");
+
+			// Get previous ListInputState for comparison
+			var previousState = deviceInfo.ListInputState;
+
+			// Convert RawInput state to ListInputState using the existing conversion method
+			var newState = ConvertRawInputStateToListInputState(rawReport, deviceInfo);
+			
+			if (newState != null)
+			{
+				// Detect and log changes between old and new state
+				bool hasChanges = DetectStateChanges(previousState, newState, deviceInfo);
+				
+				// Update the device's ListInputState property immediately
+				deviceInfo.ListInputState = newState;
+				
+				// Debug: Log successful immediate conversion and update
+				//Debug.WriteLine($"RawInputStateToListInputState: ConvertAndUpdate complete - " +
+				//              $"Handle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
+				//              $"Type: {deviceInfo.RawInputDeviceType}, " +
+				//              $"HasChanges: {hasChanges}, " +
+				//              $"Updated ListInputState: {newState}");
+			}
+			else
+			{
+				//Debug.WriteLine($"RawInputStateToListInputState: ConvertAndUpdate failed - " +
+				//              $"Handle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
+				//              $"Type: {deviceInfo.RawInputDeviceType}");
+			}
+
+			return newState;
+		}
+
+		/// <summary>
+		/// Detects changes between previous and new ListInputState and logs them for debugging.
+		/// This helps track which specific inputs are changing during WM_INPUT processing.
+		/// </summary>
+		/// <param name="previousState">Previous ListInputState (may be null)</param>
+		/// <param name="newState">New ListInputState</param>
+		/// <param name="deviceInfo">Device information for logging context</param>
+		/// <returns>True if changes were detected, false otherwise</returns>
+		private static bool DetectStateChanges(ListInputState previousState, ListInputState newState, RawInputDeviceInfo deviceInfo)
+		{
+			if (previousState == null || newState == null)
+				return previousState != newState; // Change if one is null and other isn't
+
+			bool hasChanges = false;
+			var changes = new System.Collections.Generic.List<string>();
+
+			// Check for axis changes
+			for (int i = 0; i < Math.Max(previousState.Axes.Count, newState.Axes.Count); i++)
+			{
+				int oldValue = i < previousState.Axes.Count ? previousState.Axes[i] : 0;
+				int newValue = i < newState.Axes.Count ? newState.Axes[i] : 0;
+				
+				if (oldValue != newValue)
+				{
+					changes.Add($"Axis{i}: {oldValue}→{newValue}");
+					hasChanges = true;
+				}
+			}
+
+			// Check for button changes
+			for (int i = 0; i < Math.Max(previousState.Buttons.Count, newState.Buttons.Count); i++)
+			{
+				int oldValue = i < previousState.Buttons.Count ? previousState.Buttons[i] : 0;
+				int newValue = i < newState.Buttons.Count ? newState.Buttons[i] : 0;
+				
+				if (oldValue != newValue)
+				{
+					changes.Add($"Btn{i + 1}: {oldValue}→{newValue}");
+					hasChanges = true;
+				}
+			}
+
+			// Check for slider changes
+			for (int i = 0; i < Math.Max(previousState.Sliders.Count, newState.Sliders.Count); i++)
+			{
+				int oldValue = i < previousState.Sliders.Count ? previousState.Sliders[i] : 0;
+				int newValue = i < newState.Sliders.Count ? newState.Sliders[i] : 0;
+				
+				if (oldValue != newValue)
+				{
+					changes.Add($"Slider{i}: {oldValue}→{newValue}");
+					hasChanges = true;
+				}
+			}
+
+			// Check for POV changes
+			for (int i = 0; i < Math.Max(previousState.POVs.Count, newState.POVs.Count); i++)
+			{
+				int oldValue = i < previousState.POVs.Count ? previousState.POVs[i] : -1;
+				int newValue = i < newState.POVs.Count ? newState.POVs[i] : -1;
+				
+				if (oldValue != newValue)
+				{
+					changes.Add($"POV{i}: {oldValue}→{newValue}");
+					hasChanges = true;
+				}
+			}
+
+			// Log changes if any were detected
+			if (hasChanges && changes.Count > 0)
+			{
+				//Debug.WriteLine($"RawInputStateToListInputState: State changes detected - " +
+				//              $"Handle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
+				//              $"Type: {deviceInfo.RawInputDeviceType}, " +
+				 //             $"Changes: [{string.Join(", ", changes)}]");
+			}
+
+			return hasChanges;
+		}
+
+			     /// <summary>
+        /// Converts RawInput mouse report to ListTypeState format.
+        /// Accumulates RAW WM_INPUT deltas with sensitivity multipliers into ListState.
+        /// Maintains accumulated position in deviceInfo.ListInputState for continuous tracking.
+        /// </summary>
+        /// <param name="rawReport">Raw mouse report with button states and RAW WM_INPUT axis deltas</param>
+        /// <param name="deviceInfo">Mouse device information with sensitivity values and ListInputState</param>
+        /// <returns>ListTypeState with accumulated mouse axes and buttons</returns>
+        /// <remarks>
+        /// Mouse Report Format (from RawInputState):
+        /// • Byte 0: Button state bits (0x01=left, 0x02=right, 0x04=middle, 0x08=X1, 0x10=X2)
+        /// • Bytes 1-4: X delta (int, little-endian) - RAW WM_INPUT delta
+        /// • Bytes 5-8: Y delta (int, little-endian) - RAW WM_INPUT delta
+        /// • Bytes 9-12: Z delta (int, little-endian) - RAW WM_INPUT wheel delta
+        ///
+        /// This method:
+        /// 1. Extracts current accumulated position from deviceInfo.ListInputState (if exists)
+        /// 2. Applies sensitivity multipliers from deviceInfo properties (X=20, Y=20, Z=50)
+        /// 3. Accumulates: NewPosition = OldPosition + (RawDelta × Sensitivity)
+        /// 4. Clamps to 0-65535 range
+        /// 5. Returns new accumulated ListTypeState
+        ///
+        /// Initial ListState values: X=32767, Y=32767, Z=0
+        /// </remarks>
+        private static ListInputState ConvertMouseReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+  {
+   var result = new ListInputState();
+ 
+   if (rawReport == null || rawReport.Length < 1)
+   {
+    //Debug.WriteLine($"RawInputStateToListInputState: Mouse report invalid - Length: {rawReport?.Length ?? 0}");
+    return result;
+   }
+ 
+   // Parse button states from byte 0
+   byte buttonState = rawReport[0];
+   result.Buttons.Add((buttonState & 0x01) != 0 ? 1 : 0); // Left button
+   result.Buttons.Add((buttonState & 0x02) != 0 ? 1 : 0); // Right button
+   result.Buttons.Add((buttonState & 0x04) != 0 ? 1 : 0); // Middle button
+   result.Buttons.Add((buttonState & 0x08) != 0 ? 1 : 0); // X1 button
+   result.Buttons.Add((buttonState & 0x10) != 0 ? 1 : 0); // X2 button
+ 
+   // Debug: Log mouse button state if any buttons are pressed
+   if (buttonState != 0)
+   {
+    // Debug.WriteLine($"RawInputStateToListInputState: Mouse buttons - State: 0x{buttonState:X2}, " +
+    // $"Left: {(buttonState & 0x01) != 0}, Right: {(buttonState & 0x02) != 0}, " +
+    // $"Middle: {(buttonState & 0x04) != 0}, X1: {(buttonState & 0x08) != 0}, X2: {(buttonState & 0x10) != 0}");
+   }
+ 
+   // Check if report includes axis data (13-byte format with RAW WM_INPUT deltas)
+   if (rawReport.Length >= 13)
+   {
+    // Extract already-accumulated values from the report (processed in RawInputState.cs)
+    // Report format: [0]=buttons, [1-4]=X accumulated, [5-8]=Y accumulated, [9-12]=Z accumulated
+    int accumulatedX = BitConverter.ToInt32(rawReport, 1);
+    int accumulatedY = BitConverter.ToInt32(rawReport, 5);
+    int accumulatedZ = BitConverter.ToInt32(rawReport, 9);
+    
+    // Debug: Log the pre-accumulated values from RawInputState (no need for raw deltas here)
+    //System.Diagnostics.Debug.WriteLine($"RawInputStateToListInputState: Mouse accumulated values - " +
+    //$"X={accumulatedX}, Y={accumulatedY}, Z={accumulatedZ}");
+    
+    // Set the pre-accumulated axis values in the ListInputState
+    result.Axes.Add(accumulatedX);   // X axis
+    result.Axes.Add(accumulatedY);   // Y axis
+    result.Axes.Add(accumulatedZ);   // Z axis (wheel)
+   }
+   else
+   {
+    // Legacy 1-byte format: use initial values
+    result.Axes.Add(32767); // X (centered)
+    result.Axes.Add(32767); // Y (centered)
+    result.Axes.Add(0);     // Z (wheel, neutral)
+   }
+ 
+   // Mice have no sliders or POVs
+ 
+   return result;
+  }
 
 		/// <summary>
 		/// Converts RawInput keyboard report to ListTypeState format.
@@ -186,9 +405,9 @@ namespace x360ce.App.Input.States
 		/// Note: This converts scan codes to button indices. A full implementation
 		/// would map scan codes to virtual key codes for proper key identification.
 		/// </remarks>
-		private static InputStateAsList ConvertKeyboardReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+		private static ListInputState ConvertKeyboardReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
 		{
-			var result = new InputStateAsList();
+			var result = new ListInputState();
 
 			// Initialize all 256 buttons as released
 			for (int i = 0; i < 256; i++)
@@ -197,16 +416,28 @@ namespace x360ce.App.Input.States
 			}
 
 			if (rawReport == null || rawReport.Length < 8)
+			{
+				//Debug.WriteLine($"RawInputStateToListInputState: Keyboard report invalid - Length: {rawReport?.Length ?? 0}");
 				return result;
+			}
 
 			// Parse pressed keys from bytes 2-7 (scan codes)
+			var pressedKeys = new System.Collections.Generic.List<byte>();
 			for (int i = 2; i < 8 && i < rawReport.Length; i++)
 			{
 				byte scanCode = rawReport[i];
 				if (scanCode != 0)
 				{
 					result.Buttons[scanCode] = 1;
+					pressedKeys.Add(scanCode);
 				}
+			}
+
+			// Debug: Log pressed keys if any
+			if (pressedKeys.Count > 0)
+			{
+				//Debug.WriteLine($"RawInputStateToListInputState: Keyboard keys pressed - " +
+				//              $"ScanCodes: [{string.Join(", ", pressedKeys.ConvertAll(k => $"0x{k:X2}"))}]");
 			}
 
 			// Keyboards have no axes, sliders, or POVs
@@ -230,16 +461,27 @@ namespace x360ce.App.Input.States
 		/// 
 		/// This replaces the previous placeholder implementation with real HID API calls.
 		/// </remarks>
-		private static InputStateAsList ConvertHidReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+		private static ListInputState ConvertHidReport(byte[] rawReport, RawInputDeviceInfo deviceInfo)
 		{
-			var result = new InputStateAsList();
+			var result = new ListInputState();
 
 			if (rawReport == null || rawReport.Length == 0)
+			{
+				//Debug.WriteLine($"RawInputStateToListInputState: HID report invalid - Length: {rawReport?.Length ?? 0}");
 				return result;
+			}
+
+			// Debug: Log HID report details
+			//Debug.WriteLine($"RawInputStateToListInputState: HID report received - " +
+			 //             $"Length: {rawReport.Length}, " +
+			 //             $"HasPreparsedData: {deviceInfo.PreparsedData != IntPtr.Zero}, " +
+			 //             $"Capabilities: Axes={deviceInfo.AxeCount}, Sliders={deviceInfo.SliderCount}, " +
+			 //             $"Buttons={deviceInfo.ButtonCount}, POVs={deviceInfo.PovCount}");
 
 			// Check if we have PreparsedData for proper HID parsing
 			if (deviceInfo.PreparsedData == IntPtr.Zero)
 			{
+				//Debug.WriteLine($"RawInputStateToListInputState: Using fallback parsing (no PreparsedData)");
 				// Fallback to basic parsing if PreparsedData not available
 				return ConvertHidReportFallback(rawReport, deviceInfo);
 			}
@@ -250,6 +492,8 @@ namespace x360ce.App.Input.States
 			{
 				IntPtr reportPtr = reportHandle.AddrOfPinnedObject();
 				uint reportLength = (uint)rawReport.Length;
+
+				//Debug.WriteLine($"RawInputStateToListInputState: Using HID API parsing with PreparsedData");
 
 				// Read axes using HidP_GetUsageValue
 				ReadAxesFromHidReport(reportPtr, reportLength, deviceInfo, result);
@@ -262,6 +506,11 @@ namespace x360ce.App.Input.States
 
 				// Read buttons using HidP_GetUsages
 				ReadButtonsFromHidReport(reportPtr, reportLength, deviceInfo, result);
+				
+				// Debug: Log successful HID parsing
+				//Debug.WriteLine($"RawInputStateToListInputState: HID parsing complete - " +
+				//              $"Parsed: Axes={result.Axes.Count}, Sliders={result.Sliders.Count}, " +
+				//              $"Buttons={result.Buttons.Count}, POVs={result.POVs.Count}");
 			}
 			finally
 			{
@@ -275,7 +524,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Reads axis values from HID report using HidP_GetUsageValue.
 		/// </summary>
-		private static void ReadAxesFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, InputStateAsList result)
+		private static void ReadAxesFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, ListInputState result)
 		{
 			// Standard axes: X(0x30), Y(0x31), Z(0x32), RX(0x33), RY(0x34), RZ(0x35)
 			ushort[] axisUsages = { 
@@ -318,7 +567,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Reads slider values from HID report using HidP_GetUsageValue.
 		/// </summary>
-		private static void ReadSlidersFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, InputStateAsList result)
+		private static void ReadSlidersFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, ListInputState result)
 		{
 			// Slider controls: Slider(0x36), Dial(0x37), Wheel(0x38)
 			ushort[] sliderUsages = { 
@@ -384,7 +633,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Reads POV/Hat Switch values from HID report using HidP_GetUsageValue.
 		/// </summary>
-		private static void ReadPovsFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, InputStateAsList result)
+		private static void ReadPovsFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, ListInputState result)
 		{
 			// POV Hat Switch (0x39)
 			int value;
@@ -417,7 +666,7 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Reads button states from HID report using HidP_GetUsages.
 		/// </summary>
-		private static void ReadButtonsFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, InputStateAsList result)
+		private static void ReadButtonsFromHidReport(IntPtr reportPtr, uint reportLength, RawInputDeviceInfo deviceInfo, ListInputState result)
 		{
 			// HidP_GetUsages returns the list of pressed buttons
 			uint usageLength = (uint)deviceInfo.ButtonCount;
@@ -539,9 +788,9 @@ namespace x360ce.App.Input.States
 		/// Fallback HID report parsing when PreparsedData is not available.
 		/// Uses the basic button offset parsing from the original implementation.
 		/// </summary>
-		private static InputStateAsList ConvertHidReportFallback(byte[] rawReport, RawInputDeviceInfo deviceInfo)
+		private static ListInputState ConvertHidReportFallback(byte[] rawReport, RawInputDeviceInfo deviceInfo)
 		{
-			var result = new InputStateAsList();
+			var result = new ListInputState();
 
 			// Add placeholder axes based on device capability count
 			for (int i = 0; i < deviceInfo.AxeCount; i++)
@@ -559,6 +808,12 @@ namespace x360ce.App.Input.States
 			int buttonDataOffset = deviceInfo.ButtonDataOffset;
 			int buttonCount = deviceInfo.ButtonCount;
 
+			//Debug.WriteLine($"RawInputStateToListInputState: Fallback parsing - " +
+			//              $"ButtonDataOffset: {buttonDataOffset}, ButtonCount: {buttonCount}, " +
+			//              $"ReportLength: {rawReport.Length}");
+
+			var pressedButtons = new System.Collections.Generic.List<int>();
+
 			if (buttonDataOffset < rawReport.Length && buttonCount > 0)
 			{
 				// Parse button bits from the button data section
@@ -573,6 +828,9 @@ namespace x360ce.App.Input.States
 					// Check if button bit is set
 					bool isPressed = (rawReport[buttonByte] & (1 << buttonBit)) != 0;
 					result.Buttons.Add(isPressed ? 1 : 0);
+					
+					if (isPressed)
+						pressedButtons.Add(i + 1); // Button numbers are 1-based for display
 
 					// Move to next bit/byte
 					buttonBit++;
@@ -590,6 +848,13 @@ namespace x360ce.App.Input.States
 				{
 					result.Buttons.Add(0);
 				}
+			}
+
+			// Debug: Log pressed buttons if any
+			if (pressedButtons.Count > 0)
+			{
+				//Debug.WriteLine($"RawInputStateToListInputState: Fallback buttons pressed - " +
+				 //             $"Buttons: [{string.Join(", ", pressedButtons)}]");
 			}
 
 			// Add placeholder POVs based on device capability count

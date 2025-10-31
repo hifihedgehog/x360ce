@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -28,77 +27,13 @@ namespace x360ce.App.Input.Triggers
         }
 
         /// <summary>
-        /// Gets axe, slider, button, and pov information from device state as XAML elements for display.
-        /// Extracts properties from the appropriate device list based on input type.
-        /// </summary>
-        /// <param name="inputType">The input type (DirectInput, RawInput, etc.)</param>
-        /// <param name="interfacePath">The device interface path for identification</param>
-        /// <returns>UIElement containing formatted device information or null if device not found</returns>
-        public UIElement GetDeviceInputAsXamlElements(UnifiedInputDeviceInfo unifiedInputDeviceInfo)
-        {
-            // Get device state for live values (may be null if device is offline)
-            var deviceStateAsList = GetDeviceStateAsList(unifiedInputDeviceInfo);
-
-            // Create layout based on device capabilities, not state list length
-            return CreateInputLayout(unifiedInputDeviceInfo, deviceStateAsList);
-        }
-
-
-        /// <summary>
-		/// Retrieves device information properties from the appropriate device list.
-		/// </summary>
-		/// <param name="inputType">The input type identifier</param>
-		/// <param name="interfacePath">The device interface path</param>
-		/// <returns>List of property name-value pairs</returns>
-		private InputStateAsList GetDeviceStateAsList(UnifiedInputDeviceInfo unifiedInputDeviceInfo)
-        {
-            var inputType = unifiedInputDeviceInfo.InputType;
-            var interfacePath = unifiedInputDeviceInfo.InterfacePath;
-
-            InputStateAsList listState = null;
-
-            switch (inputType)
-            {
-                case "RawInput":
-                    RawInputDeviceInfo rawInputDeviceInfo = _unifiedInputDeviceInfoInternal.RawInputDeviceInfoList?
-                        .FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
-                    // Get RawInput state.
-                    listState = rawInputDeviceInfo.StateList;
-                    break;
-
-                case "DirectInput":
-                    DirectInputDeviceInfo directInputDeviceInfo = _unifiedInputDeviceInfoInternal.DirectInputDeviceInfoList?
-                        .FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
-                    // Get DirectInput state.
-                    listState = directInputDeviceInfo.StateList;
-                    break;
-
-                case "XInput":
-                    XInputDeviceInfo xInputDeviceInfo = _unifiedInputDeviceInfoInternal.XInputDeviceInfoList?
-                        .FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
-                    // Get XInput state.
-                    listState = xInputDeviceInfo.StateList;
-                    break;
-
-                case "GamingInput":
-                    GamingInputDeviceInfo gamingInputDeviceInfo = _unifiedInputDeviceInfoInternal.GamingInputDeviceInfoList?
-                        .FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
-                    // Get GamingInput state.
-                    listState = gamingInputDeviceInfo.StateList;
-                    break;
-            }
-
-            return listState;
-        }
-
-        /// <summary>
         /// Creates layout for device inputs using device capabilities as the source of truth.
         /// Displays live values from state if available, or default values if state is null.
         /// </summary>
         /// <param name="deviceInfo">Device information containing capability counts</param>
         /// <param name="inputStateAsList">Optional live state values (may be null if device offline)</param>
         /// <returns>UIElement containing the formatted layout</returns>
-        private UIElement CreateInputLayout(UnifiedInputDeviceInfo deviceInfo, InputStateAsList inputStateAsList)
+        public UIElement CreateInputLayout(UnifiedInputDeviceInfo deviceInfo, ListInputState inputStateAsList)
         {
             // Check if device has any inputs
             if (deviceInfo.AxeCount == 0 && deviceInfo.SliderCount == 0 && deviceInfo.ButtonCount == 0 && deviceInfo.PovCount == 0)
@@ -121,17 +56,17 @@ namespace x360ce.App.Input.Triggers
         public List<(Label, Label)> SelectedDeviceKeyLabels = new List<(Label, Label)>();
         public List<(Label, Label)> SelectedDevicePovLabels = new List<(Label, Label)>();
 
-        // Track the currently selected device interface path
-        private string _currentSelectedDeviceInterfacePath;
+        // Track the currently selected device instance GUID
+        private Guid _currentSelectedDeviceInstanceGuid;
 
         /// <summary>
-        /// Sets the currently selected device interface path.
+        /// Sets the currently selected device instance GUID.
         /// Called when a device is selected in the UI.
         /// </summary>
-        /// <param name="interfacePath">The interface path of the selected device</param>
-        public void SetSelectedDevice(string interfacePath)
+        /// <param name="instanceGuid">The instance GUID of the selected device</param>
+        public void SetSelectedDevice(Guid instanceGuid)
         {
-            _currentSelectedDeviceInterfacePath = interfacePath;
+            _currentSelectedDeviceInstanceGuid = instanceGuid;
         }
 
         SolidColorBrush colorActive = (SolidColorBrush)new BrushConverter().ConvertFrom("#FF42C765");
@@ -140,14 +75,15 @@ namespace x360ce.App.Input.Triggers
         /// <summary>
         /// Updates the value labels for the selected device with current state values.
         /// Only updates if the device matches the currently selected device.
+        /// IMPORTANT: This method is called at high frequency (10Hz) from UnifiedButtonPressed.
         /// </summary>
-        /// <param name="deviceInterfacePath">The interface path of the device being updated</param>
+        /// <param name="deviceInstanceGuid">The instance GUID of the device being updated</param>
         /// <param name="listState">The current state values for the device</param>
-        public void UpdateValueLabels(string deviceInterfacePath, InputStateAsList listState)
+        public void UpdateValueLabels(Guid deviceInstanceGuid, ListInputState listState)
         {
             // Only update if this is the currently selected device
-            if (string.IsNullOrEmpty(_currentSelectedDeviceInterfacePath) ||
-                !string.Equals(_currentSelectedDeviceInterfacePath, deviceInterfacePath, StringComparison.OrdinalIgnoreCase))
+            if (_currentSelectedDeviceInstanceGuid == Guid.Empty ||
+                _currentSelectedDeviceInstanceGuid != deviceInstanceGuid)
                 return;
 
             if (listState == null)
@@ -156,11 +92,16 @@ namespace x360ce.App.Input.Triggers
             // Update axes values
             if (listState.Axes != null && SelectedDeviceAxisLabels.Count > 0)
             {
-                for (int i = 0; i < Math.Min(listState.Axes.Count, SelectedDeviceAxisLabels.Count); i++)
-                {
-                    SelectedDeviceAxisLabels[i].Item2.Content = listState.Axes[i].ToString();
-                    //SelectedDeviceSliderLabels[i].Item1.Background = (listState.Axes[i] < 30000) || (listState.Axes[i] > 40000) ? colorActive : colorBackgroundDark;
-                }
+            	for (int i = 0; i < Math.Min(listState.Axes.Count, SelectedDeviceAxisLabels.Count); i++)
+            	{
+            		var currentValue = listState.Axes[i];
+            		SelectedDeviceAxisLabels[i].Item2.Content = currentValue.ToString();
+            		// Highlight axes that are not centered (for visual feedback)
+            		SelectedDeviceAxisLabels[i].Item1.Background =
+                        (currentValue > 1000 && currentValue < 31767) || (currentValue > 33767 && currentValue < 64535)
+                        ? colorActive 
+                        : colorBackgroundDark;
+            	}
             }
 
             // Update slider values
@@ -168,8 +109,9 @@ namespace x360ce.App.Input.Triggers
             {
                 for (int i = 0; i < Math.Min(listState.Sliders.Count, SelectedDeviceSliderLabels.Count); i++)
                 {
-                    SelectedDeviceSliderLabels[i].Item2.Content = listState.Sliders[i].ToString();
-                    SelectedDeviceSliderLabels[i].Item1.Background = listState.Sliders[i] > 10000 ? colorActive : colorBackgroundDark;
+                    var currentValue = listState.Sliders[i];
+                    SelectedDeviceSliderLabels[i].Item2.Content = currentValue.ToString();
+                    SelectedDeviceSliderLabels[i].Item1.Background = currentValue > 10000 ? colorActive : colorBackgroundDark;
                 }
             }
 
@@ -178,8 +120,9 @@ namespace x360ce.App.Input.Triggers
             {
                 for (int i = 0; i < Math.Min(listState.Buttons.Count, SelectedDeviceButtonLabels.Count); i++)
                 {
-                    SelectedDeviceButtonLabels[i].Item2.Content = listState.Buttons[i].ToString();
-                    SelectedDeviceButtonLabels[i].Item1.Background = listState.Buttons[i] > 0 ? colorActive : colorBackgroundDark;
+                    var currentValue = listState.Buttons[i];
+                    SelectedDeviceButtonLabels[i].Item2.Content = currentValue.ToString();
+                    SelectedDeviceButtonLabels[i].Item1.Background = currentValue > 0 ? colorActive : colorBackgroundDark;
                 }
             }
 
@@ -188,8 +131,9 @@ namespace x360ce.App.Input.Triggers
             {
                 for (int i = 0; i < Math.Min(listState.Buttons.Count, SelectedDeviceKeyLabels.Count); i++)
                 {
-                    SelectedDeviceKeyLabels[i].Item2.Content = listState.Buttons[i].ToString();
-                    SelectedDeviceKeyLabels[i].Item1.Background = listState.Buttons[i] > 0 ? colorActive : colorBackgroundDark;
+                    var currentValue = listState.Buttons[i];
+                    SelectedDeviceKeyLabels[i].Item2.Content = currentValue.ToString();
+                    SelectedDeviceKeyLabels[i].Item1.Background = currentValue > 0 ? colorActive : colorBackgroundDark;
                 }
             }
 
@@ -198,8 +142,9 @@ namespace x360ce.App.Input.Triggers
             {
                 for (int i = 0; i < Math.Min(listState.POVs.Count, SelectedDevicePovLabels.Count); i++)
                 {
-                    SelectedDevicePovLabels[i].Item2.Content = listState.POVs[i].ToString();
-                    SelectedDevicePovLabels[i].Item1.Background = listState.POVs[i] > -1 ? colorActive : colorBackgroundDark;
+                    var currentValue = listState.POVs[i];
+                    SelectedDevicePovLabels[i].Item2.Content = currentValue.ToString();
+                    SelectedDevicePovLabels[i].Item1.Background = currentValue > -1 ? colorActive : colorBackgroundDark;
                 }
             }
         }
@@ -300,4 +245,3 @@ namespace x360ce.App.Input.Triggers
     }
 
 }
-

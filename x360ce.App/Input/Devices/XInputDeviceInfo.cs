@@ -34,7 +34,7 @@ namespace x360ce.App.Input.Devices
 		public int ProductId { get; set; }
 		public string CommonIdentifier { get; set; }
 		public string InputType { get; set; }
-        public InputStateAsList StateList { get; set; }
+        public ListInputState ListInputState { get; set; }
 
         // Capabilities
         public int AxeCount { get; set; }

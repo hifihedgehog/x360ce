@@ -1,6 +1,5 @@
 using SharpDX.DirectInput;
 using System;
-using System.Collections.Concurrent;
 using System.Linq;
 using x360ce.App.Input.Devices;
 
@@ -9,37 +8,19 @@ namespace x360ce.App.Input.States
 	/// <summary>
 	/// Converts DirectInput device states to standardized ListTypeState format.
 	/// Handles JoystickState, MouseState, and KeyboardState conversions.
-	/// For mouse devices, maintains accumulators to track relative movement with sensitivity control.
+	/// For mouse devices, accumulated values are stored in DirectInputDeviceInfo properties.
 	/// </summary>
-	internal class DirectInputStateToList
+	internal static class DirectInputStateToListInputState
 	{
 		#region Constants
 
 		private const int AxisMinValue = 0;
 		private const int AxisMaxValue = 65535;
-		private const int AxisCenterValue = 32767;
 		private const int DefaultMouseSensitivity = 20;
 		private const int DefaultMouseWheelSensitivity = 50;
 		private const int MinSensitivity = 1;
 		private const int KeyboardButtonCount = 256;
 
-		#endregion
-
-		#region Mouse Axis Accumulators
-		
-		/// <summary>
-		/// Mouse axis accumulator state for tracking cumulative movement.
-		/// </summary>
-		private class MouseAxisAccumulator
-		{
-			public int AccumulatedX { get; set; } = AxisCenterValue; // Start at center
-			public int AccumulatedY { get; set; } = AxisCenterValue; // Start at center
-			public int AccumulatedZ { get; set; } = AxisMinValue;     // Wheel starts at 0
-		}
-		
-		// Cache for mouse accumulators (keyed by device InterfacePath)
-		private readonly ConcurrentDictionary<string, MouseAxisAccumulator> _mouseAccumulators = new ConcurrentDictionary<string, MouseAxisAccumulator>();
-		
 		#endregion
 		
 		/// <summary>
@@ -54,13 +35,13 @@ namespace x360ce.App.Input.States
 		/// For mouse devices, DirectInputState returns MouseState with relative movement deltas.
 		/// This method accumulates mouse movement with sensitivity control.
 		/// </remarks>
-		public InputStateAsList ConvertDirectInputStateToList(object diState, DirectInputDeviceInfo deviceInfo = null)
+		public static ListInputState ConvertDirectInputStateToListInputState(object diState, DirectInputDeviceInfo deviceInfo = null)
 		{
 			if (diState == null)
 				return null;
 
 			// If already InputStateAsList (keyboard polled state), return directly
-			if (diState is InputStateAsList listState)
+			if (diState is ListInputState listState)
 				return listState;
 
 			// Detect state type and convert accordingly
@@ -76,20 +57,24 @@ namespace x360ce.App.Input.States
 
 		/// <summary>
 		/// Converts DirectInput JoystickState to ListTypeState format.
+		/// Note: Joystick states are always created fresh since we don't have a deviceInfo reference to reuse from.
 		/// </summary>
 		/// <param name="state">JoystickState from DirectInput device</param>
 		/// <returns>ListTypeState with axes, sliders, buttons, and POVs</returns>
 		/// <remarks>
 		/// DirectInput JoystickState Mapping:
-		/// • Axes (24 total): X, Y, Z, RotationX, RotationY, RotationZ, AccelerationX/Y/Z, 
+		/// • Axes (24 total): X, Y, Z, RotationX, RotationY, RotationZ, AccelerationX/Y/Z,
 		///   AngularAccelerationX/Y/Z, ForceX/Y/Z, TorqueX/Y/Z, VelocityX/Y/Z, AngularVelocityX/Y/Z
 		/// • Sliders (8 total): Sliders[0-1], AccelerationSliders[0-1], ForceSliders[0-1], VelocitySliders[0-1]
 		/// • Buttons (128 max): Button states as 0 or 1
 		/// • POVs (4 max): Point-of-view controllers (-1 or 0-35900 centidegrees)
+		///
+		/// NOTE: This method creates a new ListInputState each time because we don't have access to deviceInfo
+		/// to reuse the existing object. The calling code in InputStateManager will handle the assignment.
 		/// </remarks>
-		private static InputStateAsList ConvertJoystickState(JoystickState state)
+		private static ListInputState ConvertJoystickState(JoystickState state)
 		{
-			var result = new InputStateAsList();
+			var result = new ListInputState();
 
 			// Convert axes (24 axes in DirectInput) - pre-allocate capacity for performance
 			result.Axes.Capacity = 24;
@@ -128,9 +113,10 @@ namespace x360ce.App.Input.States
 
 		/// <summary>
 		/// Converts DirectInput MouseState to ListTypeState format with accumulator tracking.
+		/// CRITICAL: Reuses existing ListInputState object to maintain reference consistency.
 		/// </summary>
 		/// <param name="state">MouseState from DirectInput device (contains relative movement deltas)</param>
-		/// <param name="deviceInfo">Device information containing per-axis sensitivity settings</param>
+		/// <param name="deviceInfo">Device information containing per-axis sensitivity settings and accumulated values</param>
 		/// <returns>ListTypeState with accumulated axes and buttons (no sliders or POVs)</returns>
 		/// <remarks>
 		/// DirectInput MouseState Mapping:
@@ -141,38 +127,82 @@ namespace x360ce.App.Input.States
 		/// Accumulator Logic:
 		/// • DirectInput reports relative movement (delta values)
 		/// • Each axis delta is multiplied by its respective sensitivity (X, Y, Z) before accumulating
-		/// • Higher sensitivity values increase responsiveness (e.g., sensitivity=10 means delta of 1 becomes 10)
-		/// • Accumulated values are clamped to 0-65535 range (StateList format)
+		/// • Higher sensitivity values increase responsiveness (e.g., sensitivity=20 means delta of 1 becomes 20)
+		/// • Accumulated values are stored in deviceInfo properties and clamped to 0-65535 range
 		/// • Center position is 32767 for X/Y, 0 for Z (wheel)
-		/// • Default sensitivities: X=10, Y=10, Z=20
+		/// • Default sensitivities: X=20, Y=20, Z=50
 		/// </remarks>
-		private InputStateAsList ConvertMouseState(MouseState state, DirectInputDeviceInfo deviceInfo)
+		private static ListInputState ConvertMouseState(MouseState state, DirectInputDeviceInfo deviceInfo)
 		{
-			var result = new InputStateAsList();
+			// CRITICAL FIX: Reuse existing ListInputState object if it exists
+			// This maintains the reference in UnifiedInputDeviceInfo.ListInputState
+			ListInputState result = deviceInfo?.ListInputState;
+			
+			if (result == null)
+			{
+				// First time - create new ListInputState
+				result = new ListInputState();
+			}
 			
 			// Get per-axis sensitivity values with defaults and minimum enforcement
 			int sensitivityX = Math.Max(MinSensitivity, deviceInfo?.MouseXAxisSensitivity ?? DefaultMouseSensitivity);
 			int sensitivityY = Math.Max(MinSensitivity, deviceInfo?.MouseYAxisSensitivity ?? DefaultMouseSensitivity);
 			int sensitivityZ = Math.Max(MinSensitivity, deviceInfo?.MouseZAxisSensitivity ?? DefaultMouseWheelSensitivity);
 			
-			// Get or create accumulator for this mouse device
-			string deviceKey = deviceInfo?.InterfacePath ?? "default_mouse";
-			var accumulator = _mouseAccumulators.GetOrAdd(deviceKey, _ => new MouseAxisAccumulator());
-			
-			// Apply relative movement with per-axis sensitivity multipliers to accumulators
+			// Apply relative movement with per-axis sensitivity multipliers to accumulated values in deviceInfo
 			// DirectInput mouse reports relative movement (delta values)
 			// Each axis has its own sensitivity: higher values = more responsive
-			accumulator.AccumulatedX = ClampAxisValue(accumulator.AccumulatedX + state.X * sensitivityX);
-			accumulator.AccumulatedY = ClampAxisValue(accumulator.AccumulatedY + state.Y * sensitivityY);
-			accumulator.AccumulatedZ = ClampAxisValue(accumulator.AccumulatedZ + state.Z * sensitivityZ);
-			
-			// Add accumulated axis values to result (pre-allocate capacity)
-			result.Axes.Capacity = 3;
-			result.Axes.AddRange(new[] { accumulator.AccumulatedX, accumulator.AccumulatedY, accumulator.AccumulatedZ });
+			if (deviceInfo != null)
+			{
+				deviceInfo.MouseXAxisAccumulated = ClampAxisValue(deviceInfo.MouseXAxisAccumulated + state.X * sensitivityX);
+				deviceInfo.MouseYAxisAccumulated = ClampAxisValue(deviceInfo.MouseYAxisAccumulated + state.Y * sensitivityY);
+				deviceInfo.MouseZAxisAccumulated = ClampAxisValue(deviceInfo.MouseZAxisAccumulated + state.Z * sensitivityZ);
+				
+				// Update or add accumulated axis values
+				if (result.Axes.Count >= 3)
+				{
+					result.Axes[0] = deviceInfo.MouseXAxisAccumulated;
+					result.Axes[1] = deviceInfo.MouseYAxisAccumulated;
+					result.Axes[2] = deviceInfo.MouseZAxisAccumulated;
+				}
+				else
+				{
+					result.Axes.Clear();
+					result.Axes.Capacity = 3;
+					result.Axes.AddRange(new[] { deviceInfo.MouseXAxisAccumulated, deviceInfo.MouseYAxisAccumulated, deviceInfo.MouseZAxisAccumulated });
+				}
+			}
+			else
+			{
+				// Fallback if deviceInfo is null (shouldn't happen in normal operation)
+				if (result.Axes.Count >= 3)
+				{
+					result.Axes[0] = 32767;
+					result.Axes[1] = 32767;
+					result.Axes[2] = 0;
+				}
+				else
+				{
+					result.Axes.Clear();
+					result.Axes.Capacity = 3;
+					result.Axes.AddRange(new[] { 32767, 32767, 0 });
+				}
+			}
 
-			// Convert buttons (DirectInput reports as bool array) - pre-allocate capacity
-			result.Buttons.Capacity = state.Buttons.Length;
-			result.Buttons.AddRange(state.Buttons.Select(b => b ? 1 : 0));
+			// Update or add buttons
+			if (result.Buttons.Count == state.Buttons.Length)
+			{
+				for (int i = 0; i < state.Buttons.Length; i++)
+				{
+					result.Buttons[i] = state.Buttons[i] ? 1 : 0;
+				}
+			}
+			else
+			{
+				result.Buttons.Clear();
+				result.Buttons.Capacity = state.Buttons.Length;
+				result.Buttons.AddRange(state.Buttons.Select(b => b ? 1 : 0));
+			}
 
 			// Mice have no sliders or POVs (lists remain empty)
 
@@ -190,9 +220,9 @@ namespace x360ce.App.Input.States
 		/// • No axes, sliders, or POVs for keyboard devices
 		/// • Uses PressedKeys collection to determine which keys are pressed
 		/// </remarks>
-		private static InputStateAsList ConvertKeyboardState(KeyboardState state)
+		private static ListInputState ConvertKeyboardState(KeyboardState state)
 		{
-			var result = new InputStateAsList();
+			var result = new ListInputState();
 
 			// Initialize all 256 buttons as released (0) - pre-allocate and initialize in one step
 			result.Buttons.Capacity = KeyboardButtonCount;

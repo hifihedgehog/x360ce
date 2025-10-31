@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:x360ce.App.Controls"
              mc:Ignorable="d"
-             Loaded="UserControl_Loaded"
+             Loaded="InputDevicesControl_Loaded"
              Unloaded="UserControl_Unloaded"
 	d:DesignHeight="400"
 	d:DesignWidth="900"

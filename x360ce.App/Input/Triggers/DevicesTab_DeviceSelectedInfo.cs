@@ -31,15 +31,15 @@ namespace x360ce.App.Input.Triggers
 		/// Extracts properties from the appropriate device list based on input type.
 		/// </summary>
 		/// <param name="inputType">The input type (DirectInput, RawInput, etc.)</param>
-		/// <param name="interfacePath">The device interface path for identification</param>
+		/// <param name="instanceGuid">The device instance GUID for identification</param>
 		/// <returns>UIElement containing formatted device information in 3 columns, or null if device not found</returns>
-		public UIElement GetDeviceInformationAsXamlElements(string inputType, string interfacePath)
+		public UIElement GetDeviceInformationAsXamlElements(string inputType, Guid instanceGuid)
 		{
-			if (string.IsNullOrEmpty(inputType) || string.IsNullOrEmpty(interfacePath))
+			if (string.IsNullOrEmpty(inputType) || instanceGuid == Guid.Empty)
 				return null;
 
 			// Get device information list based on input type
-			var deviceInfo = GetDeviceInformation(inputType, interfacePath);
+			var deviceInfo = GetDeviceInformation(inputType, instanceGuid);
 			if (deviceInfo == null || deviceInfo.Count == 0)
 				return null;
 
@@ -51,9 +51,9 @@ namespace x360ce.App.Input.Triggers
 		/// Retrieves device information properties from the appropriate device list.
 		/// </summary>
 		/// <param name="inputType">The input type identifier</param>
-		/// <param name="interfacePath">The device interface path</param>
+		/// <param name="instanceGuid">The device instance GUID</param>
 		/// <returns>List of property name-value pairs</returns>
-		private List<(string Name, string Value)> GetDeviceInformation(string inputType, string interfacePath)
+		private List<(string Name, string Value)> GetDeviceInformation(string inputType, Guid instanceGuid)
 		{
 			object deviceObject = null;
 
@@ -61,28 +61,27 @@ namespace x360ce.App.Input.Triggers
 			{
 				case "PnPInput":
 					deviceObject = _unifiedInputDeviceInfoInternal.PnPInputDeviceInfoList?
-						.FirstOrDefault(d => string.Equals(d.HardwareIds, interfacePath, StringComparison.OrdinalIgnoreCase) ||
-											 string.Equals(d.DeviceInstanceId, interfacePath, StringComparison.OrdinalIgnoreCase));
+						.FirstOrDefault(d => d.InstanceGuid == instanceGuid);
 					break;
 
 				case "RawInput":
 					deviceObject = _unifiedInputDeviceInfoInternal.RawInputDeviceInfoList?
-						.FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
+						.FirstOrDefault(d => d.InstanceGuid == instanceGuid);
 					break;
 
 				case "DirectInput":
 					deviceObject = _unifiedInputDeviceInfoInternal.DirectInputDeviceInfoList?
-						.FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
+						.FirstOrDefault(d => d.InstanceGuid == instanceGuid);
 					break;
 
 				case "XInput":
 					deviceObject = _unifiedInputDeviceInfoInternal.XInputDeviceInfoList?
-						.FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
+						.FirstOrDefault(d => d.InstanceGuid == instanceGuid);
 					break;
 
 				case "GamingInput":
 					deviceObject = _unifiedInputDeviceInfoInternal.GamingInputDeviceInfoList?
-						.FirstOrDefault(d => string.Equals(d.InterfacePath, interfacePath, StringComparison.OrdinalIgnoreCase));
+						.FirstOrDefault(d => d.InstanceGuid == instanceGuid);
 					break;
 			}
 

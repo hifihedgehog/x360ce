@@ -24,10 +24,6 @@ namespace x360ce.App.Input.States
 		private static extern short GetAsyncKeyState(int vKey);
 		
 		// Virtual key codes for mouse buttons
-		private const int VK_LBUTTON = 0x01;  // Left mouse button
-		private const int VK_RBUTTON = 0x02;  // Right mouse button
-		private const int VK_MBUTTON = 0x04;  // Middle mouse button
-		private const int VK_XBUTTON1 = 0x05; // X1 mouse button
 		private const int VK_XBUTTON2 = 0x06; // X2 mouse button
 		
 		#endregion
@@ -43,7 +39,7 @@ namespace x360ce.App.Input.States
 		/// </summary>
 		private class CachedKeyboardMouseState
 		{
-			public InputStateAsList State { get; set; }
+			public ListInputState State { get; set; }
 			public DateTime LastUpdate { get; set; }
 		}
 		
@@ -129,15 +125,31 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Polls the ACTUAL current keyboard state using GetAsyncKeyState and returns InputStateAsList.
 		/// This ensures we detect key holds reliably, same approach as RawInput.
+		/// CRITICAL: Reuses existing ListInputState object to maintain reference consistency.
 		/// </summary>
-		private InputStateAsList GetCurrentKeyboardStateAsListPolled(string interfacePath)
+		private ListInputState GetCurrentKeyboardStateAsListPolled(string interfacePath)
 		{
-			var result = new InputStateAsList();
-			
-			// Initialize all 256 buttons as released (0)
-			for (int i = 0; i < 256; i++)
+			// CRITICAL FIX: Reuse existing ListInputState object if it exists
+			// This maintains the reference in UnifiedInputDeviceInfo.ListInputState
+			ListInputState result;
+			if (_cachedStates.TryGetValue(interfacePath, out var cached))
 			{
-				result.Buttons.Add(0);
+				result = cached.State;
+				// Clear existing button states
+				for (int i = 0; i < result.Buttons.Count; i++)
+				{
+					result.Buttons[i] = 0;
+				}
+			}
+			else
+			{
+				// First time - create new ListInputState
+				result = new ListInputState();
+				// Initialize all 256 buttons as released (0)
+				for (int i = 0; i < 256; i++)
+				{
+					result.Buttons.Add(0);
+				}
 			}
 			
 			// Scan virtual key codes to find pressed keys
@@ -159,37 +171,7 @@ namespace x360ce.App.Input.States
 				}
 			}
 			
-			// Cache the state
-			_cachedStates[interfacePath] = new CachedKeyboardMouseState
-			{
-				State = result,
-				LastUpdate = DateTime.Now
-			};
-			
-			return result;
-		}
-		
-		/// <summary>
-		/// Polls the ACTUAL current mouse button state using GetAsyncKeyState and returns InputStateAsList.
-		/// This ensures we detect button holds reliably, same approach as RawInput.
-		/// </summary>
-		private InputStateAsList GetCurrentMouseStateAsListPolled(string interfacePath)
-		{
-			var result = new InputStateAsList();
-			
-			// Add placeholder axes (mouse doesn't have absolute position in DirectInput)
-			result.Axes.Add(32767); // X (centered)
-			result.Axes.Add(32767); // Y (centered)
-			result.Axes.Add(0);     // Z (wheel, neutral)
-			
-			// Poll actual current button state using GetAsyncKeyState
-			result.Buttons.Add((GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0 ? 1 : 0);  // Left button
-			result.Buttons.Add((GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0 ? 1 : 0);  // Right button
-			result.Buttons.Add((GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0 ? 1 : 0);  // Middle button
-			result.Buttons.Add((GetAsyncKeyState(VK_XBUTTON1) & 0x8000) != 0 ? 1 : 0); // X1 button
-			result.Buttons.Add((GetAsyncKeyState(VK_XBUTTON2) & 0x8000) != 0 ? 1 : 0); // X2 button
-			
-			// Cache the state
+			// Cache the state (or update cache timestamp)
 			_cachedStates[interfacePath] = new CachedKeyboardMouseState
 			{
 				State = result,
