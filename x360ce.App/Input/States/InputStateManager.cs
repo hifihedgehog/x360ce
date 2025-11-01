@@ -17,7 +17,7 @@ namespace x360ce.App.Input.States
     ///
     /// B. Event Driven - for devices which report changes via events or messages:
     ///    States are retrieved from messages which report changes immediately.
-    ///    Used by: RawInput (WM_INPUT messages at 1000+ Hz)
+    ///    Used by: RawInput (WM_INPUT messages at 1000+ Hz) - NO POLLING, purely event-driven
     ///
     /// State Processing:
     /// • If full state is received from device, convert to ListInputState and save in device info ListInputState property
@@ -76,6 +76,7 @@ namespace x360ce.App.Input.States
 				throw new ArgumentNullException(nameof(deviceManager));
 
             // Start polling DirectInput, XInput, GamingInput devices for states at 20Hz.
+            // RawInput is purely event-driven via WM_INPUT messages - no polling needed.
 
             _deviceManager = deviceManager;
 
@@ -123,8 +124,8 @@ namespace x360ce.App.Input.States
     GetAndSaveXInputStates(_deviceManager.XInputDeviceInfoList);
     GetAndSaveGamingInputStates(_deviceManager.GamingInputDeviceInfoList);
     
-    // Process cached RawInput states (convert to ListInputState and save to device info)
-    GetAndSaveRawInputStates(_deviceManager.RawInputDeviceInfoList);
+    // REMOVED: RawInput polling - it's purely event-driven via WM_INPUT messages
+    // GetAndSaveRawInputStates(_deviceManager.RawInputDeviceInfoList);
    }
    catch (Exception ex)
    {
@@ -271,12 +272,12 @@ namespace x360ce.App.Input.States
 
 		#endregion
 
-		#region RawInput State Collection (Event-Driven + Polling Conversion)
+		#region RawInput State Collection (Event-Driven Only - DEPRECATED)
 
 		/// <summary>
-		/// Gets cached RawInput device state and converts it to ListInputState format.
-		/// RawInput states are updated event-driven by WM_INPUT messages, but we need to
-		/// convert the cached raw reports to ListInputState format and save them.
+		/// DEPRECATED: Gets cached RawInput device state and converts it to ListInputState format.
+		/// This method is no longer used since RawInput is now purely event-driven.
+		/// RawInput states are updated immediately via WM_INPUT messages in ConvertAndUpdateDeviceState.
 		/// </summary>
 		/// <param name="riDeviceInfo">RawInput device information</param>
 		/// <returns>True if state was successfully retrieved, converted and saved</returns>

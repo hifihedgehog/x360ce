@@ -64,24 +64,18 @@ namespace x360ce.App.Input.States
 		private static extern uint GetLastError();
 	
 		/// <summary>
-		/// Gets the current state of a virtual key (including mouse buttons and keyboard keys).
+		/// Gets the current state of a virtual key (used for keyboard polling).
 		/// Returns non-zero if the key is currently pressed.
 		/// </summary>
 		[DllImport("user32.dll")]
 		private static extern short GetAsyncKeyState(int vKey);
-	
-		// Virtual key codes for mouse buttons
-		private const int VK_LBUTTON = 0x01;  // Left mouse button
-		private const int VK_RBUTTON = 0x02;  // Right mouse button
-		private const int VK_MBUTTON = 0x04;  // Middle mouse button
-		private const int VK_XBUTTON1 = 0x05; // X1 mouse button
-		private const int VK_XBUTTON2 = 0x06; // X2 mouse button
 
 		private const uint RIM_TYPEMOUSE = 0;
 		private const uint RIM_TYPEKEYBOARD = 1;
 		private const uint RIM_TYPEHID = 2;
 		private const uint RID_INPUT = 0x10000003;
 		private const uint RIDEV_INPUTSINK = 0x00000100;
+		private const uint RIDEV_NOLEGACY = 0x00000030;
 		private const ushort USAGE_PAGE_GENERIC_DESKTOP = 0x01;
 		private const ushort USAGE_JOYSTICK = 0x04;
 		private const ushort USAGE_GAMEPAD = 0x05;
@@ -155,6 +149,8 @@ namespace x360ce.App.Input.States
 		private const ushort RI_MOUSE_BUTTON_4_UP = 0x0080;
 		private const ushort RI_MOUSE_BUTTON_5_DOWN = 0x0100;
 		private const ushort RI_MOUSE_BUTTON_5_UP = 0x0200;
+		private const ushort RI_MOUSE_WHEEL = 0x0400;
+		private const ushort RI_MOUSE_HWHEEL = 0x0800;
 
 		#endregion
 
@@ -213,11 +209,26 @@ namespace x360ce.App.Input.States
 		private readonly ConcurrentDictionary<IntPtr, int> _mouseAccumulatedX = new ConcurrentDictionary<IntPtr, int>();
 		private readonly ConcurrentDictionary<IntPtr, int> _mouseAccumulatedY = new ConcurrentDictionary<IntPtr, int>();
 		private readonly ConcurrentDictionary<IntPtr, int> _mouseAccumulatedZ = new ConcurrentDictionary<IntPtr, int>();
+		private readonly ConcurrentDictionary<IntPtr, int> _mouseAccumulatedW = new ConcurrentDictionary<IntPtr, int>();
 		private bool _isInitialized;
 		private bool _disposed;
 		
 		// Device list for immediate state conversion
 		private System.Collections.Generic.List<Devices.RawInputDeviceInfo> _deviceInfoList;
+		
+		// Queue for buffering WM_INPUT messages received before device list is ready
+		private readonly System.Collections.Generic.Queue<PendingInputMessage> _pendingMessages = new System.Collections.Generic.Queue<PendingInputMessage>();
+		private readonly object _pendingMessagesLock = new object();
+		
+		/// <summary>
+		/// Represents a WM_INPUT message received before the device list was ready
+		/// </summary>
+		private struct PendingInputMessage
+		{
+			public string DevicePath;
+			public byte[] RawReport;
+			public System.DateTime Timestamp;
+		}
 		
 		// Cached struct sizes to avoid repeated Marshal.SizeOf calls
 		private static readonly int s_rawinputDeviceSize = Marshal.SizeOf(typeof(RAWINPUTDEVICE));
@@ -262,10 +273,10 @@ namespace x360ce.App.Input.States
 				devices[3].dwFlags = RIDEV_INPUTSINK;
 				devices[3].hwndTarget = _messageWindow.Handle;
 				
-				// Mouse (0x02) - All mouse devices
+				// Mouse (0x02) - All mouse devices with NOLEGACY to capture wheel events properly
 				devices[4].usUsagePage = USAGE_PAGE_GENERIC_DESKTOP;
 				devices[4].usUsage = 0x02;
-				devices[4].dwFlags = RIDEV_INPUTSINK;
+				devices[4].dwFlags = RIDEV_INPUTSINK | RIDEV_NOLEGACY;
 				devices[4].hwndTarget = _messageWindow.Handle;
 	
 				bool success = RegisterRawInputDevices(devices, 5, (uint)s_rawinputDeviceSize);
@@ -451,66 +462,144 @@ namespace x360ce.App.Input.States
 			// Get RAW axis deltas from WM_INPUT (NO accumulation, NO sensitivity)
 			int rawDeltaX = mouse.lLastX;
 			int rawDeltaY = mouse.lLastY;
-			int rawDeltaZ = 0;
+			int rawDeltaZ = 0; // Vertical wheel
+			int rawDeltaW = 0; // Horizontal wheel
 			
-			// Handle mouse wheel (Z axis) - usButtonData contains wheel delta when RI_MOUSE_WHEEL flag is set
-			if ((mouse.usButtonFlags & 0x0400) != 0) // RI_MOUSE_WHEEL = 0x0400
+			// Handle mouse wheel (Z axis) - usButtonData contains wheel delta when wheel flags are set
+			if ((mouse.usButtonFlags & RI_MOUSE_WHEEL) != 0)
 			{
-				// usButtonData is a signed short representing wheel delta (typically ±120 per notch)
+				// Vertical wheel: usButtonData is a signed short representing wheel delta (typically ±120 per notch)
 				rawDeltaZ = unchecked((short)mouse.usButtonData);
+				System.Diagnostics.Debug.WriteLine($"RawInputState: WHEEL DETECTED - Vertical wheel delta: {rawDeltaZ}, usButtonFlags=0x{mouse.usButtonFlags:X4}, usButtonData=0x{mouse.usButtonData:X4}");
+			}
+			else if ((mouse.usButtonFlags & RI_MOUSE_HWHEEL) != 0)
+			{
+				// Horizontal wheel: separate W axis movement
+				rawDeltaW = unchecked((short)mouse.usButtonData);
+				System.Diagnostics.Debug.WriteLine($"RawInputState: HWHEEL DETECTED - Horizontal wheel delta: {rawDeltaW}, usButtonFlags=0x{mouse.usButtonFlags:X4}, usButtonData=0x{mouse.usButtonData:X4}");
+			}
+			
+			// Debug: Log usButtonFlags even when no wheel is detected to see what flags are actually coming through
+			if (mouse.usButtonFlags != 0)
+			{
+				System.Diagnostics.Debug.WriteLine($"RawInputState: Mouse flags detected - usButtonFlags=0x{mouse.usButtonFlags:X4}, usButtonData=0x{mouse.usButtonData:X4}, WHEEL={(mouse.usButtonFlags & RI_MOUSE_WHEEL) != 0}, HWHEEL={(mouse.usButtonFlags & RI_MOUSE_HWHEEL) != 0}");
+			}
+			
+			// ENHANCED DEBUG: Log ALL mouse activity to diagnose wheel issues
+			if (rawDeltaX != 0 || rawDeltaY != 0 || mouse.usButtonFlags != 0)
+			{
+				System.Diagnostics.Debug.WriteLine($"RawInputState: COMPLETE MOUSE DATA - Handle=0x{rawInput.header.hDevice.ToInt64():X8}, " +
+					$"lLastX={mouse.lLastX}, lLastY={mouse.lLastY}, " +
+					$"usButtonFlags=0x{mouse.usButtonFlags:X4}, usButtonData=0x{mouse.usButtonData:X4} (signed={(short)mouse.usButtonData}), " +
+					$"WHEEL_FLAG={((mouse.usButtonFlags & RI_MOUSE_WHEEL) != 0 ? "YES" : "NO")}, " +
+					$"HWHEEL_FLAG={((mouse.usButtonFlags & RI_MOUSE_HWHEEL) != 0 ? "YES" : "NO")}, " +
+					$"Computed: rawDeltaX={rawDeltaX}, rawDeltaY={rawDeltaY}, rawDeltaZ={rawDeltaZ}, rawDeltaW={rawDeltaW}");
 			}
 			
 			// Debug: Log RAW deltas from WM_INPUT to verify they're being read correctly
-			if (rawDeltaX != 0 || rawDeltaY != 0 || rawDeltaZ != 0)
+			if (rawDeltaX != 0 || rawDeltaY != 0 || rawDeltaZ != 0 || rawDeltaW != 0)
 			{
-				System.Diagnostics.Debug.WriteLine($"RawInputState: RAW WM_INPUT deltas - X={rawDeltaX}, Y={rawDeltaY}, Z={rawDeltaZ}, " +
+				System.Diagnostics.Debug.WriteLine($"RawInputState: RAW WM_INPUT deltas - X={rawDeltaX}, Y={rawDeltaY}, Z={rawDeltaZ}, W={rawDeltaW}, " +
 					$"ButtonFlags=0x{mouse.usButtonFlags:X4}, Handle=0x{rawInput.header.hDevice.ToInt64():X8}");
 			}
 			
 			// CRITICAL: Perform accumulation here per-device to prevent conflicts between multiple mice
 			// Get current accumulated values for this specific device handle
-			int currentX = _mouseAccumulatedX.GetOrAdd(rawInput.header.hDevice, 32767);
-			int currentY = _mouseAccumulatedY.GetOrAdd(rawInput.header.hDevice, 32767);
-			int currentZ = _mouseAccumulatedZ.GetOrAdd(rawInput.header.hDevice, 0);
+			// Use device's MouseAxisAccumulated list as defaults if available, otherwise use standard defaults
+			int defaultX = 32767, defaultY = 32767, defaultZ = 0, defaultW = 0;
 			
-			// Apply sensitivity and accumulate (default sensitivity: X=20, Y=20, Z=50)
-			int sensitivity = 20; // Could be made configurable per device later
-			int wheelSensitivity = 50;
+			// Find device info to get per-device accumulated defaults
+			if (_deviceInfoList != null && !string.IsNullOrEmpty(devicePath))
+			{
+				foreach (var device in _deviceInfoList)
+				{
+					if (device.DeviceHandle == rawInput.header.hDevice ||
+					    string.Equals(device.InterfacePath, devicePath, StringComparison.OrdinalIgnoreCase))
+					{
+						// Use list-based accumulated values (index: 0=X, 1=Y, 2=Z, 3=W)
+						if (device.MouseAxisAccumulated != null && device.MouseAxisAccumulated.Count >= 4)
+						{
+							defaultX = device.MouseAxisAccumulated[0]; // X axis
+							defaultY = device.MouseAxisAccumulated[1]; // Y axis
+							defaultZ = device.MouseAxisAccumulated[2]; // Z axis (vertical wheel)
+							defaultW = device.MouseAxisAccumulated[3]; // W axis (horizontal wheel)
+						}
+						break;
+					}
+				}
+			}
 			
-			int newX = currentX + (rawDeltaX * sensitivity);
-			int newY = currentY + (rawDeltaY * sensitivity);
-			int newZ = currentZ + (rawDeltaZ * wheelSensitivity);
+			int currentX = _mouseAccumulatedX.GetOrAdd(rawInput.header.hDevice, defaultX);
+			int currentY = _mouseAccumulatedY.GetOrAdd(rawInput.header.hDevice, defaultY);
+			int currentZ = _mouseAccumulatedZ.GetOrAdd(rawInput.header.hDevice, defaultZ);
+			int currentW = _mouseAccumulatedW.GetOrAdd(rawInput.header.hDevice, defaultW);
+			
+			// Get per-device sensitivity values (default: X=20, Y=20, Z=50, W=50 if device not found)
+			int sensitivityX = 20;
+			int sensitivityY = 20;
+			int sensitivityZ = 50;
+			int sensitivityW = 50;
+			
+			// Find device info to get per-device sensitivity settings
+			if (_deviceInfoList != null && !string.IsNullOrEmpty(devicePath))
+			{
+				foreach (var device in _deviceInfoList)
+				{
+					if (device.DeviceHandle == rawInput.header.hDevice ||
+					    string.Equals(device.InterfacePath, devicePath, StringComparison.OrdinalIgnoreCase))
+					{
+						// Use list-based sensitivity values (index: 0=X, 1=Y, 2=Z, 3=W)
+						if (device.MouseAxisSensitivity != null && device.MouseAxisSensitivity.Count >= 4)
+						{
+							sensitivityX = device.MouseAxisSensitivity[0]; // X axis
+							sensitivityY = device.MouseAxisSensitivity[1]; // Y axis
+							sensitivityZ = device.MouseAxisSensitivity[2]; // Z axis (vertical wheel)
+							sensitivityW = device.MouseAxisSensitivity[3]; // W axis (horizontal wheel)
+						}
+						break;
+					}
+				}
+			}
+			
+			int newX = currentX + (rawDeltaX * sensitivityX);
+			int newY = currentY + (rawDeltaY * sensitivityY);
+			int newZ = currentZ + (rawDeltaZ * sensitivityZ);
+			int newW = currentW + (rawDeltaW * sensitivityW);
 			
 			// Clamp to 0-65535 range
 			newX = Math.Max(0, Math.Min(65535, newX));
 			newY = Math.Max(0, Math.Min(65535, newY));
 			newZ = Math.Max(0, Math.Min(65535, newZ));
+			newW = Math.Max(0, Math.Min(65535, newW));
 			
 			// Store accumulated values back to per-device dictionaries
 			_mouseAccumulatedX[rawInput.header.hDevice] = newX;
 			_mouseAccumulatedY[rawInput.header.hDevice] = newY;
 			_mouseAccumulatedZ[rawInput.header.hDevice] = newZ;
+			_mouseAccumulatedW[rawInput.header.hDevice] = newW;
 			
 			// Debug: Log accumulation for this specific device
-			if (rawDeltaX != 0 || rawDeltaY != 0 || rawDeltaZ != 0)
+			if (rawDeltaX != 0 || rawDeltaY != 0 || rawDeltaZ != 0 || rawDeltaW != 0)
 			{
 				System.Diagnostics.Debug.WriteLine($"RawInputState: Device 0x{rawInput.header.hDevice.ToInt64():X8} accumulated - " +
-					$"Deltas: X={rawDeltaX}, Y={rawDeltaY}, Z={rawDeltaZ}, " +
-					$"Accumulated: X={newX}, Y={newY}, Z={newZ}");
+					$"Deltas: X={rawDeltaX}, Y={rawDeltaY}, Z={rawDeltaZ}, W={rawDeltaW}, " +
+					$"Accumulated: X={newX}, Y={newY}, Z={newZ}, W={newW}");
 			}
 		
-			// Create 13-byte report: [0]=buttons, [1-4]=X accumulated, [5-8]=Y accumulated, [9-12]=Z accumulated
-			byte[] report = new byte[13];
+			// Create 17-byte report: [0]=buttons, [1-4]=X accumulated, [5-8]=Y accumulated, [9-12]=Z accumulated, [13-16]=W accumulated
+			byte[] report = new byte[17];
 			report[0] = buttonState;
 			
 			// Store ACCUMULATED axis values as int (little-endian, 4 bytes each)
 			byte[] xBytes = BitConverter.GetBytes(newX);
 			byte[] yBytes = BitConverter.GetBytes(newY);
 			byte[] zBytes = BitConverter.GetBytes(newZ);
+			byte[] wBytes = BitConverter.GetBytes(newW);
 			
 			Array.Copy(xBytes, 0, report, 1, 4);
 			Array.Copy(yBytes, 0, report, 5, 4);
 			Array.Copy(zBytes, 0, report, 9, 4);
+			Array.Copy(wBytes, 0, report, 13, 4);
 	
 			if (!string.IsNullOrEmpty(devicePath))
 			{
@@ -580,7 +669,7 @@ namespace x360ce.App.Input.States
 
 		/// <summary>
 		/// Returns cached RawInput device state (non-blocking).
-		/// For mouse and keyboard devices, polls ACTUAL current state using GetAsyncKeyState to ensure accuracy.
+		/// Uses per-device states from WM_INPUT message processing for accurate per-device tracking.
 		/// </summary>
 		/// 
 
@@ -635,54 +724,68 @@ namespace x360ce.App.Input.States
 				_handleToPath.TryAdd(riDeviceInfo.DeviceHandle, riDeviceInfo.InterfacePath);
 			}
 	
-			// For mouse devices, poll button state and return cached axis deltas from WM_INPUT
+			// For mouse devices, use per-device button state from WM_INPUT and return cached axis deltas
 			if (riDeviceInfo.RawInputDeviceType == RawInputDeviceType.Mouse)
 			{
-				// Poll actual current button state using GetAsyncKeyState
-				byte currentButtonState = GetCurrentMouseButtonState();
+				// Get per-device button state from WM_INPUT processing (not global polling)
+				byte currentButtonState = _mouseButtonStates.GetOrAdd(riDeviceInfo.DeviceHandle, 0);
 				
 				// Get cached report from ProcessMouseInput (contains RAW WM_INPUT deltas)
-				if (_cachedStates.TryGetValue(riDeviceInfo.InterfacePath, out byte[] cachedReport) && cachedReport != null && cachedReport.Length >= 13)
+				if (_cachedStates.TryGetValue(riDeviceInfo.InterfacePath, out byte[] cachedReport) && cachedReport != null && cachedReport.Length >= 17)
 				{
-					// Update button state in cached report
+					// Update button state in cached report with per-device WM_INPUT state
 					cachedReport[0] = currentButtonState;
 					return cachedReport;
 				}
 				
-				// No cached report yet - return initial state with polled buttons
-				byte[] report = new byte[13];
+				// No cached report yet - return initial state with per-device buttons
+				byte[] report = new byte[17];
 				report[0] = currentButtonState;
-				// Axes default to 0 (no movement)
+				// Axes default to accumulated center values for this device
+				// Use device's MouseAxisAccumulated list as defaults if available
+				int defaultX = 32767, defaultY = 32767, defaultZ = 0, defaultW = 0;
+				if (riDeviceInfo.MouseAxisAccumulated != null && riDeviceInfo.MouseAxisAccumulated.Count >= 4)
+				{
+					defaultX = riDeviceInfo.MouseAxisAccumulated[0]; // X axis
+					defaultY = riDeviceInfo.MouseAxisAccumulated[1]; // Y axis
+					defaultZ = riDeviceInfo.MouseAxisAccumulated[2]; // Z axis (vertical wheel)
+					defaultW = riDeviceInfo.MouseAxisAccumulated[3]; // W axis (horizontal wheel)
+				}
+				
+				int accumulatedX = _mouseAccumulatedX.GetOrAdd(riDeviceInfo.DeviceHandle, defaultX);
+				int accumulatedY = _mouseAccumulatedY.GetOrAdd(riDeviceInfo.DeviceHandle, defaultY);
+				int accumulatedZ = _mouseAccumulatedZ.GetOrAdd(riDeviceInfo.DeviceHandle, defaultZ);
+				int accumulatedW = _mouseAccumulatedW.GetOrAdd(riDeviceInfo.DeviceHandle, defaultW);
+				
+				// Store accumulated axis values in report
+				byte[] xBytes = BitConverter.GetBytes(accumulatedX);
+				byte[] yBytes = BitConverter.GetBytes(accumulatedY);
+				byte[] zBytes = BitConverter.GetBytes(accumulatedZ);
+				byte[] wBytes = BitConverter.GetBytes(accumulatedW);
+				Array.Copy(xBytes, 0, report, 1, 4);
+				Array.Copy(yBytes, 0, report, 5, 4);
+				Array.Copy(zBytes, 0, report, 9, 4);
+				Array.Copy(wBytes, 0, report, 13, 4);
 				
 				// Update cache
 				_cachedStates[riDeviceInfo.InterfacePath] = report;
 				
-				// Also update accumulated button state for consistency
-				if (riDeviceInfo.DeviceHandle != IntPtr.Zero)
-				{
-					_mouseButtonStates[riDeviceInfo.DeviceHandle] = currentButtonState;
-				}
-				
 				return report;
 			}
 	
-			// For keyboard devices, poll ACTUAL current key state directly
-			// This ensures we detect key holds even if WM_INPUT messages are missed between polling intervals
+			// For keyboard devices, use cached state from WM_INPUT processing
 			if (riDeviceInfo.RawInputDeviceType == RawInputDeviceType.Keyboard)
 			{
-				// Poll actual current keyboard state using GetAsyncKeyState
-				byte[] currentKeyState = GetCurrentKeyboardState();
-				
-				// Update cache with current polled state
-				_cachedStates[riDeviceInfo.InterfacePath] = currentKeyState;
-				
-				// Also update accumulated state for consistency with WM_INPUT processing
-				if (riDeviceInfo.DeviceHandle != IntPtr.Zero)
+				// Get cached keyboard state from WM_INPUT processing
+				if (_cachedStates.TryGetValue(riDeviceInfo.InterfacePath, out byte[] cachedKeyState))
 				{
-					_keyboardKeyStates[riDeviceInfo.DeviceHandle] = currentKeyState;
+					return cachedKeyState;
 				}
 				
-				return currentKeyState;
+				// No cached state yet - return empty keyboard report
+				byte[] emptyKeyState = new byte[8];
+				_cachedStates[riDeviceInfo.InterfacePath] = emptyKeyState;
+				return emptyKeyState;
 			}
 	
 			// For HID devices, return cached state (non-blocking, thread-safe)
@@ -690,59 +793,7 @@ namespace x360ce.App.Input.States
 			return cachedState;
 		}
 	
-		/// <summary>
-		/// Polls the ACTUAL current mouse button state using GetAsyncKeyState.
-		/// This ensures we detect button holds even if WM_INPUT messages are missed.
-		/// CRITICAL: This is called at high frequency (up to 1000Hz), so it must be ultra-fast.
-		/// </summary>
-		/// <returns>Byte with button state bits set (0x01=left, 0x02=right, 0x04=middle, 0x08=X1, 0x10=X2)</returns>
-		private static byte GetCurrentMouseButtonState()
-		{
-			// Optimized: Combine all checks with bitwise operations to reduce branching
-			// Each GetAsyncKeyState call checks high bit (0x8000) and shifts result to button bit position
-			return (byte)(
-				((GetAsyncKeyState(VK_LBUTTON) >> 15) & 0x01) |
-				((GetAsyncKeyState(VK_RBUTTON) >> 14) & 0x02) |
-				((GetAsyncKeyState(VK_MBUTTON) >> 13) & 0x04) |
-				((GetAsyncKeyState(VK_XBUTTON1) >> 12) & 0x08) |
-				((GetAsyncKeyState(VK_XBUTTON2) >> 11) & 0x10)
-			);
-		}
 	
-		/// <summary>
-		/// Polls the ACTUAL current keyboard state using GetAsyncKeyState.
-		/// This ensures we detect key holds even if WM_INPUT messages are missed.
-		/// CRITICAL: This is called at high frequency (up to 1000Hz), so it must be ultra-fast.
-		/// </summary>
-		/// <returns>Byte array with keyboard report format (8 bytes: [0]=modifiers, [1]=reserved, [2-7]=scan codes)</returns>
-		private static byte[] GetCurrentKeyboardState()
-		{
-			byte[] report = new byte[8];
-			int keyIndex = 2; // Start at byte 2 for scan codes (bytes 0-1 are modifiers/reserved)
-	
-			// Scan virtual key codes to find pressed keys
-			// Skip 0x00-0x07 (undefined/mouse buttons) and 0xFF (reserved)
-			// Optimized: Check most common ranges first, early exit when buffer full
-			for (int vKey = 0x08; vKey <= 0xFE; vKey++)
-			{
-				// Skip mouse button virtual keys (already handled by mouse polling)
-				if (vKey <= VK_XBUTTON2)
-					continue;
-	
-				// Check if key is currently pressed (high bit set)
-				if ((GetAsyncKeyState(vKey) & 0x8000) != 0)
-				{
-					// Store vKey as scan code (simplified for performance)
-					report[keyIndex++] = (byte)vKey;
-					
-					// Stop after 6 keys (standard USB keyboard report limit)
-					if (keyIndex >= 8)
-						return report;
-				}
-			}
-	
-			return report;
-		}
 
 
 		/// <summary>
@@ -841,11 +892,31 @@ namespace x360ce.App.Input.States
 		/// <summary>
 		/// Sets the device list for immediate state conversion.
 		/// This enables ConvertAndUpdateDeviceState to find and update device ListInputState properties.
+		/// CRITICAL: Processes any buffered WM_INPUT messages received before device list was ready.
 		/// </summary>
 		/// <param name="deviceList">List of RawInput devices to enable immediate conversion for</param>
 		public void SetDeviceList(System.Collections.Generic.List<RawInputDeviceInfo> deviceList)
 		{
 			_deviceInfoList = deviceList;
+			
+			// CRITICAL: Process any buffered WM_INPUT messages that arrived before device list was ready
+			lock (_pendingMessagesLock)
+			{
+				int processedCount = 0;
+				while (_pendingMessages.Count > 0)
+				{
+					var pendingMessage = _pendingMessages.Dequeue();
+					
+					// Process the buffered message now that device list is available
+					ConvertAndUpdateDeviceState(pendingMessage.DevicePath, pendingMessage.RawReport);
+					processedCount++;
+				}
+				
+				if (processedCount > 0)
+				{
+					Debug.WriteLine($"RawInputState: Processed {processedCount} buffered WM_INPUT messages after device list became available");
+				}
+			}
 			
 			// CRITICAL: Clear cached mouse reports when device list is updated
 			// This prevents stale cached deltas from previous enumeration cycles
@@ -879,19 +950,51 @@ namespace x360ce.App.Input.States
 				System.Diagnostics.Debug.WriteLine($"RawInputState: Cleared stale cached mouse report for device: {path}");
 			}
 			
-			//Debug.WriteLine($"RawInputState: Device list set with {deviceList?.Count ?? 0} devices for immediate conversion");
+			Debug.WriteLine($"RawInputState: Device list set with {deviceList?.Count ?? 0} devices for immediate conversion");
+			
+			// Debug: Log if device list update happens during active input processing
+			if (_cachedStates.Count > 0)
+			{
+				Debug.WriteLine($"RawInputState: WARNING - Device list updated while {_cachedStates.Count} devices have active cached states");
+			}
 		}
 
 		/// <summary>
 		/// Immediately converts RawInput state to ListInputState and updates the device's ListInputState property.
 		/// This method is called directly from WM_INPUT message processing for event-driven conversion.
+		/// CRITICAL: Buffers messages when device list isn't ready to prevent lost input events.
 		/// </summary>
 		/// <param name="devicePath">Device interface path to identify the device</param>
 		/// <param name="rawReport">Raw HID/Mouse/Keyboard report from WM_INPUT message</param>
 		private void ConvertAndUpdateDeviceState(string devicePath, byte[] rawReport)
 		{
-			if (_deviceInfoList == null || string.IsNullOrEmpty(devicePath) || rawReport == null)
+			if (string.IsNullOrEmpty(devicePath) || rawReport == null)
 				return;
+
+			// CRITICAL FIX: If device list isn't ready yet, buffer the message for later processing
+			if (_deviceInfoList == null)
+			{
+				lock (_pendingMessagesLock)
+				{
+					// Only buffer recent messages (within last 2 seconds) to prevent memory leaks
+					var cutoffTime = System.DateTime.Now.AddSeconds(-2);
+					while (_pendingMessages.Count > 0 && _pendingMessages.Peek().Timestamp < cutoffTime)
+					{
+						_pendingMessages.Dequeue();
+					}
+					
+					// Buffer this message for processing when device list becomes available
+					_pendingMessages.Enqueue(new PendingInputMessage
+					{
+						DevicePath = devicePath,
+						RawReport = (byte[])rawReport.Clone(),
+						Timestamp = System.DateTime.Now
+					});
+					
+					Debug.WriteLine($"RawInputState: Buffered WM_INPUT message (device list not ready) - Path: {devicePath}, Queue size: {_pendingMessages.Count}");
+				}
+				return;
+			}
 
 			// Find the device in our list by interface path
 			RawInputDeviceInfo device = null;
@@ -907,7 +1010,7 @@ namespace x360ce.App.Input.States
 			if (device == null)
 			{
 				// Debug: Only log occasionally to avoid spam for unknown devices
-				//Debug.WriteLine($"RawInputState: Device not found in list for immediate conversion - Path: {devicePath}");
+				Debug.WriteLine($"RawInputState: Device not found in list for immediate conversion - Path: {devicePath}");
 				return;
 			}
 
@@ -917,15 +1020,15 @@ namespace x360ce.App.Input.States
 			// Debug: Log the immediate conversion result
 			if (listInputState != null)
 			{
-				//Debug.WriteLine($"RawInputState: Immediate conversion and update successful - " +
-				//              $"Handle: 0x{device.DeviceHandle.ToInt64():X8}, " +
-				 //             $"Type: {device.RawInputDeviceType}");
+				Debug.WriteLine($"RawInputState: Immediate conversion and update successful - " +
+				              $"Handle: 0x{device.DeviceHandle.ToInt64():X8}, " +
+				              $"Type: {device.RawInputDeviceType}");
 			}
 			else
 			{
-				//Debug.WriteLine($"RawInputState: Immediate conversion failed - " +
-				 //             $"Handle: 0x{device.DeviceHandle.ToInt64():X8}, " +
-				 //             $"Type: {device.RawInputDeviceType}");
+				Debug.WriteLine($"RawInputState: Immediate conversion failed - " +
+				              $"Handle: 0x{device.DeviceHandle.ToInt64():X8}, " +
+				              $"Type: {device.RawInputDeviceType}");
 			}
 		}
 

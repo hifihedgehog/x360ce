@@ -62,13 +62,18 @@ namespace x360ce.App.Input.Devices
         // Common identifier for grouping devices from same physical hardware
         public string CommonIdentifier { get; set; }
 
-        public int MouseXAxisSensitivity { get; set; } = 20;
-        public int MouseYAxisSensitivity { get; set; } = 20;
-        public int MouseZAxisSensitivity { get; set; } = 50;
+        /// <summary>
+        /// Mouse axis sensitivity values for X, Y, Z (vertical wheel), W (horizontal wheel).
+        /// Index 0=X, 1=Y, 2=Z, 3=W
+        /// </summary>
+        public List<int> MouseAxisSensitivity { get; set; } = new List<int> { 20, 20, 50, 50 };
 
-        public int MouseXAxisAccumulated { get; set; } = 32767;
-        public int MouseYAxisAccumulated { get; set; } = 32767;
-        public int MouseZAxisAccumulated { get; set; } = 0;
+        /// <summary>
+        /// Mouse axis accumulated positions for X, Y, Z (vertical wheel), W (horizontal wheel).
+        /// Index 0=X, 1=Y, 2=Z, 3=W
+        /// Initial values: X=32767 (centered), Y=32767 (centered), Z=0 (wheel neutral), W=0 (wheel neutral)
+        /// </summary>
+        public List<int> MouseAxisAccumulated { get; set; } = new List<int> { 32767, 32767, 0, 0 };
 
         // Additional identification properties
         public int VendorId { get; set; }
@@ -1456,7 +1461,20 @@ namespace x360ce.App.Input.Devices
                     var mouse = ridDeviceInfo.union.mouse;
                     deviceInfo.ButtonCount = (int)mouse.dwNumberOfButtons;
                     deviceInfo.ProductName = "Mouse";
-                    deviceInfo.AxeCount = mouse.fHasHorizontalWheel ? 4 : 3; // X, Y, Wheel, (Horizontal Wheel)
+                    
+                    // Debug: Log horizontal wheel detection details
+                    Debug.WriteLine($"RawInputDevice: Mouse device 0x{deviceInfo.DeviceHandle.ToInt64():X8} - " +
+                        $"Buttons: {mouse.dwNumberOfButtons}, " +
+                        $"SampleRate: {mouse.dwSampleRate}, " +
+                        $"HasHorizontalWheel: {mouse.fHasHorizontalWheel}");
+                    
+                    // ENHANCEMENT: Always set to 4 axes for modern mouse support
+                    // Most modern mice support horizontal wheels even if not reported by Windows
+                    deviceInfo.AxeCount = 4; // X, Y, Z (vertical wheel), W (horizontal wheel)
+                    
+                    Debug.WriteLine($"RawInputDevice: Mouse axes set to {deviceInfo.AxeCount} (always 4 for modern wheel support)");
+                    Debug.WriteLine($"RawInputDevice: Mouse enumeration complete - Handle: 0x{deviceInfo.DeviceHandle.ToInt64():X8}, " +
+                        $"Path: {deviceInfo.InterfacePath}, Buttons: {deviceInfo.ButtonCount}, Axes: {deviceInfo.AxeCount}");
                     break;
 
                 case RIM_TYPEKEYBOARD:
