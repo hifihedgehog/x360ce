@@ -54,20 +54,5 @@ namespace x360ce.App.Input.States
 			Buttons = new List<int>();
 			POVs = new List<int>();
 		}
-
-		/// <summary>
-		/// Returns a string representation of the state in the format:
-		/// ((axes), (sliders), (buttons), (povs))
-		/// Empty collections are shown as (), not null.
-		/// </summary>
-		public override string ToString()
-		{
-			string axesStr = Axes != null && Axes.Count > 0 ? $"({string.Join(",", Axes)})" : "()";
-			string slidersStr = Sliders != null && Sliders.Count > 0 ? $"({string.Join(",", Sliders)})" : "()";
-			string buttonsStr = Buttons != null && Buttons.Count > 0 ? $"({string.Join(",", Buttons)})" : "()";
-			string povsStr = POVs != null && POVs.Count > 0 ? $"({string.Join(",", POVs)})" : "()";
-			
-			return $"({axesStr},{slidersStr},{buttonsStr},{povsStr})";
-		}
 	}
 }

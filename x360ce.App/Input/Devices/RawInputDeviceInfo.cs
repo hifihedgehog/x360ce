@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Win32;
 using x360ce.App.Input.States;
 
 namespace x360ce.App.Input.Devices
@@ -2114,6 +2115,14 @@ namespace x360ce.App.Input.Devices
                     }
                 }
     
+                // Attempt to get a better product name from the Registry (e.g. "Logitech G903...")
+                // instead of generic "Keyboard" or "Mouse"
+                var registryName = GetDeviceProductFromRegistry(deviceInfo.InterfacePath);
+                if (!string.IsNullOrEmpty(registryName))
+                {
+                    deviceInfo.ProductName = registryName;
+                }
+    
                 // Extract VID/PID from InterfacePath for all device types
                 // For HID devices, this may override values from RID_DEVICE_INFO if they were 0
                 // For Keyboard/Mouse devices, this is the only way to get VID/PID
@@ -2416,6 +2425,66 @@ namespace x360ce.App.Input.Devices
             {
                 // Return "MI_XX"
                 return upperPath.Substring(miIndex + 1, 5);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the friendly device name from the Windows Registry.
+        /// Resolves generic names like "Keyboard" or "Mouse" to actual hardware names.
+        /// </summary>
+        private string GetDeviceProductFromRegistry(string interfacePath)
+        {
+            if (string.IsNullOrEmpty(interfacePath)) return null;
+
+            try
+            {
+                // Convert Interface Path to Registry Path
+                // Format: \\?\HID#VID_XXXX&PID_XXXX...#{GUID}
+                // Target: SYSTEM\CurrentControlSet\Enum\HID\VID_XXXX&PID_XXXX...\InstanceId
+
+                // 1. Remove \\?\ prefix
+                var path = interfacePath;
+                if (path.StartsWith(@"\\?\")) path = path.Substring(4);
+
+                // 2. Remove {GUID} suffix
+                int lastHash = path.LastIndexOf('#');
+                if (lastHash > 0) path = path.Substring(0, lastHash);
+
+                // 3. Replace remaining # with \ to form the Enum path
+                path = path.Replace('#', '\\');
+
+                // 4. Construct full registry key
+                string keyPath = $@"SYSTEM\CurrentControlSet\Enum\{path}";
+
+                using (var key = Registry.LocalMachine.OpenSubKey(keyPath))
+                {
+                    if (key != null)
+                    {
+                        // Try "FriendlyName" first (most descriptive)
+                        var friendlyName = key.GetValue("FriendlyName") as string;
+                        if (!string.IsNullOrEmpty(friendlyName)) return friendlyName;
+
+                        // Fallback to "DeviceDesc"
+                        var deviceDesc = key.GetValue("DeviceDesc") as string;
+                        if (!string.IsNullOrEmpty(deviceDesc))
+                        {
+                            // DeviceDesc often looks like "@oemXX.inf,%DeviceName%;Actual Name"
+                            // We want the last part
+                            int semiColon = deviceDesc.LastIndexOf(';');
+                            if (semiColon >= 0 && semiColon < deviceDesc.Length - 1)
+                            {
+                                return deviceDesc.Substring(semiColon + 1);
+                            }
+                            return deviceDesc;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RawInputDevice: Error getting registry name for {interfacePath}: {ex.Message}");
             }
 
             return null;
