@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using x360ce.App.Input.Devices;
@@ -138,6 +139,7 @@ namespace x360ce.App.Input.States
 
         // HID Usage Pages
         private const ushort HID_USAGE_PAGE_GENERIC = 0x01;
+        private const ushort HID_USAGE_PAGE_SIMULATION = 0x02;
         private const ushort HID_USAGE_PAGE_BUTTON = 0x09;
 
         private const uint RIM_TYPEMOUSE = 0;
@@ -273,7 +275,6 @@ namespace x360ce.App.Input.States
         #endregion
 
         private RawInputMessageWindow _messageWindow;
-        private bool _isInitialized;
         private bool _disposed;
 
         // Optimization: Reuse buffer for WM_INPUT messages to avoid AllocHGlobal/FreeHGlobal overhead
@@ -293,9 +294,12 @@ namespace x360ce.App.Input.States
 
         // HID Usage Page and Usage constants
         private const ushort USAGE_PAGE_GENERIC_DESKTOP = 0x01;
+        private const ushort USAGE_PAGE_DIGITIZER = 0x0D;
         private const ushort USAGE_JOYSTICK = 0x04;
         private const ushort USAGE_GAMEPAD = 0x05;
         private const ushort USAGE_MULTI_AXIS = 0x08;
+        private const ushort USAGE_DIGITIZER_TOUCH_SCREEN = 0x04;
+        private const ushort USAGE_DIGITIZER_TOUCH_PAD = 0x05;
         private const uint RIDEV_INPUTSINK = 0x00000100;
 
         /// <summary>
@@ -313,7 +317,6 @@ namespace x360ce.App.Input.States
             }
             catch
             {
-                _isInitialized = false;
             }
         }
 
@@ -360,9 +363,9 @@ namespace x360ce.App.Input.States
 
             try
             {
-                // Register for ALL input devices: Gaming devices, Keyboard, and Mouse
+                // Register for ALL input devices: Gaming devices, Keyboard, Mouse, and Digitizers (Touchpads/Touchscreens)
                 // This ensures we receive WM_INPUT messages from all input device types
-                var devices = new RAWINPUTDEVICE[5];
+                var devices = new RAWINPUTDEVICE[7];
 
                 // Joystick (0x04) - Flight sticks, racing wheels, Xbox controllers often report as this
                 devices[0].usUsagePage = USAGE_PAGE_GENERIC_DESKTOP;
@@ -395,25 +398,34 @@ namespace x360ce.App.Input.States
                 devices[4].dwFlags = RIDEV_INPUTSINK;
                 devices[4].hwndTarget = _messageWindow.Handle;
 
-                bool success = RegisterRawInputDevices(devices, 5, (uint)Marshal.SizeOf(typeof(RAWINPUTDEVICE)));
+                // Touch Screen (0x04) - Digitizer Page
+                devices[5].usUsagePage = USAGE_PAGE_DIGITIZER;
+                devices[5].usUsage = USAGE_DIGITIZER_TOUCH_SCREEN;
+                devices[5].dwFlags = RIDEV_INPUTSINK;
+                devices[5].hwndTarget = _messageWindow.Handle;
+
+                // Touch Pad (0x05) - Digitizer Page
+                devices[6].usUsagePage = USAGE_PAGE_DIGITIZER;
+                devices[6].usUsage = USAGE_DIGITIZER_TOUCH_PAD;
+                devices[6].dwFlags = RIDEV_INPUTSINK;
+                devices[6].hwndTarget = _messageWindow.Handle;
+
+                bool success = RegisterRawInputDevices(devices, 7, (uint)Marshal.SizeOf(typeof(RAWINPUTDEVICE)));
                 if (!success)
                 {
                     uint errorCode = GetLastError();
                     System.Diagnostics.Debug.WriteLine($"RawInputState.RegisterDevices: CRITICAL - RegisterRawInputDevices failed with error code: {errorCode}");
                     System.Diagnostics.Debug.WriteLine($"RawInputState.RegisterDevices: This will cause mouse/keyboard/HID messages to stop arriving!");
-                    _isInitialized = false;
                 }
                 else
                 {
                     System.Diagnostics.Debug.WriteLine($"RawInputState.RegisterDevices: ✅ Successfully registered all input devices (HID, Keyboard, Mouse) for window handle: 0x{_messageWindow.Handle:X}");
                     System.Diagnostics.Debug.WriteLine($"RawInputState.RegisterDevices: Mouse messages should now arrive continuously");
-                    _isInitialized = true;
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"RawInputState.RegisterDevices: Exception during registration: {ex.Message}");
-                _isInitialized = false;
             }
         }
 
@@ -475,8 +487,25 @@ namespace x360ce.App.Input.States
                 ProcessKeyboardInput(buffer, header);
         }
 
+        // Cache devices by handle to avoid expensive string operations and lookups in the hot path
+        private Dictionary<IntPtr, RawInputDeviceInfo> _deviceCache = new Dictionary<IntPtr, RawInputDeviceInfo>();
+
         private RawInputDeviceInfo GetDeviceInfo(IntPtr hDevice, RawInputDeviceType rawInputDeviceType)
         {
+            // Fast path: Check cache first
+            if (_deviceCache.TryGetValue(hDevice, out var cachedDevice))
+            {
+                // If device was disposed (external list refresh), remove from cache and retry lookup
+                if (cachedDevice.DeviceHandle == IntPtr.Zero)
+                {
+                    _deviceCache.Remove(hDevice);
+                }
+                else
+                {
+                    return cachedDevice;
+                }
+            }
+
             // Get device interface path
             string devicePath = GetDeviceInterfacePath(hDevice);
             if (string.IsNullOrEmpty(devicePath)) return null;
@@ -484,6 +513,12 @@ namespace x360ce.App.Input.States
             // Direct access to the authoritative static device list
             var device = RawInputDevice.RawInputDeviceInfoList
                 .FirstOrDefault(d => d.InterfacePath == devicePath && d.RawInputDeviceType == rawInputDeviceType);
+
+            if (device != null)
+            {
+                // Add to cache
+                _deviceCache[hDevice] = device;
+            }
 
             // If device not found in list (e.g., during list recreation), create a temporary device info
             // This ensures WM_INPUT messages continue to be processed even when the device list is being updated
@@ -539,8 +574,17 @@ namespace x360ce.App.Input.States
             {
                 device.ListInputState = new ListInputState();
                 // Initialize with device capabilities
+                // Axes: Standard Axes + Steering
                 for (int i = 0; i < device.AxeCount; i++) device.ListInputState.Axes.Add(32767);
+                for (int i = 0; i < device.SteeringCount; i++) device.ListInputState.Axes.Add(32767);
+
+                // Sliders: Standard Sliders + Throttle + Brake + Accelerator + Clutch
                 for (int i = 0; i < device.SliderCount; i++) device.ListInputState.Sliders.Add(0);
+                for (int i = 0; i < device.ThrottleCount; i++) device.ListInputState.Sliders.Add(0);
+                for (int i = 0; i < device.BrakeCount; i++) device.ListInputState.Sliders.Add(0);
+                for (int i = 0; i < device.AcceleratorCount; i++) device.ListInputState.Sliders.Add(0);
+                for (int i = 0; i < device.ClutchCount; i++) device.ListInputState.Sliders.Add(0);
+
                 for (int i = 0; i < device.ButtonCount; i++) device.ListInputState.Buttons.Add(0);
                 for (int i = 0; i < device.PovCount; i++) device.ListInputState.POVs.Add(-1);
             }
@@ -566,6 +610,7 @@ namespace x360ce.App.Input.States
                 // because devices may not report all axes in sequential order
                 int axisIndex = 0; // Track actual axis position in deviceState.Axes
                 
+                // 1. Generic Desktop Axes (X, Y, Z, Rx, Ry, Rz)
                 foreach (var usage in _axisUsages)
                 {
                     if (axisIndex >= device.AxeCount)
@@ -587,6 +632,36 @@ namespace x360ce.App.Input.States
                         // Successfully read this axis - store it at the current index
                         deviceState.Axes[axisIndex] = value;
                         axisIndex++; // Move to next axis position
+                    }
+                }
+
+                // 2. Digitizer Axes (Pressure, Tilt)
+                if (device.UsagePage == USAGE_PAGE_DIGITIZER)
+                {
+                    // Tip Pressure (0x30), Barrel Pressure (0x31), X Tilt (0x3D), Y Tilt (0x3E)
+                    ushort[] digitizerUsages = { 0x30, 0x31, 0x3D, 0x3E };
+                    
+                    foreach (var usage in digitizerUsages)
+                    {
+                        if (axisIndex >= device.AxeCount)
+                            break;
+
+                        int value;
+                        int status = HidP_GetUsageValue(
+                            HIDP_REPORT_TYPE.HidP_Input,
+                            USAGE_PAGE_DIGITIZER,
+                            0, // LinkCollection
+                            usage,
+                            out value,
+                            device.PreparsedData,
+                            reportPtr,
+                            (uint)reportLength);
+
+                        if (status == HIDP_STATUS_SUCCESS && axisIndex < deviceState.Axes.Count)
+                        {
+                            deviceState.Axes[axisIndex] = value;
+                            axisIndex++;
+                        }
                     }
                 }
             }
@@ -660,6 +735,53 @@ namespace x360ce.App.Input.States
                 }
             }
 
+            // Parse Simulation Controls using HID API if preparsed data is available
+            if (device.PreparsedData != IntPtr.Zero)
+            {
+                // Simulation Usage Page: 0x02
+                // Usages based on RawInputDeviceInfo.cs detection logic:
+                // Throttle: 0xBA
+                // Accelerator: 0xBB
+                // Brake: 0xBC
+                // Clutch: 0xBD
+                // Steering: 0xB0
+
+                // Steering maps to Axes
+                int axisIndex = device.AxeCount;
+                if (device.SteeringCount > 0)
+                {
+                    ReadSimulationControl(device, deviceState.Axes, axisIndex, 0xB0, reportPtr, reportLength);
+                    axisIndex += device.SteeringCount;
+                }
+
+                // Others map to Sliders
+                int sliderIndex = device.SliderCount;
+                
+                if (device.ThrottleCount > 0)
+                {
+                    ReadSimulationControl(device, deviceState.Sliders, sliderIndex, 0xBA, reportPtr, reportLength);
+                    sliderIndex += device.ThrottleCount;
+                }
+                
+                if (device.BrakeCount > 0)
+                {
+                    ReadSimulationControl(device, deviceState.Sliders, sliderIndex, 0xBC, reportPtr, reportLength);
+                    sliderIndex += device.BrakeCount;
+                }
+
+                if (device.AcceleratorCount > 0)
+                {
+                    ReadSimulationControl(device, deviceState.Sliders, sliderIndex, 0xBB, reportPtr, reportLength);
+                    sliderIndex += device.AcceleratorCount;
+                }
+
+                if (device.ClutchCount > 0)
+                {
+                    ReadSimulationControl(device, deviceState.Sliders, sliderIndex, 0xBD, reportPtr, reportLength);
+                    sliderIndex += device.ClutchCount;
+                }
+            }
+
             // Parse buttons using HID API instead of raw byte reading
             // This is the ONLY reliable way to read buttons because HID reports can have
             // buttons, POVs, and axes interleaved in complex ways
@@ -669,8 +791,11 @@ namespace x360ce.App.Input.States
                 if (_buttonUsagesBuffer.Length < device.ButtonCount)
                     _buttonUsagesBuffer = new ushort[device.ButtonCount];
 
-                // Use HidP_GetUsages to get all pressed buttons
-                // This API correctly interprets the HID report descriptor
+                // Clear all buttons first
+                for (int i = 0; i < deviceState.Buttons.Count; i++)
+                    deviceState.Buttons[i] = 0;
+
+                // 1. Process Standard Buttons (Page 0x09)
                 ushort usageLength = (ushort)device.ButtonCount;
                 
                 int status = HidP_GetUsages(
@@ -685,16 +810,52 @@ namespace x360ce.App.Input.States
                 
                 if (status == HIDP_STATUS_SUCCESS)
                 {
-                    // Clear all buttons first
-                    for (int i = 0; i < deviceState.Buttons.Count; i++)
-                        deviceState.Buttons[i] = 0;
-                    
                     // Set pressed buttons (usages are 1-based, button indices are 0-based)
                     for (int i = 0; i < usageLength; i++)
                     {
                         int buttonIndex = _buttonUsagesBuffer[i] - 1; // Convert 1-based to 0-based
                         if (buttonIndex >= 0 && buttonIndex < deviceState.Buttons.Count)
                             deviceState.Buttons[buttonIndex] = 1;
+                    }
+                }
+
+                // 2. Process Digitizer Buttons (Page 0x0D) for TouchScreens, Pens, etc.
+                if (device.UsagePage == USAGE_PAGE_DIGITIZER)
+                {
+                    usageLength = (ushort)device.ButtonCount;
+                    status = HidP_GetUsages(
+                        HIDP_REPORT_TYPE.HidP_Input,
+                        USAGE_PAGE_DIGITIZER,
+                        0, // LinkCollection
+                        _buttonUsagesBuffer,
+                        ref usageLength,
+                        device.PreparsedData,
+                        reportPtr,
+                        (uint)reportLength);
+
+                    if (status == HIDP_STATUS_SUCCESS)
+                    {
+                        for (int i = 0; i < usageLength; i++)
+                        {
+                            // Map Digitizer usages to buttons
+                            // Tip Switch (0x42) -> Button 0
+                            // Barrel Switch (0x44) -> Button 1
+                            // Eraser (0x45) -> Button 2
+                            // In Range (0x32) -> Button 3 (Status - Do not map)
+                            // Touch Valid (0x47) -> Button 4 (Status - Do not map)
+                            int buttonIndex = -1;
+                            switch (_buttonUsagesBuffer[i])
+                            {
+                                case 0x42: buttonIndex = 0; break;
+                                case 0x44: buttonIndex = 1; break;
+                                case 0x45: buttonIndex = 2; break;
+                                // case 0x32: buttonIndex = 3; break;
+                                // case 0x47: buttonIndex = 4; break;
+                            }
+
+                            if (buttonIndex >= 0 && buttonIndex < deviceState.Buttons.Count)
+                                deviceState.Buttons[buttonIndex] = 1;
+                        }
                     }
                 }
             }
@@ -719,7 +880,14 @@ namespace x360ce.App.Input.States
                 device.ListInputState = new ListInputState();
                 // Initialize with device.ButtonCount buttons and device.AxeCount axes (X, Y, Z-wheel, W-hwheel)
                 for (int i = 0; i < device.ButtonCount; i++) device.ListInputState.Buttons.Add(0);
-                for (int i = 0; i < device.AxeCount; i++) device.ListInputState.Axes.Add(i < 2 ? 32767 : 0);
+                
+                // Initialize Mouse Axes:
+                // Indexes 0 (X) and 1 (Y) start at center (32767) to simulate joystick stick behavior.
+                // Indexes 2 (Wheel) and 3 (H-Wheel) start at 0 to simulate slider behavior.
+                for (int i = 0; i < device.AxeCount; i++)
+                {
+                    device.ListInputState.Axes.Add(i < 2 ? 32767 : 0);
+                }
             }
 
             var deviceState = device.ListInputState;
@@ -755,6 +923,31 @@ namespace x360ce.App.Input.States
             {
                 short hwheelDelta = (short)mouse.usButtonData;                
                 deviceState.Axes[3] = Math.Max(0, Math.Min(65535, deviceState.Axes[3] + hwheelDelta * device.MouseAxisSensitivity[3]));
+            }
+        }
+
+        /// <summary>
+        /// Helper method to read simulation control values.
+        /// </summary>
+        private void ReadSimulationControl(RawInputDeviceInfo device, List<int> targetList, int index, ushort usage, IntPtr reportPtr, int reportLength)
+        {
+            if (index >= targetList.Count) return;
+
+            int value;
+            int status = HidP_GetUsageValue(
+                HIDP_REPORT_TYPE.HidP_Input,
+                HID_USAGE_PAGE_SIMULATION,
+                0, // LinkCollection
+                usage,
+                out value,
+                device.PreparsedData,
+                reportPtr,
+                (uint)reportLength);
+
+            if (status == HIDP_STATUS_SUCCESS)
+            {
+                // We only support reading one control per usage for now, as we don't track LinkCollections
+                targetList[index] = value;
             }
         }
 
@@ -831,6 +1024,7 @@ namespace x360ce.App.Input.States
             if (_disposed)
                 return;
 
+            _deviceCache.Clear();
             _messageWindow?.Dispose();
 
             if (_buffer != IntPtr.Zero)

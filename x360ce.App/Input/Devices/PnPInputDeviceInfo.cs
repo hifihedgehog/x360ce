@@ -12,87 +12,262 @@ namespace x360ce.App.Input.Devices
     /// Physical input device container with comprehensive device information from Windows Plug and Play Manager.
     /// Contains detailed device metadata from the Windows Device Manager and Setup API.
     /// </summary>
-    public class PnPInputDeviceInfo : IDisposable
+    public class PnPInputDeviceInfo
     {
+        /// <summary>
+        /// Gets or sets the unique instance identifier of the device.
+        /// </summary>
         public Guid InstanceGuid { get; set; }
+
+        /// <summary>
+        /// Gets or sets the instance name. Use FriendlyName if available, otherwise leave empty.
+        /// </summary>
         public string InstanceName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the product identifier.
+        /// </summary>
         public Guid ProductGuid { get; set; }
+
+        /// <summary>
+        /// Gets or sets the product name. Use DeviceDescription if available, otherwise leave empty.
+        /// </summary>
         public string ProductName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the device type.
+        /// </summary>
         public int DeviceType { get; set; }
+
+        /// <summary>
+        /// Gets or sets the device subtype.
+        /// </summary>
         public int DeviceSubtype { get; set; }
+
+        /// <summary>
+        /// Gets or sets the usage.
+        /// </summary>
         public int Usage { get; set; }
+
+        /// <summary>
+        /// Gets or sets the usage page.
+        /// </summary>
         public int UsagePage { get; set; }
+
+        /// <summary>
+        /// Gets or sets the input type.
+        /// </summary>
         public string InputType { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of axes.
+        /// </summary>
         public int AxeCount { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of sliders.
+        /// </summary>
         public int SliderCount { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of buttons.
+        /// </summary>
         public int ButtonCount { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of Point-of-View controllers.
+        /// </summary>
         public int PovCount { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the device has force feedback.
+        /// </summary>
         public bool HasForceFeedback { get; set; }
+
+        /// <summary>
+        /// Gets or sets the driver version.
+        /// </summary>
         public int DriverVersion { get; set; }
+
+        /// <summary>
+        /// Gets or sets the hardware revision.
+        /// </summary>
         public int HardwareRevision { get; set; }
+
+        /// <summary>
+        /// Gets or sets the firmware revision.
+        /// </summary>
         public int FirmwareRevision { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the device is online.
+        /// </summary>
         public bool IsOnline { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the device is enabled.
+        /// </summary>
         public bool IsEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the device is assigned to Pad 1.
+        /// </summary>
         public bool AssignedToPad1 { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the device is assigned to Pad 2.
+        /// </summary>
         public bool AssignedToPad2 { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the device is assigned to Pad 3.
+        /// </summary>
         public bool AssignedToPad3 { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the device is assigned to Pad 4.
+        /// </summary>
         public bool AssignedToPad4 { get; set; }
+
+        /// <summary>
+        /// Gets or sets the device type name.
+        /// </summary>
         public string DeviceTypeName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the interface path.
+        /// </summary>
         public string InterfacePath { get; set; }
-        
-        // Common identifier for grouping devices from same physical hardware
+
+        /// <summary>
+        /// Common identifier for grouping devices from same physical hardware.
+        /// </summary>
         public string CommonIdentifier { get; set; }
-        
-        // Additional identification properties
+
+        /// <summary>
+        /// Gets or sets the vendor identifier.
+        /// </summary>
         public int VendorId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the product identifier.
+        /// </summary>
         public int ProductId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the class GUID.
+        /// </summary>
         public Guid ClassGuid { get; set; }
+
+        /// <summary>
+        /// Gets or sets the hardware IDs.
+        /// </summary>
         public string HardwareIds { get; set; }
+
+        /// <summary>
+        /// Gets or sets the device ID.
+        /// </summary>
         public string DeviceId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the parent device ID.
+        /// </summary>
         public string ParentDeviceId { get; set; }
-        
-        // Physical device-specific properties
+
+        /// <summary>
+        /// Gets or sets the device instance ID.
+        /// </summary>
         public string DeviceInstanceId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the friendly name.
+        /// </summary>
         public string FriendlyName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the manufacturer.
+        /// </summary>
         public string Manufacturer { get; set; }
+
+        /// <summary>
+        /// Gets or sets the device description.
+        /// </summary>
         public string DeviceDescription { get; set; }
+
+        /// <summary>
+        /// Gets or sets the driver provider.
+        /// </summary>
         public string DriverProvider { get; set; }
+
+        /// <summary>
+        /// Gets or sets the driver date.
+        /// </summary>
         public string DriverDate { get; set; }
+
+        /// <summary>
+        /// Gets or sets the driver version string.
+        /// </summary>
         public string DriverVersionString { get; set; }
+
+        /// <summary>
+        /// Gets or sets the location information.
+        /// </summary>
         public string LocationInformation { get; set; }
+
+        /// <summary>
+        /// Gets or sets the physical device object name.
+        /// </summary>
         public string PhysicalDeviceObjectName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the device status.
+        /// </summary>
         public uint DeviceStatus { get; set; }
+
+        /// <summary>
+        /// Gets or sets the problem code.
+        /// </summary>
         public uint ProblemCode { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the device is present.
+        /// </summary>
         public bool IsPresent { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the device is started.
+        /// </summary>
         public bool IsStarted { get; set; }
-        
-        // Sorting and indentation properties
+
+        /// <summary>
+        /// Gets or sets the sorting string.
+        /// </summary>
         public string SortingString { get; set; }
+
+        /// <summary>
+        /// Gets or sets the MI value.
+        /// </summary>
         public string MiValue { get; set; }
+
+        /// <summary>
+        /// Gets or sets the COL value.
+        /// </summary>
         public string ColValue { get; set; }
-        
+
         /// <summary>
         /// Display name combining friendly name and device ID for easy identification.
         /// </summary>
         public string DisplayName => !string.IsNullOrEmpty(FriendlyName) ? FriendlyName : InstanceName;
-        
+
         /// <summary>
         /// VID/PID string in standard format for hardware identification.
         /// </summary>
         public string VidPidString => $"VID_{VendorId:X4}&PID_{ProductId:X4}";
-        
+
         /// <summary>
         /// Device status description for troubleshooting.
         /// </summary>
         public string StatusDescription => GetDeviceStatusDescription(DeviceStatus, ProblemCode);
-        
-        /// <summary>
-        /// Dispose the physical device info when no longer needed.
-        /// </summary>
-        public void Dispose()
-        {
-            // Physical device info doesn't need explicit disposal
-        }
         
         /// <summary>
         /// Gets a human-readable description of the device status and any problems.
@@ -284,9 +459,6 @@ namespace x360ce.App.Input.Devices
         /// • Provides device status, driver information, and hardware identification
         /// • Excludes non-input devices like sound cards, network adapters, storage devices
         /// • Is self-contained with minimal external dependencies
-        ///
-        /// IMPORTANT: The returned PnPInputDeviceInfo objects contain Windows device information.
-        /// Call Dispose() on each PnPInputDeviceInfo when no longer needed to free resources.
         /// </remarks>
         public List<PnPInputDeviceInfo> GetPnPInputDeviceInfoList()
         {
@@ -385,35 +557,6 @@ namespace x360ce.App.Input.Devices
             return deviceList;
         }
 
-        /// <summary>
-        /// Disposes all PnP input devices in the provided list to free resources.
-        /// Call this method when the device list is no longer needed.
-        /// </summary>
-        /// <param name="deviceList">List of PnPInputDeviceInfo objects to dispose</param>
-        public static void DisposeDeviceList(List<PnPInputDeviceInfo> deviceList)
-        {
-            if (deviceList == null) return;
-
-            Debug.WriteLine($"PnPInputDevice: Disposing {deviceList.Count} PnP input devices...");
-
-            foreach (var deviceInfo in deviceList)
-            {
-                try
-                {
-                    if (deviceInfo != null)
-                    {
-                        Debug.WriteLine($"PnPInputDevice: Disposing device - {deviceInfo.DisplayName}");
-                        deviceInfo.Dispose();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"PnPInputDevice: Error disposing device {deviceInfo?.DisplayName}: {ex.Message}");
-                }
-            }
-
-            Debug.WriteLine("PnPInputDevice: All PnP input devices disposed.");
-        }
 
         #region Private Helper Methods
 
