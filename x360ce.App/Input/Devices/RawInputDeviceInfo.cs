@@ -40,6 +40,10 @@ namespace x360ce.App.Input.Devices
         public int SliderCount { get; set; }
         public int ButtonCount { get; set; }
         public int PovCount { get; set; }
+        /// <summary>
+        /// Logical Maximum values for each POV, used to determine format (4-way, 8-way, etc.).
+        /// </summary>
+        public List<int> PovLogicalMaxes { get; set; } = new List<int>();
         
         // Simulation Controls (Usage Page 0x02)
         public int ThrottleCount { get; set; }
@@ -332,7 +336,7 @@ namespace x360ce.App.Input.Devices
         /// HID button capabilities range union.
         /// </summary>
         [StructLayout(LayoutKind.Sequential)]
-        private struct HIDP_BUTTON_CAPS_RANGE
+        public struct HIDP_BUTTON_CAPS_RANGE
         {
             public ushort UsageMin;
             public ushort UsageMax;
@@ -348,7 +352,7 @@ namespace x360ce.App.Input.Devices
         /// HID button capabilities not range union.
         /// </summary>
         [StructLayout(LayoutKind.Sequential)]
-        private struct HIDP_BUTTON_CAPS_NOT_RANGE
+        public struct HIDP_BUTTON_CAPS_NOT_RANGE
         {
             public ushort Usage;
             public ushort Reserved1;
@@ -364,7 +368,7 @@ namespace x360ce.App.Input.Devices
         /// HID value capabilities structure.
         /// </summary>
         [StructLayout(LayoutKind.Explicit)]
-        private struct HIDP_VALUE_CAPS
+        public struct HIDP_VALUE_CAPS
         {
             [FieldOffset(0)]
             public ushort UsagePage;
@@ -426,7 +430,7 @@ namespace x360ce.App.Input.Devices
         /// HID value capabilities range union.
         /// </summary>
         [StructLayout(LayoutKind.Sequential)]
-        private struct HIDP_VALUE_CAPS_RANGE
+        public struct HIDP_VALUE_CAPS_RANGE
         {
             public ushort UsageMin;
             public ushort UsageMax;
@@ -442,7 +446,7 @@ namespace x360ce.App.Input.Devices
         /// HID value capabilities not range union.
         /// </summary>
         [StructLayout(LayoutKind.Sequential)]
-        private struct HIDP_VALUE_CAPS_NOT_RANGE
+        public struct HIDP_VALUE_CAPS_NOT_RANGE
         {
             public ushort Usage;
             public ushort Reserved1;
@@ -799,7 +803,7 @@ namespace x360ce.App.Input.Devices
                 // Attempt to parse HID capabilities to check for buttons/axes
                 if (GetHidCapabilities(rawDevice.hDevice, out int axes, out int sliders, out int buttons, out int povs,
                     out _, out _, out _, out _, out _, out _,
-                    out _, out _, out IntPtr preparsedData))
+                    out _, out _, out IntPtr preparsedData, out _))
                 {
                     // Free the preparsed data as we only needed it for the check
                     // (It will be re-acquired in ProcessInputDevice if accepted)
@@ -883,7 +887,8 @@ namespace x360ce.App.Input.Devices
         /// <returns>True if capabilities were successfully retrieved</returns>
         private bool GetHidCapabilities(IntPtr hDevice, out int axeCount, out int sliderCount, out int buttonCount, out int povCount,
             out int throttleCount, out int brakeCount, out int steeringCount, out int acceleratorCount, out int clutchCount,
-            out bool hasForceFeedback, out bool usesReportIds, out int buttonDataOffset, out IntPtr preparsedDataOut)
+            out bool hasForceFeedback, out bool usesReportIds, out int buttonDataOffset, out IntPtr preparsedDataOut,
+            out List<int> povLogicalMaxes)
         {
             axeCount = 0;
             sliderCount = 0;
@@ -898,6 +903,7 @@ namespace x360ce.App.Input.Devices
             usesReportIds = false;
             buttonDataOffset = 0;
             preparsedDataOut = IntPtr.Zero;
+            povLogicalMaxes = new List<int>();
 
             // Track unique usages to avoid double-counting (e.g. multi-touch devices reporting 10 X-axes)
             // RawInputState currently only supports reading unique usages
@@ -1018,6 +1024,16 @@ namespace x360ce.App.Input.Devices
                             // Debug: Log ALL value capabilities regardless of usage page
                             ushort usage = valueCap.IsRange ? valueCap.Range.UsageMin : valueCap.NotRange.Usage;
                             ushort usageMax = valueCap.IsRange ? valueCap.Range.UsageMax : usage;
+
+                            // CRITICAL FIX: Capture LogicalMin/Max for axis scaling
+                            // x360ce needs to know the raw range to correctly scale to 0-65535
+                            // Store this in a temporary map or directly in the device info if possible
+                            // For now, we'll log it and rely on RawInputState to handle the scaling if it gets the raw values
+                            
+                            if (valueCap.LogicalMax > 0)
+                            {
+                                Debug.WriteLine($"RawInputDevice: Value Range: {valueCap.LogicalMin} to {valueCap.LogicalMax}");
+                            }
                             ushort linkUsage = valueCap.LinkUsage;
                             ushort linkUsagePage = valueCap.LinkUsagePage;
                             
@@ -1143,7 +1159,11 @@ namespace x360ce.App.Input.Devices
                                     else if (u == 0x39)
                                     {
                                         int key = (HID_USAGE_PAGE_GENERIC << 16) | u;
-                                        if (foundPovs.Add(key)) povsFound++;
+                                        if (foundPovs.Add(key))
+                                        {
+                                            povsFound++;
+                                            povLogicalMaxes.Add(valueCap.LogicalMax);
+                                        }
                                     }
                                 }
                                 else if (valueCap.UsagePage == HID_USAGE_PAGE_DIGITIZER)
@@ -2083,9 +2103,10 @@ namespace x360ce.App.Input.Devices
                         bool forceFeedback, usesReportIds;
                         int buttonDataOffset;
                         IntPtr preparsedData;
+                        List<int> povMaxes;
                         if (GetHidCapabilities(rawDevice.hDevice, out axes, out sliders, out buttons, out povs,
                             out throttles, out brakes, out steering, out accelerators, out clutches, out forceFeedback,
-                            out usesReportIds, out buttonDataOffset, out preparsedData))
+                            out usesReportIds, out buttonDataOffset, out preparsedData, out povMaxes))
                         {
                             deviceInfo.AxeCount = axes;
                             deviceInfo.SliderCount = sliders;
@@ -2099,6 +2120,7 @@ namespace x360ce.App.Input.Devices
                             deviceInfo.HasForceFeedback = forceFeedback;
                             deviceInfo.UsesReportIds = usesReportIds;
                             deviceInfo.ButtonDataOffset = buttonDataOffset;
+                            deviceInfo.PovLogicalMaxes = povMaxes;
                             // CRITICAL: Store preparsed data for later use by HidP_GetUsages
                             // This will be freed when the device is disposed
                             deviceInfo.PreparsedData = preparsedData;

@@ -575,18 +575,20 @@ namespace x360ce.App.Input.States
                 device.ListInputState = new ListInputState();
                 // Initialize with device capabilities
                 // Axes: Standard Axes + Steering
-                for (int i = 0; i < device.AxeCount; i++) device.ListInputState.Axes.Add(32767);
-                for (int i = 0; i < device.SteeringCount; i++) device.ListInputState.Axes.Add(32767);
+                // Initialize at midpoint (32767) for axes to be neutral
+                for (int i = 0; i < device.AxeCount; i++) device.ListInputState.Axes.Add(ListInputState.ConvertToAxisRange(32767, 0, 65535, ListInputState.InputSourceType.RawInput));
+                for (int i = 0; i < device.SteeringCount; i++) device.ListInputState.Axes.Add(ListInputState.ConvertToAxisRange(32767, 0, 65535, ListInputState.InputSourceType.RawInput));
 
                 // Sliders: Standard Sliders + Throttle + Brake + Accelerator + Clutch
-                for (int i = 0; i < device.SliderCount; i++) device.ListInputState.Sliders.Add(0);
-                for (int i = 0; i < device.ThrottleCount; i++) device.ListInputState.Sliders.Add(0);
-                for (int i = 0; i < device.BrakeCount; i++) device.ListInputState.Sliders.Add(0);
-                for (int i = 0; i < device.AcceleratorCount; i++) device.ListInputState.Sliders.Add(0);
-                for (int i = 0; i < device.ClutchCount; i++) device.ListInputState.Sliders.Add(0);
+                // Initialize at 0 for sliders
+                for (int i = 0; i < device.SliderCount; i++) device.ListInputState.Sliders.Add(ListInputState.ConvertToAxisRange(0, 0, 65535, ListInputState.InputSourceType.RawInput));
+                for (int i = 0; i < device.ThrottleCount; i++) device.ListInputState.Sliders.Add(ListInputState.ConvertToAxisRange(0, 0, 65535, ListInputState.InputSourceType.RawInput));
+                for (int i = 0; i < device.BrakeCount; i++) device.ListInputState.Sliders.Add(ListInputState.ConvertToAxisRange(0, 0, 65535, ListInputState.InputSourceType.RawInput));
+                for (int i = 0; i < device.AcceleratorCount; i++) device.ListInputState.Sliders.Add(ListInputState.ConvertToAxisRange(0, 0, 65535, ListInputState.InputSourceType.RawInput));
+                for (int i = 0; i < device.ClutchCount; i++) device.ListInputState.Sliders.Add(ListInputState.ConvertToAxisRange(0, 0, 65535, ListInputState.InputSourceType.RawInput));
 
-                for (int i = 0; i < device.ButtonCount; i++) device.ListInputState.Buttons.Add(0);
-                for (int i = 0; i < device.PovCount; i++) device.ListInputState.POVs.Add(-1);
+                for (int i = 0; i < device.ButtonCount; i++) device.ListInputState.Buttons.Add(ListInputState.ConvertToButtonRange(0));
+                for (int i = 0; i < device.PovCount; i++) device.ListInputState.POVs.Add(ListInputState.ConvertToPOVRange(-1));
             }
 
             var deviceState = device.ListInputState;
@@ -630,7 +632,9 @@ namespace x360ce.App.Input.States
                     if (status == HIDP_STATUS_SUCCESS && axisIndex < deviceState.Axes.Count)
                     {
                         // Successfully read this axis - store it at the current index
-                        deviceState.Axes[axisIndex] = value;
+                        // Convert raw HID value to standardized 0-65535 range
+                        // We use heuristics in ConvertToAxisRange to detect the actual range since we don't always have per-axis min/max easily available here
+                        deviceState.Axes[axisIndex] = ListInputState.ConvertToAxisRange(value, int.MinValue, int.MaxValue, ListInputState.InputSourceType.RawInput);
                         axisIndex++; // Move to next axis position
                     }
                 }
@@ -659,7 +663,7 @@ namespace x360ce.App.Input.States
 
                         if (status == HIDP_STATUS_SUCCESS && axisIndex < deviceState.Axes.Count)
                         {
-                            deviceState.Axes[axisIndex] = value;
+                            deviceState.Axes[axisIndex] = ListInputState.ConvertToAxisRange(value, int.MinValue, int.MaxValue, ListInputState.InputSourceType.RawInput);
                             axisIndex++;
                         }
                     }
@@ -685,7 +689,7 @@ namespace x360ce.App.Input.States
 
                     if (status == HIDP_STATUS_SUCCESS && i < deviceState.Sliders.Count)
                     {
-                        deviceState.Sliders[i] = value;
+                        deviceState.Sliders[i] = ListInputState.ConvertToAxisRange(value, int.MinValue, int.MaxValue, ListInputState.InputSourceType.RawInput);
                     }
                 }
             }
@@ -711,25 +715,44 @@ namespace x360ce.App.Input.States
                     {
                         // HID POV values are typically 0-7 for 8 directions, or 0-15 for 16 directions
                         // Convert to centidegrees: -1 = neutral, 0 = North, 9000 = East, 18000 = South, 27000 = West
-                        if (value == 0x0F || value == 0xFF || value == -1)
+
+                        // Determine format based on Logical Max if available
+                        int logicalMax = (device.PovLogicalMaxes != null && i < device.PovLogicalMaxes.Count)
+                            ? device.PovLogicalMaxes[i]
+                            : 7; // Default to 8-way if unknown
+
+                        // Neutral check: -1, or value outside logical range (some devices use Max+1 for neutral)
+                        if (value == -1 || value == 0xFF || value == 0xFFFF || (value > logicalMax && logicalMax > 0))
                         {
-                            // Neutral position
-                            deviceState.POVs[i] = -1;
+                            deviceState.POVs[i] = ListInputState.ConvertToPOVRange(-1);
                         }
-                        else if (value >= 0 && value <= 15)
+                        else if (logicalMax == 3)
                         {
-                            // 16-direction POV: convert to centidegrees (0-15 range)
-                            deviceState.POVs[i] = value * 2250; // 22.5° = 2250 centidegrees
+                            // 4-way POV
+                            deviceState.POVs[i] = ListInputState.ConvertToPOVRange(value, ListInputState.PovFormat.FourWay);
                         }
-                        else if (value >= 0 && value <= 7)
+                        else if (logicalMax == 7)
                         {
-                            // 8-direction POV: convert to centidegrees (0-7 range, fallback if not 16-direction)
-                            deviceState.POVs[i] = value * 4500; // 45° = 4500 centidegrees
+                            // 8-way POV
+                            deviceState.POVs[i] = ListInputState.ConvertToPOVRange(value, ListInputState.PovFormat.EightWay);
+                        }
+                        else if (logicalMax == 15)
+                        {
+                            // 16-way POV
+                            deviceState.POVs[i] = ListInputState.ConvertToPOVRange(value, ListInputState.PovFormat.SixteenWay);
+                        }
+                        else if (logicalMax > 360)
+                        {
+                            // Continuous / DirectInput format (0-35900 or similar)
+                            deviceState.POVs[i] = ListInputState.ConvertToPOVRange(value, ListInputState.PovFormat.DirectInput);
                         }
                         else
                         {
-                            // Unknown value, treat as neutral
-                            deviceState.POVs[i] = -1;
+                            // Fallback: Try 8-way if value fits, otherwise unknown
+                            if (value >= 0 && value <= 7)
+                                deviceState.POVs[i] = ListInputState.ConvertToPOVRange(value, ListInputState.PovFormat.EightWay);
+                            else
+                                deviceState.POVs[i] = ListInputState.ConvertToPOVRange(-1);
                         }
                     }
                 }
@@ -793,7 +816,7 @@ namespace x360ce.App.Input.States
 
                 // Clear all buttons first
                 for (int i = 0; i < deviceState.Buttons.Count; i++)
-                    deviceState.Buttons[i] = 0;
+                    deviceState.Buttons[i] = ListInputState.ConvertToButtonRange(0);
 
                 // 1. Process Standard Buttons (Page 0x09)
                 ushort usageLength = (ushort)device.ButtonCount;
@@ -815,7 +838,7 @@ namespace x360ce.App.Input.States
                     {
                         int buttonIndex = _buttonUsagesBuffer[i] - 1; // Convert 1-based to 0-based
                         if (buttonIndex >= 0 && buttonIndex < deviceState.Buttons.Count)
-                            deviceState.Buttons[buttonIndex] = 1;
+                            deviceState.Buttons[buttonIndex] = ListInputState.ConvertToButtonRange(1);
                     }
                 }
 
@@ -854,7 +877,7 @@ namespace x360ce.App.Input.States
                             }
 
                             if (buttonIndex >= 0 && buttonIndex < deviceState.Buttons.Count)
-                                deviceState.Buttons[buttonIndex] = 1;
+                                deviceState.Buttons[buttonIndex] = ListInputState.ConvertToButtonRange(1);
                         }
                     }
                 }
@@ -879,14 +902,14 @@ namespace x360ce.App.Input.States
             {
                 device.ListInputState = new ListInputState();
                 // Initialize with device.ButtonCount buttons and device.AxeCount axes (X, Y, Z-wheel, W-hwheel)
-                for (int i = 0; i < device.ButtonCount; i++) device.ListInputState.Buttons.Add(0);
+                for (int i = 0; i < device.ButtonCount; i++) device.ListInputState.Buttons.Add(ListInputState.ConvertToButtonRange(0));
                 
                 // Initialize Mouse Axes:
                 // Indexes 0 (X) and 1 (Y) start at center (32767) to simulate joystick stick behavior.
                 // Indexes 2 (Wheel) and 3 (H-Wheel) start at 0 to simulate slider behavior.
                 for (int i = 0; i < device.AxeCount; i++)
                 {
-                    device.ListInputState.Axes.Add(i < 2 ? 32767 : 0);
+                    device.ListInputState.Axes.Add(ListInputState.ConvertToAxisRange(i < 2 ? 32767 : 0));
                 }
             }
 
@@ -906,23 +929,23 @@ namespace x360ce.App.Input.States
             // Update axes from movement deltas (relative movement converted to joystick range)
             // Accumulate deltas and clamp to 0-65535 to simulate joystick analog stick behavior
             if (deviceState.Axes.Count > 0)
-                deviceState.Axes[0] = Math.Max(0, Math.Min(65535, deviceState.Axes[0] + mouse.lLastX * device.MouseAxisSensitivity[0]));
+                deviceState.Axes[0] = ListInputState.ConvertToAxisRange(deviceState.Axes[0] + mouse.lLastX * device.MouseAxisSensitivity[0], 0, 65535);
             if (deviceState.Axes.Count > 1)
-                deviceState.Axes[1] = Math.Max(0, Math.Min(65535, deviceState.Axes[1] + mouse.lLastY * device.MouseAxisSensitivity[1]));
+                deviceState.Axes[1] = ListInputState.ConvertToAxisRange(deviceState.Axes[1] + mouse.lLastY * device.MouseAxisSensitivity[1], 0, 65535);
 
             // Process vertical wheel delta (vertical wheel axis)
             // Accumulate deltas and clamp to 0-65535 to simulate joystick analog stick behavior
             if (deviceState.Axes.Count > 2 && (mouse.usButtonFlags & RI_MOUSE_WHEEL) != 0)
             {
                 short wheelDelta = (short)mouse.usButtonData;               
-                deviceState.Axes[2] = Math.Max(0, Math.Min(65535, deviceState.Axes[2] + wheelDelta * device.MouseAxisSensitivity[2]));
+                deviceState.Axes[2] = ListInputState.ConvertToAxisRange(deviceState.Axes[2] + wheelDelta * device.MouseAxisSensitivity[2], 0, 65535);
             }
             
             // Process horizontal wheel delta (horizontal wheel axis)
             if (deviceState.Axes.Count > 3 && (mouse.usButtonFlags & RI_MOUSE_HWHEEL) != 0)
             {
-                short hwheelDelta = (short)mouse.usButtonData;                
-                deviceState.Axes[3] = Math.Max(0, Math.Min(65535, deviceState.Axes[3] + hwheelDelta * device.MouseAxisSensitivity[3]));
+                short hwheelDelta = (short)mouse.usButtonData;
+                deviceState.Axes[3] = ListInputState.ConvertToAxisRange(deviceState.Axes[3] + hwheelDelta * device.MouseAxisSensitivity[3], 0, 65535);
             }
         }
 
@@ -947,7 +970,7 @@ namespace x360ce.App.Input.States
             if (status == HIDP_STATUS_SUCCESS)
             {
                 // We only support reading one control per usage for now, as we don't track LinkCollections
-                targetList[index] = value;
+                targetList[index] = ListInputState.ConvertToAxisRange(value, 0, 65535, ListInputState.InputSourceType.RawInput);
             }
         }
 
@@ -959,9 +982,9 @@ namespace x360ce.App.Input.States
             if (state.Buttons.Count > buttonIndex)
             {
                 if ((flags & downFlag) != 0)
-                    state.Buttons[buttonIndex] = 1;
+                    state.Buttons[buttonIndex] = ListInputState.ConvertToButtonRange(1);
                 else if ((flags & upFlag) != 0)
-                    state.Buttons[buttonIndex] = 0;
+                    state.Buttons[buttonIndex] = ListInputState.ConvertToButtonRange(0);
             }
         }
 
@@ -981,14 +1004,14 @@ namespace x360ce.App.Input.States
             {
                 device.ListInputState = new ListInputState();
                 // Initialize with device.ButtonCount buttons.
-                for (int i = 0; i < device.ButtonCount; i++) device.ListInputState.Buttons.Add(0);
+                for (int i = 0; i < device.ButtonCount; i++) device.ListInputState.Buttons.Add(ListInputState.ConvertToButtonRange(0));
             }
 
             var deviceState = device.ListInputState;
 
             // Read RAWKEYBOARD structure and update key state
             var keyboard = Marshal.PtrToStructure<RAWKEYBOARD>(IntPtr.Add(buffer, s_rawinputHeaderSize));
-            deviceState.Buttons[keyboard.VKey] = (keyboard.Flags & 0x01) == 0 ? 1 : 0;
+            deviceState.Buttons[keyboard.VKey] = ListInputState.ConvertToButtonRange((keyboard.Flags & 0x01) == 0);
         }
 
         /// <summary>

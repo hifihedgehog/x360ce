@@ -48,14 +48,23 @@ namespace x360ce.App.Input.Devices
         /// Defaults: {20, 20, 50, 50}.
         /// Minimum is 1.
         /// </summary>
-        public List<int> MouseAxisSensitivity { get; set; } = new List<int> { 20, 20, 50, 50 };
+
+		      public List<int> MouseAxisSensitivity { get; set; } = new List<int> { 20, 20, 50, 50 };
 
         /// <summary>
         /// Mouse axis delta accumulated positions for: X axis, Y axis, Vertical wheel axis, Horizontal wheel axis.
         /// Defaults: {32767, 32767, 0, 0}.
         /// Minimum is 0, maximum is 65535, center is 32767.
         /// </summary>
-        public List<int> MouseAxisAccumulatedDelta { get; set; } = new List<int> { 32767, 32767, 0, 0 };
+        public List<int> MouseAxisAccumulatedDelta { get; set; } = new List<int> { 32767, 32767, 32767, 0 };
+        
+        /// <summary>
+        /// Enable or disable Mouse Axis State retrieval for this device.
+        /// DirectInput mouse device interrupts-blocks raw input mouse state messages when Acquired.
+        /// Default: false (Button polling only, RawInput friendly).
+        /// Set to true to enable Axis polling (Acquires device, blocks RawInput).
+        /// </summary>
+        public bool MouseAxisStateEnabled { get; set; }
 
         // Additional identification properties
         public int VendorId { get; set; }
@@ -214,7 +223,8 @@ namespace x360ce.App.Input.Devices
                     AssignedToPad1 = false,
                     AssignedToPad2 = false,
                     AssignedToPad3 = false,
-                    AssignedToPad4 = false
+                    AssignedToPad4 = false,
+                    MouseAxisStateEnabled = false
                 };
 
 				// Create DirectInput device object

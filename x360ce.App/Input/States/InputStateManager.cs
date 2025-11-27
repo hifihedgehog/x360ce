@@ -170,7 +170,7 @@ namespace x360ce.App.Input.States
                     return false;
 
                 // Convert DirectInput state to ListInputState.
-                var liState = DirectInputStateToListInputState.ConvertDirectInputStateToListInputState(diState, diDeviceInfo);
+                var liState = ListInputState.ConvertDirectInputStateToListInputState(diState, diDeviceInfo);
 
                 if (liState == null)
                     return false;
@@ -209,7 +209,7 @@ namespace x360ce.App.Input.States
                     return false;
 
                 // Convert XInput state to ListInputState.
-                var liState = XInputStateToListInputState.ConvertXInputStateToListInputState(xiState.Value);
+                var liState = ListInputState.ConvertXInputStateToListInputState(xiState.Value);
 
                 if (liState == null)
                     return false;
@@ -248,7 +248,7 @@ namespace x360ce.App.Input.States
                     return false;
 
                 // Convert Gaming Input reading to InputStateAsList format
-                var liState = GamingInputStateToListInputState.ConvertGamingInputStateToListInputState(giState);
+                var liState = ListInputState.ConvertGamingInputStateToListInputState(giState);
 
                 if (liState == null)
                     return false;

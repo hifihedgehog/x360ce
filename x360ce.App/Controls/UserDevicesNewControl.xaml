@@ -338,7 +338,7 @@
                         <TextBlock Text="SELECTED DEVICE INFORMATION" />
                     </StackPanel>
                 </TabItem.Header>
-
+                
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Name="SelectedDeviceInformationStackPanel"/>
                 </ScrollViewer>

@@ -93,9 +93,34 @@ namespace x360ce.App.Input.States
 						return GetCurrentKeyboardStateAsListPolled(diDeviceInfo.InterfacePath);
 
 					case Mouse mouse:
-						// For mice, return InputStateAsList directly from polling
-						// This bypasses DirectInput's Acquire()/Poll() which kills RawInput messages
-						return GetCurrentMouseStateAsListPolled(diDeviceInfo.InterfacePath);
+					                   // Only acquire and poll if explicitly enabled to prevent blocking RawInput
+					                   if (diDeviceInfo.MouseAxisStateEnabled)
+					                   {
+					                       try
+					                       {
+					                           try
+					                           {
+					                               mouse.Acquire();
+					                           }
+					                           catch (SharpDXException)
+					                           {
+					                               // Device may already be acquired
+					                           }
+					                           mouse.Poll();
+					                           return mouse.GetCurrentState();
+					                       }
+					                       catch (Exception)
+					                       {
+					                           // Fallback to polled state if DirectInput fails
+					                           return GetCurrentMouseStateAsListPolled(diDeviceInfo.InterfacePath);
+					                       }
+					                   }
+					                   else
+					                   {
+					                       // For mice, return InputStateAsList directly from polling
+					                       // This bypasses DirectInput's Acquire()/Poll() which kills RawInput messages
+					                       return GetCurrentMouseStateAsListPolled(diDeviceInfo.InterfacePath);
+					                   }
 
 					default:
 						return null;
@@ -127,26 +152,26 @@ namespace x360ce.App.Input.States
 				result = cached.State;
 				// Clear existing button states
 				for (int i = 0; i < result.Buttons.Count; i++)
-					result.Buttons[i] = 0;
-			}
-			else
-			{
+				    result.Buttons[i] = ListInputState.ConvertToButtonRange(0);
+}
+else
+{
 				result = new ListInputState();
 				// Initialize standard mouse buttons (Left, Right, Middle, X1, X2)
 				for (int i = 0; i < 5; i++)
-					result.Buttons.Add(0);
+				    result.Buttons.Add(ListInputState.ConvertToButtonRange(0));
 				// Initialize axes (X, Y, Wheel) - placeholder as we can't easily poll relative deltas without DI
 				for (int i = 0; i < 3; i++)
-					result.Axes.Add(i < 2 ? 32767 : 0);
-			}
+				    result.Axes.Add(ListInputState.ConvertToAxisRange(32767));
+}
 
-			// Poll standard mouse buttons
-			// VK_LBUTTON (0x01), VK_RBUTTON (0x02), VK_MBUTTON (0x04), VK_XBUTTON1 (0x05), VK_XBUTTON2 (0x06)
-			if ((GetAsyncKeyState(0x01) & 0x8000) != 0) result.Buttons[0] = 1; // Left
-			if ((GetAsyncKeyState(0x02) & 0x8000) != 0) result.Buttons[1] = 1; // Right
-			if ((GetAsyncKeyState(0x04) & 0x8000) != 0) result.Buttons[2] = 1; // Middle
-			if ((GetAsyncKeyState(0x05) & 0x8000) != 0) result.Buttons[3] = 1; // X1
-			if ((GetAsyncKeyState(0x06) & 0x8000) != 0) result.Buttons[4] = 1; // X2
+// Poll standard mouse buttons
+// VK_LBUTTON (0x01), VK_RBUTTON (0x02), VK_MBUTTON (0x04), VK_XBUTTON1 (0x05), VK_XBUTTON2 (0x06)
+result.Buttons[0] = ListInputState.ConvertToButtonRange((GetAsyncKeyState(0x01) & 0x8000) != 0); // Left
+result.Buttons[1] = ListInputState.ConvertToButtonRange((GetAsyncKeyState(0x02) & 0x8000) != 0); // Right
+result.Buttons[2] = ListInputState.ConvertToButtonRange((GetAsyncKeyState(0x04) & 0x8000) != 0); // Middle
+result.Buttons[3] = ListInputState.ConvertToButtonRange((GetAsyncKeyState(0x05) & 0x8000) != 0); // X1
+result.Buttons[4] = ListInputState.ConvertToButtonRange((GetAsyncKeyState(0x06) & 0x8000) != 0); // X2
 
 			// Cache the state
 			_cachedStates[interfacePath] = new CachedKeyboardMouseState
@@ -174,38 +199,38 @@ namespace x360ce.App.Input.States
 				// Clear existing button states
 				for (int i = 0; i < result.Buttons.Count; i++)
 				{
-					result.Buttons[i] = 0;
-				}
-			}
-			else
-			{
-				// First time - create new ListInputState
-				result = new ListInputState();
-				// Initialize all 256 buttons as released (0)
-				for (int i = 0; i < 256; i++)
-				{
-					result.Buttons.Add(0);
-				}
-			}
-			
-			// Scan virtual key codes to find pressed keys
-			// Skip 0x00-0x07 (undefined/mouse buttons) and 0xFF (reserved)
-			for (int vKey = 0x08; vKey <= 0xFE; vKey++)
-			{
-				// Skip mouse button virtual keys
-				if (vKey <= VK_XBUTTON2)
+					result.Buttons[i] = ListInputState.ConvertToButtonRange(0);
+	}
+}
+else
+{
+	// First time - create new ListInputState
+	result = new ListInputState();
+	// Initialize all 256 buttons as released (0)
+	for (int i = 0; i < 256; i++)
+	{
+					result.Buttons.Add(ListInputState.ConvertToButtonRange(0));
+	}
+}
+
+// Scan virtual key codes to find pressed keys
+// Skip 0x00-0x07 (undefined/mouse buttons) and 0xFF (reserved)
+for (int vKey = 0x08; vKey <= 0xFE; vKey++)
+{
+	// Skip mouse button virtual keys
+	if (vKey <= VK_XBUTTON2)
 					continue;
-				
-				// Check if key is currently pressed (high bit set)
-				if ((GetAsyncKeyState(vKey) & 0x8000) != 0)
-				{
+	
+	// Check if key is currently pressed (high bit set)
+	if ((GetAsyncKeyState(vKey) & 0x8000) != 0)
+	{
 					// Set button state to 1 (pressed)
 					if (vKey < 256)
 					{
-						result.Buttons[vKey] = 1;
+					    result.Buttons[vKey] = ListInputState.ConvertToButtonRange(1);
 					}
-				}
-			}
+	}
+}
 			
 			// Cache the state (or update cache timestamp)
 			_cachedStates[interfacePath] = new CachedKeyboardMouseState
