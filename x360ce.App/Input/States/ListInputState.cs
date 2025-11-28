@@ -5,6 +5,7 @@ using SharpDX.XInput;
 using Windows.Gaming.Input;
 using x360ce.App.Input.Devices;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace x360ce.App.Input.States
 {
@@ -61,6 +62,8 @@ namespace x360ce.App.Input.States
 			POVs = new List<int>();
 		}
 
+		private static readonly int[] _ZeroButtons = new int[256];
+
 		#region Conversion Methods
 
 		/// <summary>
@@ -84,21 +87,29 @@ namespace x360ce.App.Input.States
 		/// <param name="max">The maximum value of the source range (optional). If not provided, basic detection is used.</param>
 		/// <param name="sourceType">The source of the input (optional). Helps refine heuristic detection.</param>
 		/// <returns>Normalized value in 0-65535 range.</returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int ConvertToAxisRange(int value, int min = int.MinValue, int max = int.MaxValue, InputSourceType sourceType = InputSourceType.Unknown)
-		{		
+		{
 			// If min/max are provided, use them for precise scaling
 			if (min != int.MinValue && max != int.MaxValue)
 			{
-				if (max == min) return 0;
+				if (max == min)
+					return 0;
 
-				long longVal = value;
-				long longMin = min;
-				long longMax = max;
+				// Optimization: if target range (0-65535) matches source range, just shift and clamp.
+				// e.g. XInput Thumbsticks: -32768 to 32767 (Range = 65535)
+				// e.g. DirectInput Axis: 0 to 65535 (Range = 65535)
+				var range = (long)max - min;
+				if (range == 65535)
+				{
+					var res = (long)value - min;
+					return (int)((res < 0) ? 0 : ((res > 65535) ? 65535 : res));
+				}
 
 				// Map range [min, max] to [0, 65535]
 				// (val - min) / (max - min) * 65535
-				long result = (longVal - longMin) * 65535 / (longMax - longMin);
-				return Math.Max(0, Math.Min(65535, (int)result));
+				var result = (long)(value - min) * 65535 / range;
+				return (int)((result < 0) ? 0 : ((result > 65535) ? 65535 : result));
 			}
 
 			// Automatic detection for common ranges
@@ -159,6 +170,16 @@ namespace x360ce.App.Input.States
 			                      
 			                      if (min == int.MinValue && max == int.MaxValue)
 			                      {
+			                          // Fix: Incorrect axis scaling interpretation for unsigned 16-bit values reported as signed short
+			                          // Some drivers report 0-65535 range but behave strangely when interpreted as signed/unsigned.
+			                          // If first half is 0-65535 and second half is 32768-65535, it indicates a signed/unsigned interpretation conflict.
+			                          // For now, if we detect values > 32767 without explicit max, it might be a full range axis.
+			                          // Standardize 0-65535 range:
+			                          if (value >= 0 && value <= 65535)
+			                          {
+			                              return value;
+			                          }
+
 			                          // Test joystick 0 and 1 index axis original value ranges are 0-16383.
 			                          // If value is in 0-16383 range, it should be scaled to 0-65535.
 			                          // This check must be before 0-32767 because 0-16383 is a subset of 0-32767.
@@ -252,6 +273,7 @@ namespace x360ce.App.Input.States
 		/// <param name="value">Normalized value.</param>
 		/// <param name="isUnsigned">If true, assumes 0.0 to 1.0 range (e.g. triggers). If false, assumes -1.0 to 1.0 range (e.g. sticks).</param>
 		/// <returns>Normalized value in 0-65535 range.</returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int ConvertToAxisRange(double value, bool isUnsigned)
 		{
 			if (isUnsigned)
@@ -272,6 +294,7 @@ namespace x360ce.App.Input.States
 		/// </summary>
 		/// <param name="isPressed">Boolean state (true=pressed).</param>
 		/// <returns>1 if pressed, 0 if released.</returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int ConvertToButtonRange(bool isPressed)
 		{
 			return isPressed ? 1 : 0;
@@ -282,6 +305,7 @@ namespace x360ce.App.Input.States
 		/// </summary>
 		/// <param name="value">Raw value (0=released, >0=pressed).</param>
 		/// <returns>1 if pressed, 0 if released.</returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int ConvertToButtonRange(int value)
 		{
 			return value > 0 ? 1 : 0;
@@ -383,7 +407,7 @@ namespace x360ce.App.Input.States
 
 			// Detect state type and convert accordingly
 			if (diState is JoystickState joystickState)
-				return ConvertJoystickState(joystickState);
+				return ConvertJoystickState(joystickState, deviceInfo);
 			else if (diState is MouseState mouseState)
 				return ConvertMouseState(mouseState, deviceInfo);
 			else if (diState is KeyboardState keyboardState)
@@ -392,45 +416,193 @@ namespace x360ce.App.Input.States
 			return null;
 		}
 
-        private static ListInputState ConvertJoystickState(JoystickState state)
-		{
-			var result = new ListInputState();
+  private static ListInputState ConvertJoystickState(JoystickState state, DirectInputDeviceInfo deviceInfo)
+  {
+  	// CRITICAL FIX: Reuse existing ListInputState object if it exists
+  	// This maintains the reference in UnifiedInputDeviceInfo.ListInputState
+  	ListInputState result = deviceInfo?.ListInputState;
 
-			// Convert axes (24 axes in DirectInput) - pre-allocate capacity for performance
-			result.Axes.Capacity = 24;
-			result.Axes.AddRange(new[]
-			{
-				ConvertToAxisRange(state.X, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.Y, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.Z, 0, 65535, InputSourceType.DirectInput),
-				ConvertToAxisRange(state.RotationX, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.RotationY, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.RotationZ, 0, 65535, InputSourceType.DirectInput),
-				ConvertToAxisRange(state.AccelerationX, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.AccelerationY, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.AccelerationZ, 0, 65535, InputSourceType.DirectInput),
-				ConvertToAxisRange(state.AngularAccelerationX, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.AngularAccelerationY, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.AngularAccelerationZ, 0, 65535, InputSourceType.DirectInput),
-				ConvertToAxisRange(state.ForceX, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.ForceY, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.ForceZ, 0, 65535, InputSourceType.DirectInput),
-				ConvertToAxisRange(state.TorqueX, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.TorqueY, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.TorqueZ, 0, 65535, InputSourceType.DirectInput),
-				ConvertToAxisRange(state.VelocityX, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.VelocityY, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.VelocityZ, 0, 65535, InputSourceType.DirectInput),
-				ConvertToAxisRange(state.AngularVelocityX, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.AngularVelocityY, 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.AngularVelocityZ, 0, 65535, InputSourceType.DirectInput)
-			});
+  	if (result == null)
+  	{
+  		// First time - create new ListInputState
+  		result = new ListInputState();
+  	}
 
-			// Convert sliders (8 sliders in DirectInput) - pre-allocate capacity for performance
-			result.Sliders.Capacity = 8;
-			result.Sliders.AddRange(new[]
-			{
-				ConvertToAxisRange(state.Sliders[0], 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.Sliders[1], 0, 65535, InputSourceType.DirectInput),
-				ConvertToAxisRange(state.AccelerationSliders[0], 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.AccelerationSliders[1], 0, 65535, InputSourceType.DirectInput),
-				ConvertToAxisRange(state.ForceSliders[0], 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.ForceSliders[1], 0, 65535, InputSourceType.DirectInput),
-				ConvertToAxisRange(state.VelocitySliders[0], 0, 65535, InputSourceType.DirectInput), ConvertToAxisRange(state.VelocitySliders[1], 0, 65535, InputSourceType.DirectInput)
-			});
+    // Use available axes info if possible to populate the list efficiently
+    // This ensures that ListInputState axes map 1:1 with AvailableAxes in DirectInputDeviceInfo
+    var availableAxes = deviceInfo?.AvailableAxes;
+    var axes = result.Axes;
 
-			// Convert buttons (DirectInput reports as bool array) - pre-allocate capacity
-			result.Buttons.Capacity = state.Buttons.Length;
-			result.Buttons.AddRange(state.Buttons.Select(b => ConvertToButtonRange(b)));
+    if (availableAxes != null && availableAxes.Count > 0)
+    {
+        // Resize list if needed to match available axes count
+        if (axes.Count != availableAxes.Count)
+        {
+            axes.Clear();
+            if (axes.Capacity < availableAxes.Count)
+                axes.Capacity = availableAxes.Count;
+            
+            for (int i = 0; i < availableAxes.Count; i++)
+                axes.Add(0);
+        }
 
-			// Convert POVs (DirectInput reports -1 for neutral, 0-35900 for directions)
-			result.POVs.Capacity = state.PointOfViewControllers.Length;
-            // DirectInput POVs are already in 0-35900 range, which is handled by ConvertToPOVRange
-			result.POVs.AddRange(state.PointOfViewControllers.Select(p => ConvertToPOVRange(p, PovFormat.DirectInput)));
+        // Update values using specific available axes mapping
+        for (int i = 0; i < availableAxes.Count; i++)
+        {
+            axes[i] = ClampAxisValue(GetAxisValue(state, availableAxes[i]));
+        }
+    }
+    else
+    {
+        // Fallback to legacy fixed 24-axis array if no available axes info
+      	if (axes.Count == 24)
+      	{
+      		// Update existing axes in place
+      		axes[0] = ClampAxisValue(state.X);
+      		axes[1] = ClampAxisValue(state.Y);
+      		axes[2] = ClampAxisValue(state.Z);
+      		axes[3] = ClampAxisValue(state.RotationX);
+      		axes[4] = ClampAxisValue(state.RotationY);
+      		axes[5] = ClampAxisValue(state.RotationZ);
+      		axes[6] = ClampAxisValue(state.AccelerationX);
+      		axes[7] = ClampAxisValue(state.AccelerationY);
+      		axes[8] = ClampAxisValue(state.AccelerationZ);
+      		axes[9] = ClampAxisValue(state.AngularAccelerationX);
+      		axes[10] = ClampAxisValue(state.AngularAccelerationY);
+      		axes[11] = ClampAxisValue(state.AngularAccelerationZ);
+      		axes[12] = ClampAxisValue(state.ForceX);
+      		axes[13] = ClampAxisValue(state.ForceY);
+      		axes[14] = ClampAxisValue(state.ForceZ);
+      		axes[15] = ClampAxisValue(state.TorqueX);
+      		axes[16] = ClampAxisValue(state.TorqueY);
+      		axes[17] = ClampAxisValue(state.TorqueZ);
+      		axes[18] = ClampAxisValue(state.VelocityX);
+      		axes[19] = ClampAxisValue(state.VelocityY);
+      		axes[20] = ClampAxisValue(state.VelocityZ);
+      		axes[21] = ClampAxisValue(state.AngularVelocityX);
+      		axes[22] = ClampAxisValue(state.AngularVelocityY);
+      		axes[23] = ClampAxisValue(state.AngularVelocityZ);
+      	}
+      	else
+      	{
+      		// First time or mismatched count - clear and add
+      		axes.Clear();
+      		axes.Capacity = 24;
+      		// Use ClampAxisValue directly since DirectInput is normalized to 0-65535
+      		axes.Add(ClampAxisValue(state.X));
+      		axes.Add(ClampAxisValue(state.Y));
+      		axes.Add(ClampAxisValue(state.Z));
+      		axes.Add(ClampAxisValue(state.RotationX));
+      		axes.Add(ClampAxisValue(state.RotationY));
+      		axes.Add(ClampAxisValue(state.RotationZ));
+      		axes.Add(ClampAxisValue(state.AccelerationX));
+      		axes.Add(ClampAxisValue(state.AccelerationY));
+      		axes.Add(ClampAxisValue(state.AccelerationZ));
+      		axes.Add(ClampAxisValue(state.AngularAccelerationX));
+      		axes.Add(ClampAxisValue(state.AngularAccelerationY));
+      		axes.Add(ClampAxisValue(state.AngularAccelerationZ));
+      		axes.Add(ClampAxisValue(state.ForceX));
+      		axes.Add(ClampAxisValue(state.ForceY));
+      		axes.Add(ClampAxisValue(state.ForceZ));
+      		axes.Add(ClampAxisValue(state.TorqueX));
+      		axes.Add(ClampAxisValue(state.TorqueY));
+      		axes.Add(ClampAxisValue(state.TorqueZ));
+      		axes.Add(ClampAxisValue(state.VelocityX));
+      		axes.Add(ClampAxisValue(state.VelocityY));
+      		axes.Add(ClampAxisValue(state.VelocityZ));
+      		axes.Add(ClampAxisValue(state.AngularVelocityX));
+      		axes.Add(ClampAxisValue(state.AngularVelocityY));
+      		axes.Add(ClampAxisValue(state.AngularVelocityZ));
+      	}
+    }
 
-			return result;
-		}
+  	// Convert sliders
+  	var availableSliders = deviceInfo?.AvailableSliders;
+  	var sliders = result.Sliders;
+
+  	if (availableSliders != null)
+  	{
+  		// Resize list if needed to match available sliders count
+  		if (sliders.Count != availableSliders.Count)
+  		{
+  			sliders.Clear();
+  			if (sliders.Capacity < availableSliders.Count)
+  				sliders.Capacity = availableSliders.Count;
+
+  			for (int i = 0; i < availableSliders.Count; i++)
+  				sliders.Add(0);
+  		}
+
+  		// Update values using specific available sliders mapping
+  		for (int i = 0; i < availableSliders.Count; i++)
+  		{
+  			sliders[i] = ClampAxisValue(GetAxisValue(state, availableSliders[i]));
+  		}
+  	}
+  	else
+  	{
+  		// Fallback to legacy 8 sliders
+  		if (sliders.Count == 8)
+  		{
+  			sliders[0] = ClampAxisValue(state.Sliders[0]);
+  			sliders[1] = ClampAxisValue(state.Sliders[1]);
+  			sliders[2] = ClampAxisValue(state.AccelerationSliders[0]);
+  			sliders[3] = ClampAxisValue(state.AccelerationSliders[1]);
+  			sliders[4] = ClampAxisValue(state.ForceSliders[0]);
+  			sliders[5] = ClampAxisValue(state.ForceSliders[1]);
+  			sliders[6] = ClampAxisValue(state.VelocitySliders[0]);
+  			sliders[7] = ClampAxisValue(state.VelocitySliders[1]);
+  		}
+  		else
+  		{
+  			sliders.Clear();
+  			sliders.Capacity = 8;
+  			sliders.Add(ClampAxisValue(state.Sliders[0]));
+  			sliders.Add(ClampAxisValue(state.Sliders[1]));
+  			sliders.Add(ClampAxisValue(state.AccelerationSliders[0]));
+  			sliders.Add(ClampAxisValue(state.AccelerationSliders[1]));
+  			sliders.Add(ClampAxisValue(state.ForceSliders[0]));
+  			sliders.Add(ClampAxisValue(state.ForceSliders[1]));
+  			sliders.Add(ClampAxisValue(state.VelocitySliders[0]));
+  			sliders.Add(ClampAxisValue(state.VelocitySliders[1]));
+  		}
+  	}
+
+  	// Convert buttons (DirectInput reports as bool array) - pre-allocate capacity
+  	var buttons = result.Buttons;
+  	var stateButtons = state.Buttons;
+  	if (buttons.Count == stateButtons.Length)
+  	{
+  		for (int i = 0; i < stateButtons.Length; i++)
+  			buttons[i] = ConvertToButtonRange(stateButtons[i]);
+  	}
+  	else
+  	{
+  		buttons.Clear();
+  		buttons.Capacity = stateButtons.Length;
+  		for (int i = 0; i < stateButtons.Length; i++)
+  			buttons.Add(ConvertToButtonRange(stateButtons[i]));
+  	}
+
+  	// Convert POVs (DirectInput reports -1 for neutral, 0-35900 for directions)
+  	var povs = result.POVs;
+  	var statePovs = state.PointOfViewControllers;
+  	if (povs.Count == statePovs.Length)
+  	{
+  		for (int i = 0; i < statePovs.Length; i++)
+  			povs[i] = ConvertToPOVRange(statePovs[i], PovFormat.DirectInput);
+  	}
+  	else
+  	{
+  		povs.Clear();
+  		povs.Capacity = statePovs.Length;
+  		// DirectInput POVs are already in 0-35900 range, which is handled by ConvertToPOVRange
+  		for (int i = 0; i < statePovs.Length; i++)
+  			povs.Add(ConvertToPOVRange(statePovs[i], PovFormat.DirectInput));
+  	}
+
+  	return result;
+  }
 
         private static ListInputState ConvertMouseState(MouseState state, DirectInputDeviceInfo deviceInfo)
 		{
@@ -459,41 +631,39 @@ namespace x360ce.App.Input.States
 				deviceInfo.MouseAxisAccumulatedDelta[2] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[2] + state.Z * sensitivityZ);
 				
 				// Update or add accumulated axis values
-				if (result.Axes.Count >= 3)
+				var axes = result.Axes;
+				if (axes.Count >= 3)
 				{
-					result.Axes[0] = ConvertToAxisRange(deviceInfo.MouseAxisAccumulatedDelta[0], 0, 65535);
-					result.Axes[1] = ConvertToAxisRange(deviceInfo.MouseAxisAccumulatedDelta[1], 0, 65535);
-					result.Axes[2] = ConvertToAxisRange(deviceInfo.MouseAxisAccumulatedDelta[2], 0, 65535);
+					axes[0] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[0]);
+					axes[1] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[1]);
+					axes[2] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[2]);
 				}
 				else
 				{
-					result.Axes.Clear();
-					result.Axes.Capacity = 3;
-					result.Axes.AddRange(new[] {
-				                    ConvertToAxisRange(deviceInfo.MouseAxisAccumulatedDelta[0], 0, 65535),
-				                    ConvertToAxisRange(deviceInfo.MouseAxisAccumulatedDelta[1], 0, 65535),
-				                    ConvertToAxisRange(deviceInfo.MouseAxisAccumulatedDelta[2], 0, 65535)
-				                });
+					axes.Clear();
+					axes.Capacity = 3;
+					axes.Add(ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[0]));
+					axes.Add(ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[1]));
+					axes.Add(ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[2]));
 				}
 			}
 			else
 			{
 				// Fallback if deviceInfo is null (shouldn't happen in normal operation)
-				if (result.Axes.Count >= 3)
+				var axes = result.Axes;
+				if (axes.Count >= 3)
 				{
-					result.Axes[0] = ConvertToAxisRange(32767, 0, 65535);
-					result.Axes[1] = ConvertToAxisRange(32767, 0, 65535);
-					result.Axes[2] = ConvertToAxisRange(32767, 0, 65535);
+					axes[0] = 32767;
+					axes[1] = 32767;
+					axes[2] = 32767;
 				}
 				else
 				{
-					result.Axes.Clear();
-					result.Axes.Capacity = 3;
-					result.Axes.AddRange(new[] {
-				                    ConvertToAxisRange(32767, 0, 65535),
-				                    ConvertToAxisRange(32767, 0, 65535),
-				                    ConvertToAxisRange(32767, 0, 65535)
-				                });
+					axes.Clear();
+					axes.Capacity = 3;
+					axes.Add(32767);
+					axes.Add(32767);
+					axes.Add(32767);
 				}
 			}
 
@@ -523,7 +693,7 @@ namespace x360ce.App.Input.States
 
 			// Initialize all 256 buttons as released (0) - pre-allocate and initialize in one step
 			result.Buttons.Capacity = KeyboardButtonCount;
-			result.Buttons.AddRange(Enumerable.Repeat(0, KeyboardButtonCount)); // Already 0 (released)
+			result.Buttons.AddRange(_ZeroButtons); // Already 0 (released)
 
 			// Set pressed keys to 1
 			foreach (var key in state.PressedKeys)
@@ -531,7 +701,7 @@ namespace x360ce.App.Input.States
 				int keyIndex = (int)key;
 				if (keyIndex >= 0 && keyIndex < KeyboardButtonCount)
 				{
-					result.Buttons[keyIndex] = ConvertToButtonRange(1);
+					result.Buttons[keyIndex] = 1;
 				}
 			}
 
@@ -540,10 +710,52 @@ namespace x360ce.App.Input.States
 			return result;
 		}
 
-        private static int ClampAxisValue(int value)
-		{
-			return Math.Max(AxisMinValue, Math.Min(AxisMaxValue, value));
-		}
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  private static int ClampAxisValue(int value)
+  {
+   return Math.Max(AxisMinValue, Math.Min(AxisMaxValue, value));
+  }
+
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  private static int GetAxisValue(JoystickState state, JoystickOffset offset)
+  {
+    switch (offset)
+    {
+        case JoystickOffset.X: return state.X;
+        case JoystickOffset.Y: return state.Y;
+        case JoystickOffset.Z: return state.Z;
+        case JoystickOffset.RotationX: return state.RotationX;
+        case JoystickOffset.RotationY: return state.RotationY;
+        case JoystickOffset.RotationZ: return state.RotationZ;
+        case JoystickOffset.AccelerationX: return state.AccelerationX;
+        case JoystickOffset.AccelerationY: return state.AccelerationY;
+        case JoystickOffset.AccelerationZ: return state.AccelerationZ;
+        case JoystickOffset.AngularAccelerationX: return state.AngularAccelerationX;
+        case JoystickOffset.AngularAccelerationY: return state.AngularAccelerationY;
+        case JoystickOffset.AngularAccelerationZ: return state.AngularAccelerationZ;
+        case JoystickOffset.ForceX: return state.ForceX;
+        case JoystickOffset.ForceY: return state.ForceY;
+        case JoystickOffset.ForceZ: return state.ForceZ;
+        case JoystickOffset.TorqueX: return state.TorqueX;
+        case JoystickOffset.TorqueY: return state.TorqueY;
+        case JoystickOffset.TorqueZ: return state.TorqueZ;
+        case JoystickOffset.VelocityX: return state.VelocityX;
+        case JoystickOffset.VelocityY: return state.VelocityY;
+        case JoystickOffset.VelocityZ: return state.VelocityZ;
+        case JoystickOffset.AngularVelocityX: return state.AngularVelocityX;
+        case JoystickOffset.AngularVelocityY: return state.AngularVelocityY;
+        case JoystickOffset.AngularVelocityZ: return state.AngularVelocityZ;
+    case JoystickOffset.Sliders0: return state.Sliders[0];
+    case JoystickOffset.Sliders1: return state.Sliders[1];
+    case JoystickOffset.AccelerationSliders0: return state.AccelerationSliders[0];
+    case JoystickOffset.AccelerationSliders1: return state.AccelerationSliders[1];
+    case JoystickOffset.ForceSliders0: return state.ForceSliders[0];
+    case JoystickOffset.ForceSliders1: return state.ForceSliders[1];
+    case JoystickOffset.VelocitySliders0: return state.VelocitySliders[0];
+    case JoystickOffset.VelocitySliders1: return state.VelocitySliders[1];
+        default: return 0;
+    }
+  }
         
         // Imported from XInputStateToListInputState
         public static ListInputState ConvertXInputStateToListInputState(State state)
@@ -553,11 +765,12 @@ namespace x360ce.App.Input.States
 
 			// Convert axes (6 axes in XInput)
 			// Thumbsticks: Convert from -32768..32767 to 0..65535
+			result.Axes.Capacity = 6;
 			result.Axes.Add(ConvertToAxisRange(gamepad.LeftThumbX, -32768, 32767, InputSourceType.XInput));
 			result.Axes.Add(ConvertToAxisRange(gamepad.LeftThumbY, -32768, 32767, InputSourceType.XInput));
 			result.Axes.Add(ConvertToAxisRange(gamepad.RightThumbX, -32768, 32767, InputSourceType.XInput));
 			result.Axes.Add(ConvertToAxisRange(gamepad.RightThumbY, -32768, 32767, InputSourceType.XInput));
-			
+
 			// Triggers: Convert from 0..255 to 0..65535
 			result.Axes.Add(ConvertToAxisRange(gamepad.LeftTrigger, 0, 255, InputSourceType.XInput));
 			result.Axes.Add(ConvertToAxisRange(gamepad.RightTrigger, 0, 255, InputSourceType.XInput));
@@ -566,6 +779,7 @@ namespace x360ce.App.Input.States
 
 			// Convert buttons (15 buttons in XInput)
 			var buttons = gamepad.Buttons;
+			result.Buttons.Capacity = 14;
 			result.Buttons.Add(ConvertToButtonRange((buttons & GamepadButtonFlags.A) != 0));
 			result.Buttons.Add(ConvertToButtonRange((buttons & GamepadButtonFlags.B) != 0));
 			result.Buttons.Add(ConvertToButtonRange((buttons & GamepadButtonFlags.X) != 0));
@@ -584,11 +798,43 @@ namespace x360ce.App.Input.States
 			result.Buttons.Add(ConvertToButtonRange((buttons & GamepadButtonFlags.DPadRight) != 0));
 
 			// XInput has no POVs (D-Pad is represented as buttons, list remains empty)
+			// But we can synthesize one from D-Pad buttons
+			int povValue = ConvertXInputDPadToPOV(buttons);
+			result.POVs.Add(ConvertToPOVRange(povValue));
 
 			return result;
 		}
 
-        // Imported from GamingInputStateToListInputState
+		private static int ConvertXInputDPadToPOV(GamepadButtonFlags buttons)
+		{
+			bool up = (buttons & GamepadButtonFlags.DPadUp) != 0;
+			bool down = (buttons & GamepadButtonFlags.DPadDown) != 0;
+			bool left = (buttons & GamepadButtonFlags.DPadLeft) != 0;
+			bool right = (buttons & GamepadButtonFlags.DPadRight) != 0;
+
+			// Handle 8-way directional input
+			if (up && !down && !left && !right)
+				return 0;        // North
+			if (up && right && !down && !left)
+				return 4500;     // Northeast
+			if (right && !up && !down && !left)
+				return 9000;     // East
+			if (down && right && !up && !left)
+				return 13500;    // Southeast
+			if (down && !up && !left && !right)
+				return 18000;    // South
+			if (down && left && !up && !right)
+				return 22500;    // Southwest
+			if (left && !up && !down && !right)
+				return 27000;    // West
+			if (up && left && !down && !right)
+				return 31500;    // Northwest
+
+			// Neutral (no direction or invalid combination)
+			return -1;
+		}
+
+			     // Imported from GamingInputStateToListInputState
         public static ListInputState ConvertGamingInputStateToListInputState(GamepadReading? gamepadReading)
 		{
 			
@@ -597,11 +843,12 @@ namespace x360ce.App.Input.States
 
 			// Convert axes (6 axes in Gaming Input)
 			// Thumbsticks: Convert from -1.0..1.0 to 0..65535
+			result.Axes.Capacity = 6;
 			result.Axes.Add(ConvertToAxisRange(reading.LeftThumbstickX, false));
 			result.Axes.Add(ConvertToAxisRange(reading.LeftThumbstickY, false));
 			result.Axes.Add(ConvertToAxisRange(reading.RightThumbstickX, false));
 			result.Axes.Add(ConvertToAxisRange(reading.RightThumbstickY, false));
-			
+
 			// Triggers: Convert from 0.0..1.0 to 0..65535
 			result.Axes.Add(ConvertToAxisRange(reading.LeftTrigger, true));
 			result.Axes.Add(ConvertToAxisRange(reading.RightTrigger, true));
@@ -610,6 +857,7 @@ namespace x360ce.App.Input.States
 
 			// Convert buttons (16 buttons in Gaming Input)
 			var buttons = reading.Buttons;
+			result.Buttons.Capacity = 16;
 			result.Buttons.Add(ConvertToButtonRange((buttons & GamepadButtons.A) != 0));
 			result.Buttons.Add(ConvertToButtonRange((buttons & GamepadButtons.B) != 0));
 			result.Buttons.Add(ConvertToButtonRange((buttons & GamepadButtons.X) != 0));

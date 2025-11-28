@@ -633,8 +633,18 @@ namespace x360ce.App.Input.States
                     {
                         // Successfully read this axis - store it at the current index
                         // Convert raw HID value to standardized 0-65535 range
-                        // We use heuristics in ConvertToAxisRange to detect the actual range since we don't always have per-axis min/max easily available here
-                        deviceState.Axes[axisIndex] = ListInputState.ConvertToAxisRange(value, int.MinValue, int.MaxValue, ListInputState.InputSourceType.RawInput);
+                        // Use stored axis properties (Min/Max) for precise scaling if available
+                        int min = int.MinValue;
+                        int max = int.MaxValue;
+                        int key = (HID_USAGE_PAGE_GENERIC << 16) | usage;
+
+                        if (device.DeviceAxisProperties != null && device.DeviceAxisProperties.ContainsKey(key))
+                        {
+                            min = device.DeviceAxisProperties[key].Min;
+                            max = device.DeviceAxisProperties[key].Max;
+                        }
+
+                        deviceState.Axes[axisIndex] = ListInputState.ConvertToAxisRange(value, min, max, ListInputState.InputSourceType.RawInput);
                         axisIndex++; // Move to next axis position
                     }
                 }
@@ -663,7 +673,17 @@ namespace x360ce.App.Input.States
 
                         if (status == HIDP_STATUS_SUCCESS && axisIndex < deviceState.Axes.Count)
                         {
-                            deviceState.Axes[axisIndex] = ListInputState.ConvertToAxisRange(value, int.MinValue, int.MaxValue, ListInputState.InputSourceType.RawInput);
+                            int min = int.MinValue;
+                            int max = int.MaxValue;
+                            int key = (USAGE_PAGE_DIGITIZER << 16) | usage;
+
+                            if (device.DeviceAxisProperties != null && device.DeviceAxisProperties.ContainsKey(key))
+                            {
+                                min = device.DeviceAxisProperties[key].Min;
+                                max = device.DeviceAxisProperties[key].Max;
+                            }
+
+                            deviceState.Axes[axisIndex] = ListInputState.ConvertToAxisRange(value, min, max, ListInputState.InputSourceType.RawInput);
                             axisIndex++;
                         }
                     }
@@ -689,7 +709,17 @@ namespace x360ce.App.Input.States
 
                     if (status == HIDP_STATUS_SUCCESS && i < deviceState.Sliders.Count)
                     {
-                        deviceState.Sliders[i] = ListInputState.ConvertToAxisRange(value, int.MinValue, int.MaxValue, ListInputState.InputSourceType.RawInput);
+                        int min = int.MinValue;
+                        int max = int.MaxValue;
+                        int key = (HID_USAGE_PAGE_GENERIC << 16) | _sliderUsages[i];
+
+                        if (device.DeviceAxisProperties != null && device.DeviceAxisProperties.ContainsKey(key))
+                        {
+                            min = device.DeviceAxisProperties[key].Min;
+                            max = device.DeviceAxisProperties[key].Max;
+                        }
+
+                        deviceState.Sliders[i] = ListInputState.ConvertToAxisRange(value, min, max, ListInputState.InputSourceType.RawInput);
                     }
                 }
             }
@@ -721,27 +751,52 @@ namespace x360ce.App.Input.States
                             ? device.PovLogicalMaxes[i]
                             : 7; // Default to 8-way if unknown
 
+                        int logicalMin = (device.PovLogicalMins != null && i < device.PovLogicalMins.Count)
+                            ? device.PovLogicalMins[i]
+                            : 0; // Default to 0-based if unknown
+
+                        // If POV uses 1-based index (e.g. 1-8 for directions, 0 for neutral), convert to 0-based
+                        // Some gamepads report 1-8 for directions and 0 for neutral.
+                        // HID standard usually says Null value is outside range, but some use 0.
+                        // If logical min is 1, then 0 is likely neutral.
+                        // Shift value to 0-based for standard processing.
+                        if (logicalMin == 1)
+                        {
+                            if (value == 0) value = -1; // Neutral
+                            else value -= 1; // Shift to 0-based
+                        }
+
                         // Neutral check: -1, or value outside logical range (some devices use Max+1 for neutral)
-                        if (value == -1 || value == 0xFF || value == 0xFFFF || (value > logicalMax && logicalMax > 0))
+                        // If we shifted above, value might be -1 already.
+                        // Re-check against adjusted logical max (if it was 1-based, logicalMax should also be 1-based in descriptor, but we shifted value)
+                        // Actually, if descriptor says Min=1, Max=8, and we read 1..8, we shift to 0..7.
+                        // If we read 0, we set to -1.
+                        // If we read 9 (Max+1), we set to -1.
+                        // The original logicalMax from descriptor is 8.
+                        // If we shifted value, we must compare against (logicalMax - logicalMin).
+                        
+                        int effectiveMax = logicalMax - logicalMin;
+
+                        if (value == -1 || value == 0xFF || value == 0xFFFF || (value > effectiveMax && effectiveMax > 0))
                         {
                             deviceState.POVs[i] = ListInputState.ConvertToPOVRange(-1);
                         }
-                        else if (logicalMax == 3)
+                        else if (effectiveMax == 3)
                         {
                             // 4-way POV
                             deviceState.POVs[i] = ListInputState.ConvertToPOVRange(value, ListInputState.PovFormat.FourWay);
                         }
-                        else if (logicalMax == 7)
+                        else if (effectiveMax == 7)
                         {
                             // 8-way POV
                             deviceState.POVs[i] = ListInputState.ConvertToPOVRange(value, ListInputState.PovFormat.EightWay);
                         }
-                        else if (logicalMax == 15)
+                        else if (effectiveMax == 15)
                         {
                             // 16-way POV
                             deviceState.POVs[i] = ListInputState.ConvertToPOVRange(value, ListInputState.PovFormat.SixteenWay);
                         }
-                        else if (logicalMax > 360)
+                        else if (effectiveMax > 360)
                         {
                             // Continuous / DirectInput format (0-35900 or similar)
                             deviceState.POVs[i] = ListInputState.ConvertToPOVRange(value, ListInputState.PovFormat.DirectInput);
@@ -970,7 +1025,17 @@ namespace x360ce.App.Input.States
             if (status == HIDP_STATUS_SUCCESS)
             {
                 // We only support reading one control per usage for now, as we don't track LinkCollections
-                targetList[index] = ListInputState.ConvertToAxisRange(value, 0, 65535, ListInputState.InputSourceType.RawInput);
+                int min = int.MinValue;
+                int max = int.MaxValue;
+                int key = (HID_USAGE_PAGE_SIMULATION << 16) | usage;
+
+                if (device.DeviceAxisProperties != null && device.DeviceAxisProperties.ContainsKey(key))
+                {
+                    min = device.DeviceAxisProperties[key].Min;
+                    max = device.DeviceAxisProperties[key].Max;
+                }
+
+                targetList[index] = ListInputState.ConvertToAxisRange(value, min, max, ListInputState.InputSourceType.RawInput);
             }
         }
 

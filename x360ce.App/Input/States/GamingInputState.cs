@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Text;
 using Windows.Gaming.Input;
 using x360ce.App.Input.Devices;
 
@@ -58,22 +58,19 @@ namespace x360ce.App.Input.States
 		/// </remarks>
 		public GamepadReading? GetGamingInputState(GamingInputDeviceInfo giDeviceInfo)
 		{
-			if (giDeviceInfo?.GamingInputDevice == null)
-			{
-				Debug.WriteLine("GamingInputState: Device info or gamepad is null");
+			// Optimization: Local reference to avoid multiple property accesses
+			var device = giDeviceInfo?.GamingInputDevice;
+			if (device == null)
 				return null;
-			}
-
 			try
 			{
 				// Read Gaming Input state - no acquisition or polling needed
-				var reading = giDeviceInfo.GamingInputDevice.GetCurrentReading();
-				return reading;
+				return device.GetCurrentReading();
 			}
-			catch (Exception ex)
+			catch
 			{
-				// Device may be disconnected or access lost
-				Debug.WriteLine($"GamingInputState: Error reading state for {giDeviceInfo.InstanceName}: {ex.Message}");
+				// Device may be disconnected or access lost.
+				// Do not log in high-frequency loop.
 				return null;
 			}
 		}
@@ -90,21 +87,16 @@ namespace x360ce.App.Input.States
 		public GamepadReading? GetGamingInputState(Gamepad gamepad)
 		{
 			if (gamepad == null)
-			{
-				Debug.WriteLine("GamingInputState: Gamepad is null");
 				return null;
-			}
-
 			try
 			{
 				// Read Gaming Input state - no acquisition or polling needed
-				var reading = gamepad.GetCurrentReading();
-				return reading;
+				return gamepad.GetCurrentReading();
 			}
-			catch (Exception ex)
+			catch
 			{
-				// Device may be disconnected or access lost
-				Debug.WriteLine($"GamingInputState: Error reading state: {ex.Message}");
+				// Device may be disconnected or access lost.
+				// Do not log in high-frequency loop.
 				return null;
 			}
 		}
@@ -132,21 +124,11 @@ namespace x360ce.App.Input.States
 			try
 			{
 				var gamepads = Gamepad.Gamepads;
-				
-				if (gamepadIndex < 0 || gamepadIndex >= gamepads.Count)
-				{
-					Debug.WriteLine($"GamingInputState: Invalid gamepad index {gamepadIndex}. Available gamepads: {gamepads.Count}");
-					return null;
-				}
-
-				var gamepad = gamepads[gamepadIndex];
-				return GetGamingInputState(gamepad);
+				if (gamepadIndex >= 0 && gamepadIndex < gamepads.Count)
+					return gamepads[gamepadIndex].GetCurrentReading();
 			}
-			catch (Exception ex)
-			{
-				Debug.WriteLine($"GamingInputState: Error reading state for index {gamepadIndex}: {ex.Message}");
-				return null;
-			}
+			catch { }
+			return null;
 		}
 
 		#endregion
@@ -169,10 +151,7 @@ namespace x360ce.App.Input.States
 				var gamepads = Gamepad.Gamepads;
 				return true;
 			}
-			catch
-			{
-				return false;
-			}
+			catch { return false; }
 		}
 
 		/// <summary>
@@ -185,10 +164,7 @@ namespace x360ce.App.Input.States
 			{
 				return Gamepad.Gamepads.Count;
 			}
-			catch
-			{
-				return 0;
-			}
+			catch { return 0; }
 		}
 
 		/// <summary>
@@ -203,10 +179,7 @@ namespace x360ce.App.Input.States
 				var gamepads = Gamepad.Gamepads;
 				return gamepadIndex >= 0 && gamepadIndex < gamepads.Count;
 			}
-			catch
-			{
-				return false;
-			}
+			catch { return false; }
 		}
 
 		/// <summary>
@@ -214,10 +187,8 @@ namespace x360ce.App.Input.States
 		/// </summary>
 		/// <param name="deviceInfo">The device info to check</param>
 		/// <returns>True if device is online and has a valid gamepad object</returns>
-		public bool IsDeviceConnected(GamingInputDeviceInfo deviceInfo)
-		{
-			return deviceInfo != null && deviceInfo.IsOnline && deviceInfo.GamingInputDevice != null;
-		}
+		public bool IsDeviceConnected(GamingInputDeviceInfo deviceInfo) =>
+			deviceInfo != null && deviceInfo.IsOnline && deviceInfo.GamingInputDevice != null;
 
 		#endregion
 
@@ -236,92 +207,68 @@ namespace x360ce.App.Input.States
 		/// </remarks>
 		public string GetDiagnosticInfo()
 		{
-			var info = new System.Text.StringBuilder();
-			info.AppendLine("=== Gaming Input Status ===");
+			var sb = new StringBuilder();
+			sb.AppendLine("=== Gaming Input Status ===");
 
 			try
 			{
 				// Check OS version
 				var osVersion = Environment.OSVersion.Version;
 				var isWindows10Plus = osVersion.Major >= 10;
-				info.AppendLine($"Operating System: {Environment.OSVersion}");
-				info.AppendLine($"Windows 10+ Required: {isWindows10Plus}");
+				sb.AppendLine($"Operating System: {osVersion}");
+				sb.AppendLine($"Windows 10+ Required: {isWindows10Plus}");
 
 				// Check API availability
 				var isAvailable = IsGamingInputAvailable();
-				info.AppendLine($"Gaming Input Available: {isAvailable}");
+				sb.AppendLine($"Gaming Input Available: {isAvailable}");
 
 				if (!isAvailable)
 				{
-					info.AppendLine("\n⚠️ Gaming Input is not available on this system");
-					info.AppendLine("Requires: Windows 10 or higher");
-					return info.ToString();
+					sb.AppendLine().AppendLine("⚠️ Gaming Input is not available on this system");
+					sb.AppendLine("Requires: Windows 10 or higher");
+					return sb.ToString();
 				}
 
 				// Get connected gamepads
 				var gamepads = Gamepad.Gamepads;
-				info.AppendLine($"\nConnected Gamepads: {gamepads.Count}");
+				sb.AppendLine().AppendLine($"Connected Gamepads: {gamepads.Count}");
 
 				// Detail each gamepad
 				for (int i = 0; i < gamepads.Count; i++)
 				{
-					info.AppendLine($"\n--- Gamepad {i + 1} ---");
-					
+					sb.AppendLine().AppendLine($"--- Gamepad {i + 1} ---");
 					try
 					{
-						var gamepad = gamepads[i];
-						var reading = gamepad.GetCurrentReading();
-
-						// Timestamp
-						info.AppendLine($"Timestamp: {reading.Timestamp}");
-
-						// Buttons
-						info.AppendLine($"Buttons: {reading.Buttons}");
-						info.AppendLine($"  A: {reading.Buttons.HasFlag(GamepadButtons.A)}");
-						info.AppendLine($"  B: {reading.Buttons.HasFlag(GamepadButtons.B)}");
-						info.AppendLine($"  X: {reading.Buttons.HasFlag(GamepadButtons.X)}");
-						info.AppendLine($"  Y: {reading.Buttons.HasFlag(GamepadButtons.Y)}");
-						info.AppendLine($"  Left Shoulder: {reading.Buttons.HasFlag(GamepadButtons.LeftShoulder)}");
-						info.AppendLine($"  Right Shoulder: {reading.Buttons.HasFlag(GamepadButtons.RightShoulder)}");
-						info.AppendLine($"  View (Back): {reading.Buttons.HasFlag(GamepadButtons.View)}");
-						info.AppendLine($"  Menu (Start): {reading.Buttons.HasFlag(GamepadButtons.Menu)}");
-						info.AppendLine($"  Left Thumbstick: {reading.Buttons.HasFlag(GamepadButtons.LeftThumbstick)}");
-						info.AppendLine($"  Right Thumbstick: {reading.Buttons.HasFlag(GamepadButtons.RightThumbstick)}");
-
-						// D-Pad
-						info.AppendLine($"D-Pad:");
-						info.AppendLine($"  Up: {reading.Buttons.HasFlag(GamepadButtons.DPadUp)}");
-						info.AppendLine($"  Down: {reading.Buttons.HasFlag(GamepadButtons.DPadDown)}");
-						info.AppendLine($"  Left: {reading.Buttons.HasFlag(GamepadButtons.DPadLeft)}");
-						info.AppendLine($"  Right: {reading.Buttons.HasFlag(GamepadButtons.DPadRight)}");
-
-						// Analog sticks
-						info.AppendLine($"Left Stick: X={reading.LeftThumbstickX:F3}, Y={reading.LeftThumbstickY:F3}");
-						info.AppendLine($"Right Stick: X={reading.RightThumbstickX:F3}, Y={reading.RightThumbstickY:F3}");
-
-						// Triggers
-						info.AppendLine($"Triggers: L={reading.LeftTrigger:F3}, R={reading.RightTrigger:F3}");
+						var reading = gamepads[i].GetCurrentReading();
+						sb.AppendLine($"Timestamp: {reading.Timestamp}");
+						sb.AppendLine($"Buttons: {reading.Buttons}");
+						foreach (GamepadButtons button in Enum.GetValues(typeof(GamepadButtons)))
+						{
+							if (button == GamepadButtons.None) continue;
+							sb.AppendLine($"  {button}: {reading.Buttons.HasFlag(button)}");
+						}
+						sb.AppendLine($"Left Stick: X={reading.LeftThumbstickX:F3}, Y={reading.LeftThumbstickY:F3}");
+						sb.AppendLine($"Right Stick: X={reading.RightThumbstickX:F3}, Y={reading.RightThumbstickY:F3}");
+						sb.AppendLine($"Triggers: L={reading.LeftTrigger:F3}, R={reading.RightTrigger:F3}");
 					}
 					catch (Exception ex)
 					{
-						info.AppendLine($"Error reading gamepad {i + 1}: {ex.Message}");
+						sb.AppendLine($"Error reading gamepad {i + 1}: {ex.Message}");
 					}
 				}
-
-				info.AppendLine($"\n=== Gaming Input Features ===");
-				info.AppendLine("✅ Normalized analog values (-1.0 to 1.0)");
-				info.AppendLine("✅ Separate trigger axes (0.0 to 1.0)");
-				info.AppendLine("✅ High-precision timestamps");
-				info.AppendLine("✅ Advanced vibration support (including trigger rumble)");
-				info.AppendLine("⚠️ No background access (UWP limitation)");
-				info.AppendLine("⚠️ No Guide button access");
+				sb.AppendLine().AppendLine("=== Gaming Input Features ===");
+				sb.AppendLine("✅ Normalized analog values (-1.0 to 1.0)");
+				sb.AppendLine("✅ Separate trigger axes (0.0 to 1.0)");
+				sb.AppendLine("✅ High-precision timestamps");
+				sb.AppendLine("✅ Advanced vibration support (including trigger rumble)");
+				sb.AppendLine("⚠️ No background access (UWP limitation)");
+				sb.AppendLine("⚠️ No Guide button access");
 			}
 			catch (Exception ex)
 			{
-				info.AppendLine($"\nError getting Gaming Input diagnostic info: {ex.Message}");
+				sb.AppendLine().AppendLine($"Error getting Gaming Input diagnostic info: {ex.Message}");
 			}
-
-			return info.ToString();
+			return sb.ToString();
 		}
 
 		/// <summary>
@@ -331,31 +278,25 @@ namespace x360ce.App.Input.States
 		/// <returns>String containing detailed state information</returns>
 		public string GetDeviceStateInfo(GamingInputDeviceInfo deviceInfo)
 		{
-			if (deviceInfo == null)
-				return "Device info is null";
+			if (deviceInfo?.GamingInputDevice == null)
+				return "Device info is null or missing gamepad object";
 
-			if (deviceInfo.GamingInputDevice == null)
-				return $"Device {deviceInfo.InstanceName} has no gamepad object";
-
-			var info = new System.Text.StringBuilder();
-			
+			var sb = new StringBuilder();
 			try
 			{
 				var reading = deviceInfo.GamingInputDevice.GetCurrentReading();
-				
-				info.AppendLine($"=== {deviceInfo.DisplayName} State ===");
-				info.AppendLine($"Timestamp: {reading.Timestamp}");
-				info.AppendLine($"Buttons: {reading.Buttons}");
-				info.AppendLine($"Left Stick: ({reading.LeftThumbstickX:F3}, {reading.LeftThumbstickY:F3})");
-				info.AppendLine($"Right Stick: ({reading.RightThumbstickX:F3}, {reading.RightThumbstickY:F3})");
-				info.AppendLine($"Triggers: L={reading.LeftTrigger:F3}, R={reading.RightTrigger:F3}");
+				sb.AppendLine($"=== {deviceInfo.DisplayName} State ===");
+				sb.AppendLine($"Timestamp: {reading.Timestamp}");
+				sb.AppendLine($"Buttons: {reading.Buttons}");
+				sb.AppendLine($"Left Stick: ({reading.LeftThumbstickX:F3}, {reading.LeftThumbstickY:F3})");
+				sb.AppendLine($"Right Stick: ({reading.RightThumbstickX:F3}, {reading.RightThumbstickY:F3})");
+				sb.AppendLine($"Triggers: L={reading.LeftTrigger:F3}, R={reading.RightTrigger:F3}");
 			}
 			catch (Exception ex)
 			{
-				info.AppendLine($"Error reading device state: {ex.Message}");
+				sb.AppendLine($"Error reading device state: {ex.Message}");
 			}
-
-			return info.ToString();
+			return sb.ToString();
 		}
 
 		/// <summary>
@@ -368,22 +309,18 @@ namespace x360ce.App.Input.States
 			try
 			{
 				var gamepads = Gamepad.Gamepads;
-				
 				if (gamepadIndex < 0 || gamepadIndex >= gamepads.Count)
 					return $"Invalid gamepad index {gamepadIndex}. Available gamepads: {gamepads.Count}";
 
-				var gamepad = gamepads[gamepadIndex];
-				var reading = gamepad.GetCurrentReading();
-				
-				var info = new System.Text.StringBuilder();
-				info.AppendLine($"=== Gamepad {gamepadIndex + 1} State ===");
-				info.AppendLine($"Timestamp: {reading.Timestamp}");
-				info.AppendLine($"Buttons: {reading.Buttons}");
-				info.AppendLine($"Left Stick: ({reading.LeftThumbstickX:F3}, {reading.LeftThumbstickY:F3})");
-				info.AppendLine($"Right Stick: ({reading.RightThumbstickX:F3}, {reading.RightThumbstickY:F3})");
-				info.AppendLine($"Triggers: L={reading.LeftTrigger:F3}, R={reading.RightTrigger:F3}");
-				
-				return info.ToString();
+				var reading = gamepads[gamepadIndex].GetCurrentReading();
+				var sb = new StringBuilder();
+				sb.AppendLine($"=== Gamepad {gamepadIndex + 1} State ===");
+				sb.AppendLine($"Timestamp: {reading.Timestamp}");
+				sb.AppendLine($"Buttons: {reading.Buttons}");
+				sb.AppendLine($"Left Stick: ({reading.LeftThumbstickX:F3}, {reading.LeftThumbstickY:F3})");
+				sb.AppendLine($"Right Stick: ({reading.RightThumbstickX:F3}, {reading.RightThumbstickY:F3})");
+				sb.AppendLine($"Triggers: L={reading.LeftTrigger:F3}, R={reading.RightTrigger:F3}");
+				return sb.ToString();
 			}
 			catch (Exception ex)
 			{

@@ -100,7 +100,7 @@ namespace x360ce.App.Input.Devices
 		private const int XInputAxeCount = 6;
 		private const int XInputSliderCount = 0;
 		private const int XInputButtonCount = 15;
-		private const int XInputPovCount = 0;
+		private const int XInputPovCount = 1;
 		private const int XInputVersion = 0x0104;
 		private const int GameControlsUsage = 0x05;
 		private const int GenericDesktopUsagePage = 0x01;
@@ -168,7 +168,10 @@ namespace x360ce.App.Input.Devices
 					Debug.WriteLine($"\n{slotIndex + 1}. XInputDevice: No controller in slot {slotIndex}");
 					return null;
 				}
-				
+
+				            // Convert initial state to ListInputState for capability checks
+				            var listInputState = ListInputState.ConvertXInputStateToListInputState(controllerState);
+
 				var slotGuidBytes = (byte[])XInputSlotGuidBase.Clone();
 				slotGuidBytes[15] = (byte)slotIndex;
 				
@@ -208,10 +211,11 @@ namespace x360ce.App.Input.Devices
                     AssignedToPad1 = false,
                     AssignedToPad2 = false,
                     AssignedToPad3 = false,
-                    AssignedToPad4 = false
+                    AssignedToPad4 = false,
+                    ListInputState = listInputState
                 };
-			}
-			catch (Exception ex)
+   }
+   catch (Exception ex)
 			{
 				Debug.WriteLine($"XInputDevice: Error in slot {slotIndex}: {ex.Message}");
 				return null;

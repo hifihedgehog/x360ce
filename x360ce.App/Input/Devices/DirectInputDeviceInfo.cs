@@ -22,9 +22,11 @@ namespace x360ce.App.Input.Devices
 		public int Usage { get; set; }
 		public int UsagePage { get; set; }
 		public string InputType { get; set; }
-        public ListInputState ListInputState { get; set; }
-        public int AxeCount { get; set; }
-	    public int SliderCount { get; set; }
+		      public ListInputState ListInputState { get; set; }
+		public List<JoystickOffset> AvailableAxes { get; set; }
+		public List<JoystickOffset> AvailableSliders { get; set; }
+		      public int AxeCount { get; set; }
+		   public int SliderCount { get; set; }
 	    public int ButtonCount { get; set; }
 	    public int PovCount { get; set; }
 		public bool HasForceFeedback { get; set; }
@@ -108,6 +110,35 @@ namespace x360ce.App.Input.Devices
 	/// </summary>
 	internal class DirectInputDevice
 	{
+		// Standard DirectInput axis offsets for capability detection
+		private static readonly JoystickOffset[] AxisOffsets = new[]
+		{
+			JoystickOffset.X,
+			JoystickOffset.Y,
+			JoystickOffset.Z,
+			JoystickOffset.RotationX,
+			JoystickOffset.RotationY,
+			JoystickOffset.RotationZ,
+			JoystickOffset.AccelerationX,
+			JoystickOffset.AccelerationY,
+			JoystickOffset.AccelerationZ,
+			JoystickOffset.AngularAccelerationX,
+			JoystickOffset.AngularAccelerationY,
+			JoystickOffset.AngularAccelerationZ,
+			JoystickOffset.ForceX,
+			JoystickOffset.ForceY,
+			JoystickOffset.ForceZ,
+			JoystickOffset.TorqueX,
+			JoystickOffset.TorqueY,
+			JoystickOffset.TorqueZ,
+			JoystickOffset.VelocityX,
+			JoystickOffset.VelocityY,
+			JoystickOffset.VelocityZ,
+			JoystickOffset.AngularVelocityX,
+			JoystickOffset.AngularVelocityY,
+			JoystickOffset.AngularVelocityZ,
+		};
+
 		// Standard DirectInput slider offsets for capability detection
 		private static readonly JoystickOffset[] SliderOffsets = new[]
 		{
@@ -329,35 +360,59 @@ namespace x360ce.App.Input.Devices
 			deviceInfo.HardwareRevision = capabilities.HardwareRevision;
 			deviceInfo.FirmwareRevision = capabilities.FirmwareRevision;
 			
-			// Calculate slider count for joystick devices
-			deviceInfo.SliderCount = device is Joystick joystick ? CalculateSliderCount(joystick) : 0;
+			// Calculate available axes and slider count for joystick devices
+			if (device is Joystick joystick)
+			{
+				deviceInfo.AvailableSliders = GetAvailableSliders(joystick);
+				deviceInfo.SliderCount = deviceInfo.AvailableSliders.Count;
+				// Calculate number of non-slider axes
+				var axisCount = Math.Max(0, deviceInfo.AxeCount - deviceInfo.SliderCount);
+				deviceInfo.AvailableAxes = GetAvailableAxes(joystick, axisCount);
+			}
+			else
+			{
+				deviceInfo.AvailableAxes = new List<JoystickOffset>();
+				deviceInfo.AvailableSliders = new List<JoystickOffset>();
+				deviceInfo.SliderCount = 0;
+			}
+		}
+
+		/// <summary>
+		/// Gets the list of available axes on a joystick device.
+		/// </summary>
+		private List<JoystickOffset> GetAvailableAxes(Joystick joystick, int axisCount)
+		{
+			var axes = new List<JoystickOffset>();
+			foreach (var offset in AxisOffsets)
+			{
+				if (axes.Count >= axisCount)
+					break;
+				try
+				{
+					if (joystick.GetObjectInfoByOffset((int)offset) != null)
+						axes.Add(offset);
+				}
+				catch { }
+			}
+			return axes;
 		}
 		
 		/// <summary>
-		/// Calculates the number of sliders present on a joystick device by checking slider offsets.
-		/// Uses the standard DirectInput slider offset list to detect which sliders are available.
+		/// Gets the list of available sliders on a joystick device.
 		/// </summary>
-		/// <param name="joystick">The joystick device to check</param>
-		/// <returns>Number of sliders detected (0-8)</returns>
-		private int CalculateSliderCount(Joystick joystick)
+		private List<JoystickOffset> GetAvailableSliders(Joystick joystick)
 		{
-			int sliderCount = 0;
-			
-			// Check each slider offset to see if it exists on the device
+			var sliders = new List<JoystickOffset>();
 			foreach (var offset in SliderOffsets)
 			{
 				try
 				{
 					if (joystick.GetObjectInfoByOffset((int)offset) != null)
-						sliderCount++;
+						sliders.Add(offset);
 				}
-				catch
-				{
-					// Slider offset not present on this device - continue checking others
-				}
+				catch { }
 			}
-			
-			return sliderCount;
+			return sliders;
 		}
 
 		/// <summary>

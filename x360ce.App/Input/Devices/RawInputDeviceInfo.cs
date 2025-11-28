@@ -43,7 +43,18 @@ namespace x360ce.App.Input.Devices
         /// <summary>
         /// Logical Maximum values for each POV, used to determine format (4-way, 8-way, etc.).
         /// </summary>
+        /// <summary>
+        /// Logical Minimum values for each POV, used to determine if values are 0-based or 1-based.
+        /// </summary>
+        public List<int> PovLogicalMins { get; set; } = new List<int>();
+
         public List<int> PovLogicalMaxes { get; set; } = new List<int>();
+
+        /// <summary>
+        /// Stores Logical Min/Max for each axis/slider by Usage.
+        /// Key = (UsagePage << 16) | Usage
+        /// </summary>
+        public Dictionary<int, AxisRange> DeviceAxisProperties { get; set; } = new Dictionary<int, AxisRange>();
         
         // Simulation Controls (Usage Page 0x02)
         public int ThrottleCount { get; set; }
@@ -151,6 +162,21 @@ namespace x360ce.App.Input.Devices
             }
             // RawInput devices don't need explicit disposal, but we clear the handle
             DeviceHandle = IntPtr.Zero;
+        }
+    }
+
+    /// <summary>
+    /// Logical range for an axis.
+    /// </summary>
+    public struct AxisRange
+    {
+        public int Min;
+        public int Max;
+
+        public AxisRange(int min, int max)
+        {
+            Min = min;
+            Max = max;
         }
     }
 
@@ -803,7 +829,7 @@ namespace x360ce.App.Input.Devices
                 // Attempt to parse HID capabilities to check for buttons/axes
                 if (GetHidCapabilities(rawDevice.hDevice, out int axes, out int sliders, out int buttons, out int povs,
                     out _, out _, out _, out _, out _, out _,
-                    out _, out _, out IntPtr preparsedData, out _))
+                    out _, out _, out IntPtr preparsedData, out _, out _, out _))
                 {
                     // Free the preparsed data as we only needed it for the check
                     // (It will be re-acquired in ProcessInputDevice if accepted)
@@ -888,7 +914,7 @@ namespace x360ce.App.Input.Devices
         private bool GetHidCapabilities(IntPtr hDevice, out int axeCount, out int sliderCount, out int buttonCount, out int povCount,
             out int throttleCount, out int brakeCount, out int steeringCount, out int acceleratorCount, out int clutchCount,
             out bool hasForceFeedback, out bool usesReportIds, out int buttonDataOffset, out IntPtr preparsedDataOut,
-            out List<int> povLogicalMaxes)
+            out List<int> povLogicalMins, out List<int> povLogicalMaxes, out Dictionary<int, AxisRange> axisProperties)
         {
             axeCount = 0;
             sliderCount = 0;
@@ -903,7 +929,9 @@ namespace x360ce.App.Input.Devices
             usesReportIds = false;
             buttonDataOffset = 0;
             preparsedDataOut = IntPtr.Zero;
+            povLogicalMins = new List<int>();
             povLogicalMaxes = new List<int>();
+            axisProperties = new Dictionary<int, AxisRange>();
 
             // Track unique usages to avoid double-counting (e.g. multi-touch devices reporting 10 X-axes)
             // RawInputState currently only supports reading unique usages
@@ -1126,6 +1154,11 @@ namespace x360ce.App.Input.Devices
                             int rangeMax = valueCap.IsRange ? valueCap.Range.UsageMax : valueCap.NotRange.Usage;
                             int rangeSize = rangeMax - rangeMin + 1;
 
+                            // Capture LogicalMin/Max for axis scaling
+                            // x360ce needs to know the raw range to correctly scale to 0-65535
+                            // Store this in the axis properties map
+                            // Loop below handles storing it for each specific usage
+
                             int axesFound = 0;
                             int slidersFound = 0;
                             int povsFound = 0;
@@ -1141,27 +1174,47 @@ namespace x360ce.App.Input.Devices
                                 // If rangeSize < itemCount, usually the last usage repeats (common for arrays or multi-axis inputs)
                                 int u = (i < rangeSize) ? (rangeMin + i) : rangeMax;
 
+                                // Store axis properties (Min/Max) for this usage
+                                int key = (valueCap.UsagePage << 16) | u;
+                                if (!axisProperties.ContainsKey(key))
+                                {
+                                    // Use PhysicalMin/Max if available and different from LogicalMin/Max
+                                    // Some devices report 0-255 Logical but represent -32768 to 32767 Physical
+                                    // However, RawInput usually returns normalized logical values?
+                                    // Actually, RawInput returns the raw value from the report.
+                                    // If the Logical Min/Max are small (e.g. 0-255) but Physical are large,
+                                    // we should trust Logical Min/Max for the raw data range.
+                                    
+                                    // Issue: If Min == Max, range is 0, which causes divide by zero in conversion.
+                                    // Ensure valid range.
+                                    if (valueCap.LogicalMax > valueCap.LogicalMin)
+                                    {
+                                        axisProperties[key] = new AxisRange(valueCap.LogicalMin, valueCap.LogicalMax);
+                                    }
+                                }
+
                                 if (valueCap.UsagePage == HID_USAGE_PAGE_GENERIC)
                                 {
                                     // Standard axes: X(0x30)-Rz(0x35)
                                     if (u >= 0x30 && u <= 0x35)
                                     {
-                                        int key = (HID_USAGE_PAGE_GENERIC << 16) | u;
-                                        if (foundAxes.Add(key)) axesFound++;
+                                        int itemKey = (HID_USAGE_PAGE_GENERIC << 16) | u;
+                                        if (foundAxes.Add(itemKey)) axesFound++;
                                     }
                                     // Sliders: Slider(0x36)-Wheel(0x38)
                                     else if (u >= 0x36 && u <= 0x38)
                                     {
-                                        int key = (HID_USAGE_PAGE_GENERIC << 16) | u;
-                                        if (foundSliders.Add(key)) slidersFound++;
+                                        int itemKey = (HID_USAGE_PAGE_GENERIC << 16) | u;
+                                        if (foundSliders.Add(itemKey)) slidersFound++;
                                     }
                                     // POV Hat Switch (0x39)
                                     else if (u == 0x39)
                                     {
-                                        int key = (HID_USAGE_PAGE_GENERIC << 16) | u;
-                                        if (foundPovs.Add(key))
+                                        int itemKey = (HID_USAGE_PAGE_GENERIC << 16) | u;
+                                        if (foundPovs.Add(itemKey))
                                         {
                                             povsFound++;
+                                            povLogicalMins.Add(valueCap.LogicalMin);
                                             povLogicalMaxes.Add(valueCap.LogicalMax);
                                         }
                                     }
@@ -1173,8 +1226,8 @@ namespace x360ce.App.Input.Devices
                                     // Tilt X (0x3D), Tilt Y (0x3E)
                                     if (u == 0x30 || u == 0x31 || u == 0x3D || u == 0x3E)
                                     {
-                                        int key = (HID_USAGE_PAGE_DIGITIZER << 16) | u;
-                                        if (foundAxes.Add(key)) axesFound++;
+                                        int itemKey = (HID_USAGE_PAGE_DIGITIZER << 16) | u;
+                                        if (foundAxes.Add(itemKey)) axesFound++;
                                     }
                                 }
                                 else if (valueCap.UsagePage == HID_USAGE_PAGE_SIMULATION)
@@ -2103,10 +2156,12 @@ namespace x360ce.App.Input.Devices
                         bool forceFeedback, usesReportIds;
                         int buttonDataOffset;
                         IntPtr preparsedData;
+                        List<int> povMins;
                         List<int> povMaxes;
+                        Dictionary<int, AxisRange> axisProperties;
                         if (GetHidCapabilities(rawDevice.hDevice, out axes, out sliders, out buttons, out povs,
                             out throttles, out brakes, out steering, out accelerators, out clutches, out forceFeedback,
-                            out usesReportIds, out buttonDataOffset, out preparsedData, out povMaxes))
+                            out usesReportIds, out buttonDataOffset, out preparsedData, out povMins, out povMaxes, out axisProperties))
                         {
                             deviceInfo.AxeCount = axes;
                             deviceInfo.SliderCount = sliders;
@@ -2120,7 +2175,9 @@ namespace x360ce.App.Input.Devices
                             deviceInfo.HasForceFeedback = forceFeedback;
                             deviceInfo.UsesReportIds = usesReportIds;
                             deviceInfo.ButtonDataOffset = buttonDataOffset;
+                            deviceInfo.PovLogicalMins = povMins;
                             deviceInfo.PovLogicalMaxes = povMaxes;
+                            deviceInfo.DeviceAxisProperties = axisProperties;
                             // CRITICAL: Store preparsed data for later use by HidP_GetUsages
                             // This will be freed when the device is disposed
                             deviceInfo.PreparsedData = preparsedData;
