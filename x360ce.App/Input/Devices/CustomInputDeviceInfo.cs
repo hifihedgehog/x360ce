@@ -216,26 +216,26 @@ namespace x360ce.App.Input.Devices
 
 		public bool AssignedToPad1
 		{
-			get => _inputDeviceInfo.AssignedToPad1;
-			set { if (_inputDeviceInfo.AssignedToPad1 != value) { _inputDeviceInfo.AssignedToPad1 = value; OnPropertyChanged(); } }
+			get => _inputDeviceInfo.AssignedToPad[0];
+			set { if (_inputDeviceInfo.AssignedToPad[0] != value) { _inputDeviceInfo.AssignedToPad[0] = value; OnPropertyChanged(); } }
 		}
 
 		public bool AssignedToPad2
 		{
-			get => _inputDeviceInfo.AssignedToPad2;
-			set { if (_inputDeviceInfo.AssignedToPad2 != value) { _inputDeviceInfo.AssignedToPad2 = value; OnPropertyChanged(); } }
+			get => _inputDeviceInfo.AssignedToPad[1];
+			set { if (_inputDeviceInfo.AssignedToPad[1] != value) { _inputDeviceInfo.AssignedToPad[1] = value; OnPropertyChanged(); } }
 		}
 
 		public bool AssignedToPad3
 		{
-			get => _inputDeviceInfo.AssignedToPad3;
-			set { if (_inputDeviceInfo.AssignedToPad3 != value) { _inputDeviceInfo.AssignedToPad3 = value; OnPropertyChanged(); } }
+			get => _inputDeviceInfo.AssignedToPad[2];
+			set { if (_inputDeviceInfo.AssignedToPad[2] != value) { _inputDeviceInfo.AssignedToPad[2] = value; OnPropertyChanged(); } }
 		}
 
 		public bool AssignedToPad4
 		{
-			get => _inputDeviceInfo.AssignedToPad4;
-			set { if (_inputDeviceInfo.AssignedToPad4 != value) { _inputDeviceInfo.AssignedToPad4 = value; OnPropertyChanged(); } }
+			get => _inputDeviceInfo.AssignedToPad[3];
+			set { if (_inputDeviceInfo.AssignedToPad[3] != value) { _inputDeviceInfo.AssignedToPad[3] = value; OnPropertyChanged(); } }
 		}
 
 		private bool _axePressed;

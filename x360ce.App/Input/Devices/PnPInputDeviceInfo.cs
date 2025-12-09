@@ -428,10 +428,7 @@ namespace x360ce.App.Input.Devices
 
                 // Initial application profile state
                 deviceInfo.IsEnabled = false;
-                deviceInfo.AssignedToPad1 = false;
-                deviceInfo.AssignedToPad2 = false;
-                deviceInfo.AssignedToPad3 = false;
-                deviceInfo.AssignedToPad4 = false;
+                deviceInfo.AssignedToPad = new List<bool> { false, false, false, false };
 
                 // Get device instance ID
                 var instanceIdBuffer = new StringBuilder(256);

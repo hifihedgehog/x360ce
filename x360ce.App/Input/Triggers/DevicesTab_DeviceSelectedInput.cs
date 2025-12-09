@@ -215,7 +215,18 @@ namespace x360ce.App.Input.Triggers
                     Content = displayValue,
                     Background = Brushes.Transparent,
                 };
-                stackPanel.Children.Add(valueLabel);
+
+                if (groupName == "Buttons")
+                { 
+                    valueLabel.Visibility = Visibility.Collapsed;
+                    groupBox.Padding = new Thickness(5,0,6,6);
+                }
+                else
+                {
+                    groupBox.Padding = new Thickness(5,0,6,4);
+                }
+
+                    stackPanel.Children.Add(valueLabel);
                 uniformGrid.Children.Add(stackPanel);
 
                 // Add the value label to the appropriate list

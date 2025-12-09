@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using x360ce.App.Input.States;
 
 namespace x360ce.App.Input.Devices
@@ -93,17 +94,8 @@ namespace x360ce.App.Input.Devices
 		/// <summary>Indicates if the device is enabled in x360ce.</summary>
 		public bool IsEnabled { get; set; }
 
-		/// <summary>Assigned to Controller 1.</summary>
-		public bool AssignedToPad1 { get; set; }
-
-		/// <summary>Assigned to Controller 2.</summary>
-		public bool AssignedToPad2 { get; set; }
-
-		/// <summary>Assigned to Controller 3.</summary>
-		public bool AssignedToPad3 { get; set; }
-
-		/// <summary>Assigned to Controller 4.</summary>
-		public bool AssignedToPad4 { get; set; }
+		/// <summary>Assigned to Virtual Controllers.</summary>
+		public List<bool> AssignedToPad { get; set; }
 
 		/// <summary>Current input state normalized to custom format.</summary>
 		public CustomInputState CustomInputState { get; set; }

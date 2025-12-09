@@ -303,10 +303,7 @@ namespace x360ce.App.Input.Devices
 
                 // Initial application profile state
                 IsEnabled = false,
-                AssignedToPad1 = false,
-                AssignedToPad2 = false,
-                AssignedToPad3 = false,
-                AssignedToPad4 = false,
+                AssignedToPad = new List<bool> { false, false, false, false },
             };
 		}
 
