@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JocysCom.ClassLibrary.Controls;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -119,6 +120,9 @@ namespace x360ce.App.Controls
 
         private void InputDevicesControl_Loaded(object sender, RoutedEventArgs e)
         {
+            if (ControlsHelper.IsDesignMode(this))
+                return;
+
             // Set dispatcher for UI thread synchronization
             _customInputDeviceManager.SetDispatcher(Dispatcher);
 

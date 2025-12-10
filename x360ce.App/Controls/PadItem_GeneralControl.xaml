@@ -449,12 +449,7 @@
 			<!--  LeftThumbRight  -->
 			<StackPanel Style="{StaticResource MiniMenuStackPanelLeft}">
 			             <TextBox Name="StickLRightTextBox" x:FieldModifier="public" />
-				<Button
-					Name="StickLRightInvertButton"
-					Margin="0,0,3,0"
-                    IsEnabled="False">
-                    <ContentControl Content="{x:Null}"/>
-                </Button>
+                <Button Name="StickLRightInvertButton" Style="{StaticResource MenuButtonLeft}"/>
                 <Border Style="{StaticResource LabelBorderLeft}">
                     <StackPanel>
                         <Label Name="StickLRightLabel" Content="Stick Right" />

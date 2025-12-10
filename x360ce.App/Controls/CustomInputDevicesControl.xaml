@@ -8,7 +8,7 @@
              mc:Ignorable="d"
              Loaded="InputDevicesControl_Loaded"
              Unloaded="UserControl_Unloaded"
- d:DesignHeight="400"
+ d:DesignHeight="600"
  d:DesignWidth="900"
  Background="{StaticResource BackgroundLight}">
 
