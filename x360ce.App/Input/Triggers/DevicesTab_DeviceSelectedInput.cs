@@ -92,7 +92,7 @@ namespace x360ce.App.Input.Triggers
             // Update axes values
             if (listState.Axes != null && SelectedDeviceAxisLabels.Count > 0)
             {
-            	for (int i = 0; i < Math.Min(listState.Axes.Count, SelectedDeviceAxisLabels.Count); i++)
+            	for (int i = 0; i < Math.Min(listState.Axes.Length, SelectedDeviceAxisLabels.Count); i++)
             	{
             		var currentValue = listState.Axes[i];
             		SelectedDeviceAxisLabels[i].Item2.Content = currentValue.ToString();
@@ -107,7 +107,7 @@ namespace x360ce.App.Input.Triggers
             // Update slider values
             if (listState.Sliders != null && SelectedDeviceSliderLabels.Count > 0)
             {
-                for (int i = 0; i < Math.Min(listState.Sliders.Count, SelectedDeviceSliderLabels.Count); i++)
+                for (int i = 0; i < Math.Min(listState.Sliders.Length, SelectedDeviceSliderLabels.Count); i++)
                 {
                     var currentValue = listState.Sliders[i];
                     SelectedDeviceSliderLabels[i].Item2.Content = currentValue.ToString();
@@ -118,7 +118,7 @@ namespace x360ce.App.Input.Triggers
             // Update button values
             if (listState.Buttons != null && SelectedDeviceButtonLabels.Count > 0)
             {
-                for (int i = 0; i < Math.Min(listState.Buttons.Count, SelectedDeviceButtonLabels.Count); i++)
+                for (int i = 0; i < Math.Min(listState.Buttons.Length, SelectedDeviceButtonLabels.Count); i++)
                 {
                     var currentValue = listState.Buttons[i];
                     SelectedDeviceButtonLabels[i].Item2.Content = currentValue.ToString();
@@ -129,7 +129,7 @@ namespace x360ce.App.Input.Triggers
             // Update key values (keys use the same button list)
             if (listState.Buttons != null && SelectedDeviceKeyLabels.Count > 0)
             {
-                for (int i = 0; i < Math.Min(listState.Buttons.Count, SelectedDeviceKeyLabels.Count); i++)
+                for (int i = 0; i < Math.Min(listState.Buttons.Length, SelectedDeviceKeyLabels.Count); i++)
                 {
                     var currentValue = listState.Buttons[i];
                     SelectedDeviceKeyLabels[i].Item2.Content = currentValue.ToString();
@@ -140,7 +140,7 @@ namespace x360ce.App.Input.Triggers
             // Update POV values
             if (listState.POVs != null && SelectedDevicePovLabels.Count > 0)
             {
-                for (int i = 0; i < Math.Min(listState.POVs.Count, SelectedDevicePovLabels.Count); i++)
+                for (int i = 0; i < Math.Min(listState.POVs.Length, SelectedDevicePovLabels.Count); i++)
                 {
                     var currentValue = listState.POVs[i];
                     SelectedDevicePovLabels[i].Item2.Content = currentValue.ToString();
@@ -156,7 +156,7 @@ namespace x360ce.App.Input.Triggers
         /// <param name="groupName">Name of the input group</param>
         /// <param name="count">Number of inputs from device capabilities</param>
         /// <param name="values">Optional live values from device state</param>
-        private void CreateInputGroup(StackPanel parentPanel, string groupName, int count, System.Collections.Generic.List<int> values)
+        private void CreateInputGroup(StackPanel parentPanel, string groupName, int count, int[] values)
         {
             if (count == 0)
                 return;
@@ -201,7 +201,7 @@ namespace x360ce.App.Input.Triggers
 
                 // Value Label - shows live value or "N/A" if state unavailable
                 string displayValue = "N/A";
-                if (values != null && i < values.Count)
+                if (values != null && i < values.Length)
                 {
                     displayValue = values[i].ToString();
                 }

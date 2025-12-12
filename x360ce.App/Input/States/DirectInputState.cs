@@ -149,27 +149,26 @@ namespace x360ce.App.Input.States
 			{
 				result = cached.State;
 				// Clear existing button states
-				for (int i = 0; i < result.Buttons.Count; i++)
-				    result.Buttons[i] = CustomInputState.ConvertToButtonRange(0);
-}
-else
-{
-				result = new CustomInputState();
-				// Initialize standard mouse buttons (Left, Right, Middle, X1, X2)
+				// Array is fixed size, just reset standard buttons
 				for (int i = 0; i < 5; i++)
-				    result.Buttons.Add(CustomInputState.ConvertToButtonRange(0));
+					result.Buttons[i] = CustomInputState.ConvertToButtonRange(0);
+			}
+			else
+			{
+				result = new CustomInputState();
 				// Initialize axes (X, Y, Wheel) - placeholder as we can't easily poll relative deltas without DI
-				for (int i = 0; i < 3; i++)
-				    result.Axes.Add(CustomInputState.ConvertToAxisRange(32767));
-}
+				result.Axes[0] = CustomInputState.ConvertToAxisRange(32767);
+				result.Axes[1] = CustomInputState.ConvertToAxisRange(32767);
+				result.Axes[2] = CustomInputState.ConvertToAxisRange(32767);
+			}
 
-// Poll standard mouse buttons
-// VK_LBUTTON (0x01), VK_RBUTTON (0x02), VK_MBUTTON (0x04), VK_XBUTTON1 (0x05), VK_XBUTTON2 (0x06)
-result.Buttons[0] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x01) & 0x8000) != 0); // Left
-result.Buttons[1] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x02) & 0x8000) != 0); // Right
-result.Buttons[2] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x04) & 0x8000) != 0); // Middle
-result.Buttons[3] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x05) & 0x8000) != 0); // X1
-result.Buttons[4] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x06) & 0x8000) != 0); // X2
+			// Poll standard mouse buttons
+			// VK_LBUTTON (0x01), VK_RBUTTON (0x02), VK_MBUTTON (0x04), VK_XBUTTON1 (0x05), VK_XBUTTON2 (0x06)
+			result.Buttons[0] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x01) & 0x8000) != 0); // Left
+			result.Buttons[1] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x02) & 0x8000) != 0); // Right
+			result.Buttons[2] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x04) & 0x8000) != 0); // Middle
+			result.Buttons[3] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x05) & 0x8000) != 0); // X1
+			result.Buttons[4] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x06) & 0x8000) != 0); // X2
 
 			// Cache the state
 			_cachedStates[interfacePath] = new CachedKeyboardMouseState
@@ -195,48 +194,41 @@ result.Buttons[4] = CustomInputState.ConvertToButtonRange((GetAsyncKeyState(0x06
 			{
 				result = cached.State;
 				// Clear existing button states
-				for (int i = 0; i < result.Buttons.Count; i++)
-				{
-					result.Buttons[i] = CustomInputState.ConvertToButtonRange(0);
-	}
-}
-else
-{
-	// First time - create new ListInputState
-	result = new CustomInputState();
-	// Initialize all 256 buttons as released (0)
-	for (int i = 0; i < 256; i++)
-	{
-					result.Buttons.Add(CustomInputState.ConvertToButtonRange(0));
-	}
-}
+				Array.Clear(result.Buttons, 0, result.Buttons.Length);
+			}
+			else
+			{
+				// First time - create new ListInputState
+				result = new CustomInputState();
+				// Buttons are initialized to 0 by default
+			}
 
-// Scan virtual key codes to find pressed keys
-// Skip 0x00-0x07 (undefined/mouse buttons) and 0xFF (reserved)
-for (int vKey = 0x08; vKey <= 0xFE; vKey++)
-{
-	// Skip mouse button virtual keys
-	if (vKey <= VK_XBUTTON2)
+			// Scan virtual key codes to find pressed keys
+			// Skip 0x00-0x07 (undefined/mouse buttons) and 0xFF (reserved)
+			for (int vKey = 0x08; vKey <= 0xFE; vKey++)
+			{
+				// Skip mouse button virtual keys
+				if (vKey <= VK_XBUTTON2)
 					continue;
-	
-	// Check if key is currently pressed (high bit set)
-	if ((GetAsyncKeyState(vKey) & 0x8000) != 0)
-	{
+
+				// Check if key is currently pressed (high bit set)
+				if ((GetAsyncKeyState(vKey) & 0x8000) != 0)
+				{
 					// Set button state to 1 (pressed)
-					if (vKey < 256)
+					if (vKey < CustomInputState.MaxButtons)
 					{
-					    result.Buttons[vKey] = CustomInputState.ConvertToButtonRange(1);
+						result.Buttons[vKey] = CustomInputState.ConvertToButtonRange(1);
 					}
-	}
-}
-			
+				}
+			}
+
 			// Cache the state (or update cache timestamp)
 			_cachedStates[interfacePath] = new CachedKeyboardMouseState
 			{
 				State = result,
 				LastUpdate = DateTime.Now
 			};
-			
+
 			return result;
 		}
 	}

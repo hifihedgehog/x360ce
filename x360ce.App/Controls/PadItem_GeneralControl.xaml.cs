@@ -208,6 +208,11 @@ namespace x360ce.App.Controls
 						Background = colorLight
 					};
 
+					if (headerName == "BUTTON")
+					{ 
+						valueLabel.Visibility = Visibility.Collapsed;
+					}
+
 					StackPanel stackPanel = new StackPanel();
 					stackPanel.Children.Add(buttonLabel);
 					stackPanel.Children.Add(valueLabel);

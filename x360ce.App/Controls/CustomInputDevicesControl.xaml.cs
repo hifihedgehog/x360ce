@@ -772,19 +772,17 @@ namespace x360ce.App.Controls
             // Loop through custom list and get current state
             foreach (var device in customInputDeviceManager.CustomInputDeviceInfoList)
             {
-                var liState = device.CustomInputState;
+                var customState = device.CustomInputState;
 
                 // Skip if no state available
-                if (liState == null ||
-                    liState.Buttons == null && liState.POVs == null && liState.Axes == null && liState.Sliders == null ||
-                    liState.Buttons.Count == 0 && liState.POVs.Count == 0 && liState.Axes.Count == 0 && liState.Sliders.Count == 0)
+                if (customState == null)
                     continue;
 
                 // Check if any button or POV is pressed and Update ButtonPressed property
-                device.ButtonPressed = IsAnyButtonOrPovPressed(liState);
+                device.ButtonPressed = IsAnyButtonOrPovPressed(customState);
 
                 // Update value labels if handler is set
-                _devicesTab_DeviceSelectedInput?.UpdateValueLabels(device.InstanceGuid, liState);
+                _devicesTab_DeviceSelectedInput?.UpdateValueLabels(device.InstanceGuid, customState);
             }
         }
 
@@ -792,18 +790,18 @@ namespace x360ce.App.Controls
         /// Checks if any button or POV is pressed in the given state.
         /// Optimized for high-frequency execution.
         /// </summary>
-        /// <param name="listState">The device state to check</param>
+        /// <param name="customState">The device state to check</param>
         /// <returns>True if any button is pressed (value 1) or any POV is pressed (value > -1)</returns>
-        private static bool IsAnyButtonOrPovPressed(CustomInputState listState)
+        private static bool IsAnyButtonOrPovPressed(CustomInputState customState)
         {
-            if (listState == null)
+            if (customState == null)
                 return false;
 
             // Check buttons.
-            var buttons = listState.Buttons;
+            var buttons = customState.Buttons;
             if (buttons != null)
             {
-                var count = buttons.Count;
+                var count = buttons.Length;
                 for (int i = 0; i < count; i++)
                 {
                     if (buttons[i] != 0)
@@ -812,10 +810,10 @@ namespace x360ce.App.Controls
             }
 
             // Check POVs.
-            var povs = listState.POVs;
+            var povs = customState.POVs;
             if (povs != null)
             {
-                var count = povs.Count;
+                var count = povs.Length;
                 for (int i = 0; i < count; i++)
                 {
                     if (povs[i] > -1)
