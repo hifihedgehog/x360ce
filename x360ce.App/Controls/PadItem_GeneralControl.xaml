@@ -255,7 +255,7 @@
 					Background="{StaticResource BackgroundLight}"
 					Orientation="Horizontal"
 					Visibility="Collapsed">
-					<!-- Button value modification buttons. -->
+                    <!-- Button value modification buttons. -->
 					<Button
 						Name="DragAndDrop_Button"
 						Margin="0,3,3,3"

@@ -130,6 +130,7 @@ namespace x360ce.App.Controls
 		readonly SolidColorBrush colorNormal = (SolidColorBrush)new BrushConverter().ConvertFrom("#FF6699FF");
         readonly SolidColorBrush colorNormal05 = (SolidColorBrush)new BrushConverter().ConvertFrom("#886699FF");
         readonly SolidColorBrush colorRecord = (SolidColorBrush)new BrushConverter().ConvertFrom("#FFFF6B66");
+        readonly SolidColorBrush colorOver = (SolidColorBrush)new BrushConverter().ConvertFrom("#FFFFCC66");
 
 		Dictionary<int, (Label, Label)> ButtonDictionary = new Dictionary<int, (Label, Label)>();
 		Dictionary<int, (Label, Label)> PovDictionary = new Dictionary<int, (Label, Label)>();
@@ -877,13 +878,19 @@ namespace x360ce.App.Controls
 
         private void MiniMenu_MouseEnterStackPanel(object sender, MouseEventArgs e)
         {
-           var child = ((StackPanel)sender).Children.OfType<TextBox>().FirstOrDefault();
-		   if (child != null) { MiniMenu_MouseEnterTextBox(child, null); };
+           var childTextBox = ((StackPanel)sender).Children.OfType<TextBox>().FirstOrDefault();
+		   if (childTextBox != null) { MiniMenu_MouseEnterTextBox(childTextBox, null); };
+
+            var childButton = ((StackPanel)sender).Children.OfType<Button>().FirstOrDefault();
+            if (childButton != null) { childButton.MinWidth = 0; childButton.Width = 0; }
         }
 
         private void MiniMenu_MouseLeaveStackPanel(object sender, MouseEventArgs e)
         {
             MiniMenuStackPanel.Visibility = Visibility.Collapsed;
+
+            var childButton = ((StackPanel)sender).Children.OfType<Button>().FirstOrDefault();
+            if (childButton != null) { childButton.MinWidth = 26; childButton.Width = 26; }
         }
 
         /// <summary>
@@ -950,44 +957,43 @@ namespace x360ce.App.Controls
 			}
 		}
 
-		/// <summary>
-		/// Modifies the text of the current TextBox based on the button clicked (Invert, Half, etc.).
-		/// </summary>
-		private void ModifyButton_Click(object sender, RoutedEventArgs e)
-		{
-		           var button = sender as Button;
-			var tb = GetCurrentTextBoxFromSender(sender);
-			if (tb == null || tb.Text.Length == 0)
-				return;
-	
-		           // Remove existing prefixes.
-		           var text = tb.Text;
-			if (text.StartsWith("IH"))
-				text = text.Substring(2);
-			else if (text.StartsWith("I"))
-				text = text.Substring(1);
-			else if (text.StartsWith("H"))
-				text = text.Substring(1);
-	
-			// Add new prefix.
-			if (button == DragAndDrop_Button_Inverted || button == DragAndDrop_Axis_Inverted)
-			{
-				text = "I" + text;
-			}
-			else if (button == DragAndDrop_Axis_Half)
-			{
-				text = "H" + text;
-			}
-			else if (button == DragAndDrop_Axis_Inverted_Half)
-			{
-				text = "IH" + text;
-			}
-			// Normal (DragAndDrop_Button, DragAndDrop_Axis) just leaves stripped text.
-	
-			tb.Text = text;
-		       }
+        /// <summary>
+        /// Modifies the text of the current TextBox based on the button clicked (Invert, Half, etc.).
+        /// </summary>
+        private void ModifyButton_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var tb = GetCurrentTextBoxFromSender(sender);
+            if (tb == null || tb.Text.Length == 0)
+                return;
 
-		private TextBox GetCurrentTextBoxFromSender(object sender)
+            // Remove existing prefixes.
+            var text = tb.Text;
+            if (text.StartsWith("IH"))
+                text = text.Substring(2);
+            else if (text.StartsWith("I"))
+                text = text.Substring(1);
+            else if (text.StartsWith("H"))
+                text = text.Substring(1);
+
+            // Add new prefix.
+            if (button == DragAndDrop_Button_Inverted || button == DragAndDrop_Axis_Inverted)
+            {
+                text = "I" + text;
+            }
+            else if (button == DragAndDrop_Axis_Half)
+            {
+                text = "H" + text;
+            }
+            else if (button == DragAndDrop_Axis_Inverted_Half)
+            {
+                text = "IH" + text;
+            }
+            // Normal (DragAndDrop_Button, DragAndDrop_Axis) just leaves stripped text.
+            tb.Text = text;
+        }
+
+        private TextBox GetCurrentTextBoxFromSender(object sender)
 		{
 			// Prefer the TextBox that was registered on mouse enter.
 			if (CurrentTextBox != null && CurrentTextBox.IsVisible)
@@ -1066,24 +1072,43 @@ namespace x360ce.App.Controls
 			if (button == null)
 				return;
 
-			if (txt.Contains("Button"))
+			var buttonVisibility = Visibility.Collapsed;
+            var axisVisibility = Visibility.Collapsed;
+
+            if (txt.Contains("Button"))
 			{
-				bool isInverted = txt.StartsWith("I");
+                buttonVisibility = Visibility.Visible;
+                axisVisibility = Visibility.Collapsed;
+                button.Visibility = Visibility.Visible;
+
+                bool isInverted = txt.StartsWith("I");
 				button.Content = FindResource(isInverted ? "Icon_DragAndDrop_Button_Inverted" : "Icon_DragAndDrop_Button");
 				button.ToolTip = isInverted ? "Inverted" : "Normal";
-				DragAndDrop_Button.Visibility = isInverted ? Visibility.Visible : Visibility.Collapsed;
-				DragAndDrop_Button_Inverted.Visibility = isInverted ? Visibility.Collapsed : Visibility.Visible;
 
-				button.Visibility = Visibility.Visible;
+				if (isInverted)
+				{
+                    DragAndDrop_Button_Inverted.IsHitTestVisible = false;
+                    DragAndDrop_Button_Inverted.Background = colorOver;
 
-				DragAndDrop_Axis.Visibility = Visibility.Collapsed;
-				DragAndDrop_Axis_Inverted.Visibility = Visibility.Collapsed;
-				DragAndDrop_Axis_Half.Visibility = Visibility.Collapsed;
-				DragAndDrop_Axis_Inverted_Half.Visibility = Visibility.Collapsed;
+                    DragAndDrop_Button.IsHitTestVisible = true;
+                    DragAndDrop_Button.ClearValue(BackgroundProperty);
+                }
+				else
+				{
+                    DragAndDrop_Button.IsHitTestVisible = false;
+					DragAndDrop_Button.Background = colorOver;
+
+                    DragAndDrop_Button_Inverted.IsHitTestVisible = true;
+                    DragAndDrop_Button_Inverted.ClearValue(BackgroundProperty);
+                }
 			}
 			else if (txt.Contains("Axis") || txt.Contains("Slider"))
 			{
-				var isHalf = txt.StartsWith("H");
+                axisVisibility = Visibility.Visible;
+                buttonVisibility = Visibility.Collapsed;
+                button.Visibility = Visibility.Visible;
+
+                var isHalf = txt.StartsWith("H");
 				var isInverted = txt.StartsWith("I");
 				var isInvertedHalf = txt.StartsWith("IH");
 
@@ -1108,26 +1133,63 @@ namespace x360ce.App.Controls
 					button.ToolTip = "Normal";
 				}
 
-				button.Visibility = Visibility.Visible;
+                if (isInverted || isHalf)
+				{
+                    DragAndDrop_Axis.IsHitTestVisible = true;
+                    DragAndDrop_Axis.ClearValue(BackgroundProperty);
+				}
+				else
+                {
+                    DragAndDrop_Axis.IsHitTestVisible = false;
+                    DragAndDrop_Axis.Background = colorOver;
+                }
 
-				DragAndDrop_Axis.Visibility = isInverted || isHalf ? Visibility.Visible : Visibility.Collapsed;
-				DragAndDrop_Axis_Inverted.Visibility = isInverted && !isInvertedHalf ? Visibility.Collapsed : Visibility.Visible;
-				DragAndDrop_Axis_Half.Visibility = isHalf ? Visibility.Collapsed : Visibility.Visible;
-				DragAndDrop_Axis_Inverted_Half.Visibility = isInvertedHalf ? Visibility.Collapsed : Visibility.Visible;
+                if (isInverted && !isInvertedHalf)
+                {
+                    DragAndDrop_Axis_Inverted.IsHitTestVisible = false;
+                    DragAndDrop_Axis_Inverted.Background = colorOver;
+                }
+                else
+                {
+                    DragAndDrop_Axis_Inverted.IsHitTestVisible = true;
+					DragAndDrop_Axis_Inverted.ClearValue(BackgroundProperty);
+                }
 
-				DragAndDrop_Button.Visibility = Visibility.Collapsed;
-				DragAndDrop_Button_Inverted.Visibility = Visibility.Collapsed;
+                if (isHalf)
+                {
+                    DragAndDrop_Axis_Half.IsHitTestVisible = false;
+                    DragAndDrop_Axis_Half.Background = colorOver;
+                }
+                else
+                {
+                    DragAndDrop_Axis_Half.IsHitTestVisible = true;
+                    DragAndDrop_Axis_Half.ClearValue(BackgroundProperty);
+                }
+
+                if (isInvertedHalf)
+                {
+                    DragAndDrop_Axis_Inverted_Half.IsHitTestVisible = false;
+                    DragAndDrop_Axis_Inverted_Half.Background = colorOver;
+                }
+                else
+                {
+                    DragAndDrop_Axis_Inverted_Half.IsHitTestVisible = true;
+                    DragAndDrop_Axis_Inverted_Half.ClearValue(BackgroundProperty);
+                }
 			}
 			else
 			{
-				DragAndDrop_Button.Visibility = Visibility.Collapsed;
-				DragAndDrop_Button_Inverted.Visibility = Visibility.Collapsed;
-				DragAndDrop_Axis.Visibility = Visibility.Collapsed;
-				DragAndDrop_Axis_Inverted.Visibility = Visibility.Collapsed;
-				DragAndDrop_Axis_Half.Visibility = Visibility.Collapsed;
-				DragAndDrop_Axis_Inverted_Half.Visibility = Visibility.Collapsed;
-			}
-		}
+                buttonVisibility = Visibility.Collapsed;
+                axisVisibility = Visibility.Collapsed;
+            }
+
+            DragAndDrop_Button.Visibility = buttonVisibility;
+            DragAndDrop_Button_Inverted.Visibility = buttonVisibility;
+            DragAndDrop_Axis.Visibility = axisVisibility;
+            DragAndDrop_Axis_Inverted.Visibility = axisVisibility;
+            DragAndDrop_Axis_Half.Visibility = axisVisibility;
+            DragAndDrop_Axis_Inverted_Half.Visibility = axisVisibility;
+        }
 
 		private Button GetInvertButton(TextBox tb)
 		{
