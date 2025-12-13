@@ -779,7 +779,7 @@ namespace x360ce.App.Controls
                     continue;
 
                 // Check if any button or POV is pressed and Update ButtonPressed property
-                device.ButtonPressed = IsAnyButtonOrPovPressed(customState);
+                device.ButtonPressed = IsAnyButtonOrPovPressed(customState, device.ButtonCount, device.PovCount);
 
                 // Update value labels if handler is set
                 _devicesTab_DeviceSelectedInput?.UpdateValueLabels(device.InstanceGuid, customState);
@@ -792,7 +792,7 @@ namespace x360ce.App.Controls
         /// </summary>
         /// <param name="customState">The device state to check</param>
         /// <returns>True if any button is pressed (value 1) or any POV is pressed (value > -1)</returns>
-        private static bool IsAnyButtonOrPovPressed(CustomInputState customState)
+        private static bool IsAnyButtonOrPovPressed(CustomInputState customState, int buttonCount, int povCount)
         {
             if (customState == null)
                 return false;
@@ -801,7 +801,7 @@ namespace x360ce.App.Controls
             var buttons = customState.Buttons;
             if (buttons != null)
             {
-                var count = buttons.Length;
+                var count = Math.Min(buttons.Length, buttonCount);
                 for (int i = 0; i < count; i++)
                 {
                     if (buttons[i] != 0)
@@ -813,7 +813,7 @@ namespace x360ce.App.Controls
             var povs = customState.POVs;
             if (povs != null)
             {
-                var count = povs.Length;
+                var count = Math.Min(povs.Length, povCount);
                 for (int i = 0; i < count; i++)
                 {
                     if (povs[i] > -1)

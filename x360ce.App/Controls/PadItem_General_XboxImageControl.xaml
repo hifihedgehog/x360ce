@@ -136,15 +136,13 @@
 					SnapsToDevicePixels="False"
 					Style="{StaticResource AxisActive}" />
 			</Grid>
-			<Viewbox
-				Margin="850,0,850,250"
-				HorizontalAlignment="Center"
-				VerticalAlignment="Bottom">
-				<Label
-					Name="HelpTextLabel"
-					Content="Mapping Done"
-					Foreground="{StaticResource NavColorActive}" />
-			</Viewbox>
-		</Grid>
-	</Viewbox>
+            <Label
+                FontSize="80"
+                VerticalAlignment="Bottom"
+                HorizontalAlignment="Center"
+				Name="HelpTextLabel"
+				Content="Mapping Done"
+				Foreground="{StaticResource NavColorActive}" />
+        </Grid>
+    </Viewbox>
 </UserControl>

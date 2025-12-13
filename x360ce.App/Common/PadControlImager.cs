@@ -164,17 +164,18 @@ namespace x360ce.App.Controls
 
         private void UpdateXAMLStickElementsDetailed(short axisValue, Label valueLabel, MapCode mapCode, short deadzone)
         {
-			switch (mapCode) { 
-				case MapCode.LeftThumbRight:
+			switch (mapCode) {
                 case MapCode.LeftThumbUp:
-                case MapCode.RightThumbRight:
+                case MapCode.LeftThumbRight:
                 case MapCode.RightThumbUp:
+                case MapCode.RightThumbRight:
                     on = axisValue > deadzone;
                     break;
-                case MapCode.LeftThumbLeft:
                 case MapCode.LeftThumbDown:
-                case MapCode.RightThumbLeft:
+                case MapCode.LeftThumbLeft:
                 case MapCode.RightThumbDown:
+                case MapCode.RightThumbLeft:
+
                     on = axisValue < -deadzone;
                     break;
             }
@@ -201,28 +202,22 @@ namespace x360ce.App.Controls
 			{
                 // Trigger axis state visual representation with yellow circle position [•].
                 case MapCode.LeftTrigger:
-                    //if (!IsValueChanged(MapCode.LeftTrigger, gp.LeftTrigger)) break;
                     UpdateXAMLTriggerElements(gp.LeftTrigger, (Label)ii.ControlStackPanel, LeftTriggerAxisStatus);
 					break;
                 case MapCode.RightTrigger:
-                    //if (!IsValueChanged(MapCode.RightTrigger, gp.RightTrigger)) break;
                     UpdateXAMLTriggerElements(gp.RightTrigger, (Label)ii.ControlStackPanel, RightTriggerAxisStatus);
                     break;
-                // Trigger axis state visual representation with yellow circle position (•).
+                // Thumb axis state visual representation with yellow circle position (•).
                 case MapCode.LeftThumbAxisX:
-                    //if (!IsValueChanged(MapCode.LeftThumbAxisX, gp.LeftThumbX)) break;
                     UpdateXAMLStickElements(gp.LeftThumbX, (Label)ii.ControlStackPanel, LeftThumbAxisStatus, ii.Code, stickLDeadzone);
 					break;
                 case MapCode.LeftThumbAxisY:
-                    //if (!IsValueChanged(MapCode.LeftThumbAxisY, gp.LeftThumbY)) break;
                     UpdateXAMLStickElements(gp.LeftThumbY, (Label)ii.ControlStackPanel, LeftThumbAxisStatus, ii.Code, stickLDeadzone);
 					break;
                 case MapCode.RightThumbAxisX:
-                    //if (!IsValueChanged(MapCode.RightThumbAxisX, gp.RightThumbX)) break;
                     UpdateXAMLStickElements(gp.RightThumbX, (Label)ii.ControlStackPanel, RightThumbAxisStatus, ii.Code, stickRDeadzone);
                     break;
                 case MapCode.RightThumbAxisY:
-                    //if (!IsValueChanged(MapCode.RightThumbAxisY, gp.RightThumbY)) break;
                     UpdateXAMLStickElements(gp.RightThumbY, (Label)ii.ControlStackPanel, RightThumbAxisStatus, ii.Code, stickRDeadzone);
                     break;
                 // Stick axis detailed deadzones.
@@ -274,7 +269,7 @@ namespace x360ce.App.Controls
 			}
 
             if (ii.ControlName is ContentControl)
-                padItem_General_XboxImageControl.setNormalOverActiveRecordColor(ii, on ? padItem_General_XboxImageControl.colorActive : padItem_General_XboxImageControl.colorNormalPath);
+                padItem_General_XboxImageControl.SetNormalOverActiveRecordColor(ii, on ? padItem_General_XboxImageControl.colorActive : padItem_General_XboxImageControl.colorNormalPath);
 
             // If record then...
             //if (Recorder.Recording)

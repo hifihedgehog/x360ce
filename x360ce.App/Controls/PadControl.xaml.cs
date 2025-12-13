@@ -121,44 +121,35 @@ namespace x360ce.App.Controls
 			lock (updateFromDirectInputLock)
 			{
 				var ud = CurrentUserDevice;
-				var udNotNull = ud != null;
-				var instanceGuid = udNotNull ? ud.InstanceGuid : Guid.Empty;
-				var isOnline = udNotNull ? ud.IsOnline : false;
-				var currentInputMethod = udNotNull ? ud.InputMethod : InputMethod.DirectInput;
-
-				ControlsHelper.SetEnabled(PadFootPanel.RemapAllButton, udNotNull && ud.DeviceState != null);
-				PadItemPanel.SetEnabled(udNotNull);
+				var isOnline = ud != null && ud.IsOnline;
+				var instanceGuid = ud?.InstanceGuid ?? Guid.Empty;
+				var currentInputMethod = ud?.InputMethod ?? InputMethod.DirectInput;
+				ControlsHelper.SetEnabled(PadFootPanel.RemapAllButton, ud?.DeviceState != null);
+				PadItemPanel.SetEnabled(ud != null);
 				// If device instance changed then...
-				if (!Equals(_InstanceGuid, instanceGuid))
+				if (_InstanceGuid != instanceGuid)
 				{
-					//if (instanceGuid != Guid.Empty && ud?.DeviceState != null)
-					//{
 					_InstanceGuid = instanceGuid;
 					_lastInputMethod = currentInputMethod; // Update tracking when device changes
-					GeneralPanel.UpdateDragAndDropMenu(udNotNull && ud.IsOnline ? ud : null);
-					//}
+					GeneralPanel.UpdateDragAndDropMenu(isOnline ? ud : null);
 				}
-
-				if (!Equals(_isOnline, isOnline))
+				if (_isOnline != isOnline)
 				{
 					_isOnline = isOnline;
-					GeneralPanel.UpdateDragAndDropMenu(udNotNull && ud.IsOnline ? ud : null);
+					GeneralPanel.UpdateDragAndDropMenu(isOnline ? ud : null);
 				}
-
 				// Check for InputMethod changes
-				if (!Equals(_lastInputMethod, currentInputMethod))
+				if (_lastInputMethod != currentInputMethod)
 				{
 					_lastInputMethod = currentInputMethod;
-					GeneralPanel.UpdateDragAndDropMenu(udNotNull && ud.IsOnline ? ud : null);
+					GeneralPanel.UpdateDragAndDropMenu(isOnline ? ud : null);
 				}
 				// Update direct input form and return actions (pressed Buttons/DPads, turned Axis/Sliders).
 				UpdateDirectInputTabPage(ud);
-
 				PadItemPanel.DInputPanel.UpdateFrom(ud);
 				// DragAndDrop menu update. ---------------------------------------------------------------------------------------------------------------------------
 				PadItemPanel.GeneralPanel.DragAndDropMenuLabels_Update(ud);
-
-				if (udNotNull && _PadControlImager.Recorder.Recording)
+				if (ud != null && _PadControlImager.Recorder.Recording)
 				{
 					// Stop recording if DInput value captured.
 					var stopped = _PadControlImager.Recorder.StopRecording(ud.DeviceState);
@@ -231,23 +222,12 @@ namespace x360ce.App.Controls
 			{
 				// Update graphs.
 				var axis = CurrentUserDevice.DeviceState.Axis;
-				foreach (var (target, panel, value) in new (TargetType Target, AxisMapControl Panel, short Value)[]
-				{
-					(TargetType.LeftThumbX, LeftThumbXPanel, newState.Gamepad.LeftThumbX),
-					(TargetType.LeftThumbY, LeftThumbYPanel, newState.Gamepad.LeftThumbY),
-					(TargetType.RightThumbX, RightThumbXPanel, newState.Gamepad.RightThumbX),
-					(TargetType.RightThumbY, RightThumbYPanel, newState.Gamepad.RightThumbY),
-					(TargetType.LeftTrigger, LeftTriggerPanel, newState.Gamepad.LeftTrigger),
-					(TargetType.RightTrigger, RightTriggerPanel, newState.Gamepad.RightTrigger),
-				})
-				{
-					// Get current pad setting.
-					Map map = CurrentPadSetting.Maps.FirstOrDefault(x => x.Target == target);
-					if (map != null && map.Index > 0 && map.Index <= axis.Length)
-					{
-						panel.UpdateGraph(axis[map.Index - 1], value, map.IsInverted, map.IsHalf);
-					}
-				}
+				UpdateGraph(TargetType.LeftThumbX, LeftThumbXPanel, newState.Gamepad.LeftThumbX, axis);
+				UpdateGraph(TargetType.LeftThumbY, LeftThumbYPanel, newState.Gamepad.LeftThumbY, axis);
+				UpdateGraph(TargetType.RightThumbX, RightThumbXPanel, newState.Gamepad.RightThumbX, axis);
+				UpdateGraph(TargetType.RightThumbY, RightThumbYPanel, newState.Gamepad.RightThumbY, axis);
+				UpdateGraph(TargetType.LeftTrigger, LeftTriggerPanel, newState.Gamepad.LeftTrigger, axis);
+				UpdateGraph(TargetType.RightTrigger, RightTriggerPanel, newState.Gamepad.RightTrigger, axis);
 			}
 			// Update Axis to Button Images.
 			if (_AxisToButtonControls == null)
@@ -258,28 +238,13 @@ namespace x360ce.App.Controls
 			oldConnected = newConnected;
 		}
 
-		//private void SetLabelDIContent(CustomDeviceState customDeviceState, TargetType targetType, StackPanel sp)
-		//{
-			
-		//	Map map = CurrentPadSetting.Maps.FirstOrDefault(x => x.Target == targetType);
-
-		//	if (map?.Index <= 0/* || map.Index > axisLength*/)
-		//		return;
-
-		//	var i = map.Index - 1;
-		//	if (map.IsAxis || map.IsHalf || map.IsInverted)
-		//	{
-		//		((Label)sp.Children[1]).Content = customDeviceState.Axis[i];
-		//	}
-		//	else if (map.IsButton)
-		//	{
-		//		((Label)sp.Children[1]).Content = customDeviceState.Buttons[i] ? 1 : 0;
-		//	}
-		//	else if (map.IsSlider)
-		//	{
-		//		((Label)sp.Children[1]).Content = customDeviceState.Sliders[i];
-		//	}
-		//}
+		void UpdateGraph(TargetType target, AxisMapControl panel, short value, int[] axis)
+		{
+			// Get current pad setting.
+			var map = CurrentPadSetting.Maps.FirstOrDefault(x => x.Target == target);
+			if (map != null && map.Index > 0 && map.Index <= axis.Length)
+				panel.UpdateGraph(axis[map.Index - 1], value, map.IsInverted, map.IsHalf);
+		}
 
 		private AxisToButtonControl[] _AxisToButtonControls;
 
@@ -625,36 +590,37 @@ namespace x360ce.App.Controls
 			if (!SettingsManager.Current.ClearAll(MappedTo))
 				return;
 			StopRecording();
-			// Buttons to record.
-			var codes = new List<MapCode> {
-				MapCode.LeftTrigger,
-				MapCode.RightTrigger,
-				MapCode.LeftShoulder,
-				MapCode.RightShoulder,
-				MapCode.ButtonBack,
-				MapCode.ButtonStart,
-				MapCode.DPad,
-				MapCode.LeftThumbUp,
-				MapCode.LeftThumbDown,
-				MapCode.LeftThumbLeft,
-				MapCode.LeftThumbRight,
-				MapCode.LeftThumbButton,
-				MapCode.RightThumbUp,
-				MapCode.RightThumbDown,
-				MapCode.RightThumbLeft,
-				MapCode.RightThumbRight,
-				MapCode.RightThumbButton,
-				MapCode.ButtonY,
-				MapCode.ButtonX,
-				MapCode.ButtonB,
-				MapCode.ButtonA,
-			};
-			RecordAllMaps = SettingsManager.Current.SettingsMap.Where(x => x.MapTo == MappedTo && codes.Contains(x.Code))
+			RecordAllMaps = SettingsManager.Current.SettingsMap.Where(x => x.MapTo == MappedTo && RemapCodes.Contains(x.Code))
 				// Order as same as in the list above.
-				.OrderBy(x => codes.IndexOf(x.Code))
+				.OrderBy(x => RemapCodes.IndexOf(x.Code))
 				.ToList();
 			StartRecording();
 		}
+
+		static readonly List<MapCode> RemapCodes = new List<MapCode>
+		{
+			MapCode.LeftTrigger,
+			MapCode.RightTrigger,
+			MapCode.LeftShoulder,
+			MapCode.RightShoulder,
+			MapCode.ButtonBack,
+			MapCode.ButtonStart,
+			MapCode.DPad,
+			MapCode.LeftThumbUp,
+			MapCode.LeftThumbDown,
+			MapCode.LeftThumbLeft,
+			MapCode.LeftThumbRight,
+			MapCode.LeftThumbButton,
+			MapCode.RightThumbUp,
+			MapCode.RightThumbDown,
+			MapCode.RightThumbLeft,
+			MapCode.RightThumbRight,
+			MapCode.RightThumbButton,
+			MapCode.ButtonY,
+			MapCode.ButtonX,
+			MapCode.ButtonB,
+			MapCode.ButtonA,
+		};
 
 		private void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)
 		{
