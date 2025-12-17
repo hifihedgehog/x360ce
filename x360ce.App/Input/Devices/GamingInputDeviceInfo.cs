@@ -11,8 +11,15 @@ namespace x360ce.App.Input.Devices
 	/// </summary>
 	public class GamingInputDeviceInfo : InputDeviceInfo, IDisposable
 	{
-        // Gaming Input-specific properties
-        public int GamepadIndex { get; set; }
+		/// <summary>
+		/// Unique instance identifier for this Gaming Input device.
+		/// Generated from gamepad index using a base GUID pattern with index number in the last byte.
+		/// Gaming Input devices don't have native InstanceGuid, so it's generated from the unique gamepad index property.
+		/// </summary>
+		// InstanceGuid is inherited from InputDeviceInfo base class and generated in GenerateGamingInputGuid() method
+
+		// Gaming Input-specific properties
+	       public int GamepadIndex { get; set; }
 		public uint LastTimestamp { get; set; }
 		public bool SupportsVibration { get; set; }
 		public bool SupportsTriggerRumble { get; set; }
@@ -274,7 +281,7 @@ namespace x360ce.App.Input.Devices
 				VendorId = MICROSOFT_VENDOR_ID,
 				ProductId = GAMING_INPUT_PRODUCT_ID,
 				ClassGuid = GenerateGamingInputClassGuid(),
-				CommonIdentifier = $"VID_{MICROSOFT_VENDOR_ID:X4}&PID_{GAMING_INPUT_PRODUCT_ID:X4}",
+				InputGroupId = $"VID_{MICROSOFT_VENDOR_ID:X4}&PID_{GAMING_INPUT_PRODUCT_ID:X4}",
 				
 				// Capabilities
 				AxeCount = AXES_COUNT,

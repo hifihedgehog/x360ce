@@ -12,6 +12,13 @@ namespace x360ce.App.Input.Devices
 	/// </summary>
 	public class XInputDeviceInfo : InputDeviceInfo, IDisposable
 	{
+		/// <summary>
+		/// Unique instance identifier for this XInput device.
+		/// Generated from XInput slot index (0-3) using a base GUID pattern with slot number in the last byte.
+		/// XInput devices don't have native InstanceGuid, so it's generated from the unique slot index property.
+		/// </summary>
+		// InstanceGuid is inherited from InputDeviceInfo base class and generated from XInputSlotGuidBase + slotIndex
+
 		// XInput-specific
 		public UserIndex XInputSlot { get; set; }
 		public int SlotIndex { get; set; }
@@ -123,7 +130,7 @@ namespace x360ce.App.Input.Devices
 					UsagePage = GenericDesktopUsagePage,
 					VendorId = XInputVendorId,
 					ProductId = XInputProductId,
-					CommonIdentifier = $"VID_{XInputVendorId:X4}&PID_{XInputProductId:X4}",
+					InputGroupId = $"VID_{XInputVendorId:X4}&PID_{XInputProductId:X4}",
 					InputType = "XInput",
 					AxeCount = XInputAxeCount,
 					SliderCount = XInputSliderCount,

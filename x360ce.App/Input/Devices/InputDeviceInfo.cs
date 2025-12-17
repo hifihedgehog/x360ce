@@ -10,7 +10,16 @@ namespace x360ce.App.Input.Devices
 	/// </summary>
 	public abstract class InputDeviceInfo
 	{
-		/// <summary>Unique instance identifier (InstanceGuid for DirectInput, etc.).</summary>
+		/// <summary>
+		/// Unique instance identifier for this input device.
+		/// Source depends on device type:
+		/// - DirectInput: Taken directly from native DirectInput InstanceGuid property (no generation needed)
+		/// - PnP: Generated from DeviceInstanceId using MD5 hash for deterministic GUID
+		/// - RawInput: Generated from InterfacePath using MD5 hash for deterministic GUID
+		/// - XInput: Generated from slot index (0-3) using base GUID pattern with index in last byte
+		/// - GamingInput: Generated from gamepad index using base GUID pattern with index in last byte
+		/// All generated GUIDs use consistent encoding to avoid duplicates.
+		/// </summary>
 		public Guid InstanceGuid { get; set; }
 
 		/// <summary>Human-readable product name.</summary>
@@ -34,8 +43,12 @@ namespace x360ce.App.Input.Devices
 		/// <summary>Human-readable device type name.</summary>
 		public string DeviceTypeName { get; set; }
 
-		/// <summary>Common identifier used to match devices across APIs.</summary>
-		public string CommonIdentifier { get; set; }
+		/// <summary>
+		/// Input group identifier used to match the same physical device across different input APIs.
+		/// Groups DirectInput, RawInput, PnP, XInput, and GamingInput instances of the same hardware.
+		/// Format: VID_XXXX&PID_XXXX[&MI_XX][&COL_XX]
+		/// </summary>
+		public string InputGroupId { get; set; }
 
 		/// <summary>System path to the device interface.</summary>
 		public string InterfacePath { get; set; }

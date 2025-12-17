@@ -14,6 +14,13 @@ namespace x360ce.App.Input.Devices
     public class PnPInputDeviceInfo : InputDeviceInfo
     {
         /// <summary>
+        /// Unique instance identifier for this PnP device.
+        /// Generated from DeviceInstanceId using MD5 hash to create a deterministic GUID.
+        /// PnP devices don't have native InstanceGuid, so it's generated from the unique DeviceInstanceId property.
+        /// </summary>
+        // InstanceGuid is inherited from InputDeviceInfo base class and generated in GenerateInstanceGuid() method
+
+        /// <summary>
         /// Gets or sets the device instance ID.
         /// </summary>
         public string DeviceInstanceId { get; set; }
@@ -1075,7 +1082,7 @@ namespace x360ce.App.Input.Devices
         }
 
         /// <summary>
-        /// Generates a SortingString and CommonIdentifier for the device by extracting VID, PID, MI, and COL values.
+        /// Generates a SortingString and InputGroupId for the device by extracting VID, PID, MI, and COL values.
         /// Uses optimized single-pass extraction from combined device properties.
         /// </summary>
         /// <param name="deviceInfo">Device information to process</param>
@@ -1114,14 +1121,14 @@ namespace x360ce.App.Input.Devices
                     sortingString += $"&COL_{col}";
 
                 deviceInfo.SortingString = sortingString;
-                deviceInfo.CommonIdentifier = sortingString;
+                deviceInfo.InputGroupId = sortingString;
                 deviceInfo.MiValue = mi ?? "";
                 deviceInfo.ColValue = col ?? "";
             }
             catch (Exception)
             {
                 deviceInfo.SortingString = "VID_0000&PID_0000";
-                deviceInfo.CommonIdentifier = "VID_0000&PID_0000";
+                deviceInfo.InputGroupId = "VID_0000&PID_0000";
                 deviceInfo.MiValue = "";
                 deviceInfo.ColValue = "";
             }

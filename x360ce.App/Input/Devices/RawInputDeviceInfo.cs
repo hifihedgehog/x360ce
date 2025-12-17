@@ -23,6 +23,13 @@ namespace x360ce.App.Input.Devices
     public class RawInputDeviceInfo : InputDeviceInfo, IDisposable
     {
         /// <summary>
+        /// Unique instance identifier for this RawInput device.
+        /// Generated from DeviceHandle and InterfacePath using MD5 hash to create a deterministic GUID.
+        /// RawInput devices don't have native InstanceGuid, so it's generated from the unique InterfacePath property.
+        /// </summary>
+        // InstanceGuid is inherited from InputDeviceInfo base class and generated in GenerateInstanceGuid() method
+
+        /// <summary>
         /// Logical Maximum values for each POV, used to determine format (4-way, 8-way, etc.).
         /// </summary>
         public List<int> PovLogicalMins { get; set; } = new List<int>();
@@ -1432,10 +1439,10 @@ namespace x360ce.App.Input.Devices
         }
         
         /// <summary>
-        /// Generates CommonIdentifier for the device by extracting VID, PID, MI, and COL values.
+        /// Generates InputGroupId for the device by extracting VID, PID, MI, and COL values.
         /// </summary>
         /// <param name="deviceInfo">Device information to process</param>
-        private void GenerateCommonIdentifier(RawInputDeviceInfo deviceInfo)
+        private void GenerateInputGroupId(RawInputDeviceInfo deviceInfo)
         {
             var vid = deviceInfo.VendorId > 0 ? $"{deviceInfo.VendorId:X4}" : "0000";
             var pid = deviceInfo.ProductId > 0 ? $"{deviceInfo.ProductId:X4}" : "0000";
@@ -1473,7 +1480,7 @@ namespace x360ce.App.Input.Devices
                 }
             }
             
-            deviceInfo.CommonIdentifier = commonId;
+            deviceInfo.InputGroupId = commonId;
         }
 
         /// <summary>
@@ -1691,8 +1698,8 @@ namespace x360ce.App.Input.Devices
                 // Extract additional device identification
                 deviceInfo.DeviceId = ExtractDeviceIdFromPath(deviceName);
                 
-                // Generate CommonIdentifier for device grouping
-                GenerateCommonIdentifier(deviceInfo);
+                // Generate InputGroupId for device grouping
+                GenerateInputGroupId(deviceInfo);
                 
                 // HardwareIds and ParentDeviceId are not natively provided by RawInput API
                 deviceInfo.HardwareIds = "";

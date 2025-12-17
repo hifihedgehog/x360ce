@@ -112,7 +112,7 @@ namespace x360ce.App.Input.Devices
                 for (int i = CustomInputDeviceInfoList.Count - 1; i >= 0; i--)
                 {
                     var device = CustomInputDeviceInfoList[i];
-                    var key = GetDeviceKey(device.InputType, device.CommonIdentifier);
+                    var key = GetDeviceKey(device.InputType, device.InputGroupId);
                     if (!currentDeviceKeys.Contains(key))
                     {
                         CustomInputDeviceInfoList.RemoveAt(i);
@@ -150,7 +150,7 @@ namespace x360ce.App.Input.Devices
             foreach (var item in sourceList)
             {
                 dynamic device = item;
-                var key = GetDeviceKey(device.InputType, device.CommonIdentifier);
+                var key = GetDeviceKey(device.InputType, device.InputGroupId);
                 keySet.Add(key);
             }
         }
@@ -158,9 +158,9 @@ namespace x360ce.App.Input.Devices
         /// <summary>
         /// Generates a unique key for a device based on input type and common identifier.
         /// </summary>
-        private string GetDeviceKey(string inputType, string commonIdentifier)
+        private string GetDeviceKey(string inputType, string inputGroupId)
         {
-            return $"{inputType}|{commonIdentifier}";
+            return $"{inputType}|{inputGroupId}";
         }
 
         /// <summary>
@@ -177,13 +177,13 @@ namespace x360ce.App.Input.Devices
             foreach (var item in sourceList)
             {
                 dynamic device = item;
-                string commonId = device.CommonIdentifier;
+                string inputGroupId = device.InputGroupId;
                 string inputType = device.InputType;
-                var key = GetDeviceKey(inputType, commonId);
+                var key = GetDeviceKey(inputType, inputGroupId);
 
                 // Find existing device in custom list
                 var existingDevice = CustomInputDeviceInfoList.FirstOrDefault(d =>
-                 GetDeviceKey(d.InputType, d.CommonIdentifier) == key);
+                 GetDeviceKey(d.InputType, d.InputGroupId) == key);
 
                 if (existingDevice != null)
                 {
@@ -196,7 +196,7 @@ namespace x360ce.App.Input.Devices
                 	   // Required for RawInput which creates new device instances on enumeration.
                 	   existingDevice.SetDevice(item as InputDeviceInfo);
 
-                	existingDevice.ProductName = getProductName(item, commonId);
+                	existingDevice.ProductName = getProductName(item, inputGroupId);
                 	existingDevice.InterfacePath = getInterfacePath(item);
                 }
                 else
@@ -208,7 +208,7 @@ namespace x360ce.App.Input.Devices
                 		SliderPressed = false,
                 		ButtonPressed = false,
                 		PovPressed = false,
-                		ProductName = getProductName(item, commonId),
+                		ProductName = getProductName(item, inputGroupId),
                 		InterfacePath = getInterfacePath(item),
                     };
                 	CustomInputDeviceInfoList.Add(newDevice);
@@ -320,12 +320,12 @@ namespace x360ce.App.Input.Devices
 
             foreach (var device in DirectInputDeviceInfoList)
             {
-                if (string.IsNullOrEmpty(device.CommonIdentifier))
+                if (string.IsNullOrEmpty(device.InputGroupId))
                     continue;
 
-                var key = device.CommonIdentifier.Length > 17
-                    ? device.CommonIdentifier.Substring(0, 17)
-                    : device.CommonIdentifier;
+                var key = device.InputGroupId.Length > 17
+                    ? device.InputGroupId.Substring(0, 17)
+                    : device.InputGroupId;
 
                 // Store first match only (consistent with original behavior)
                 if (!_directInputNameCache.ContainsKey(key))
@@ -336,9 +336,9 @@ namespace x360ce.App.Input.Devices
         /// <summary>
         /// Gets product name with DirectInput prefix for non-DirectInput devices.
         /// </summary>
-        private string GetPrefixedProductName<T>(T item, string commonIdentifier) where T : class
+        private string GetPrefixedProductName<T>(T item, string inputGroupId) where T : class
         {
-            var prefix = GetDirectInputProductNameFromCache(commonIdentifier);
+            var prefix = GetDirectInputProductNameFromCache(inputGroupId);
             dynamic device = item;
             return prefix + device.ProductName;
         }
@@ -347,16 +347,16 @@ namespace x360ce.App.Input.Devices
         /// Retrieves DirectInput product name from cache using truncated common identifier.
         /// Returns empty string if not found or cache is unavailable.
         /// </summary>
-        /// <param name="commonIdentifier">The device's common identifier</param>
+        /// <param name="inputGroupId">The device's input group identifier</param>
         /// <returns>DirectInput product name with separator, or empty string</returns>
-        private string GetDirectInputProductNameFromCache(string commonIdentifier)
+        private string GetDirectInputProductNameFromCache(string inputGroupId)
         {
-            if (_directInputNameCache == null || string.IsNullOrEmpty(commonIdentifier))
+            if (_directInputNameCache == null || string.IsNullOrEmpty(inputGroupId))
                 return string.Empty;
 
-            var key = commonIdentifier.Length > 17
-                ? commonIdentifier.Substring(0, 17)
-                : commonIdentifier;
+            var key = inputGroupId.Length > 17
+                ? inputGroupId.Substring(0, 17)
+                : inputGroupId;
 
             return _directInputNameCache.TryGetValue(key, out var productName)
                 ? productName + " • "

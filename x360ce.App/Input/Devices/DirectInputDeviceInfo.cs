@@ -11,7 +11,14 @@ namespace x360ce.App.Input.Devices
 	/// </summary>
 	public class DirectInputDeviceInfo : InputDeviceInfo, IDisposable
 	{
-        public List<JoystickOffset> AvailableAxes { get; set; }
+		/// <summary>
+		/// Unique instance identifier for this DirectInput device.
+		/// For DirectInput devices, this value is taken directly from the native DirectInput InstanceGuid property.
+		/// DirectInput provides this GUID natively - no generation needed.
+		/// </summary>
+		// InstanceGuid is inherited from InputDeviceInfo base class and set from deviceInstance.InstanceGuid
+
+		public List<JoystickOffset> AvailableAxes { get; set; }
 		public List<JoystickOffset> AvailableSliders { get; set; }
         /// <summary>
         /// Mouse axis sensitivity values for: X axis, Y axis, Vertical wheel axis, Horizontal wheel axis.
@@ -37,7 +44,7 @@ namespace x360ce.App.Input.Devices
         public bool MouseAxisStateEnabled { get; set; }
 
 		/// <summary>
-		/// Display name combining instance ID and name for easy identification.
+		/// Display name combining instance Guid and name for easy identification.
 		/// </summary>
 		public string DisplayName => $"{InstanceGuid.ToString().Substring(0, 8)} - {InstanceName}";
 
@@ -202,7 +209,7 @@ namespace x360ce.App.Input.Devices
 				// Populate capabilities
 				PopulateDeviceCapabilities(device, deviceInfo);
 
-				// Extract hardware identification and generate CommonIdentifier
+				// Extract hardware identification and generate InputGroupId
 				ExtractHardwareIdentification(device, deviceInfo);
 
 				deviceInfo.DirectInputDevice = device;
@@ -340,7 +347,7 @@ namespace x360ce.App.Input.Devices
 		}
 
 		/// <summary>
-		/// Extracts hardware identification properties from the device and generates CommonIdentifier.
+		/// Extracts hardware identification properties from the device and generates InputGroupId.
 		/// Handles both joystick devices (with detailed properties) and keyboard/mouse devices.
 		/// </summary>
 		private void ExtractHardwareIdentification(Device device, DirectInputDeviceInfo deviceInfo)
@@ -377,12 +384,12 @@ namespace x360ce.App.Input.Devices
 					deviceInfo.InterfacePath = deviceInfo.ProductGuid.ToString();
 				}
 
-				// Generate CommonIdentifier for all device types
-				GenerateCommonIdentifier(deviceInfo);
+				// Generate InputGroupId for all device types
+				GenerateInputGroupId(deviceInfo);
 			}
 			catch (Exception)
 			{
-				deviceInfo.CommonIdentifier = "VID_0000&PID_0000";
+				deviceInfo.InputGroupId = "VID_0000&PID_0000";
 			}
 		}
 
@@ -503,10 +510,10 @@ namespace x360ce.App.Input.Devices
 		}
 		
 		/// <summary>
-		/// Generates CommonIdentifier for the device by extracting VID, PID, MI, and COL values.
+		/// Generates InputGroupId for the device by extracting VID, PID, MI, and COL values.
 		/// Format: VID_XXXX&PID_XXXX[&MI_XX][&COL_XX]
 		/// </summary>
-		private void GenerateCommonIdentifier(DirectInputDeviceInfo deviceInfo)
+		private void GenerateInputGroupId(DirectInputDeviceInfo deviceInfo)
 		{
 			try
 			{
@@ -546,11 +553,11 @@ namespace x360ce.App.Input.Devices
 					}
 				}
 				
-				deviceInfo.CommonIdentifier = commonId;
+				deviceInfo.InputGroupId = commonId;
 			}
 			catch (Exception)
 			{
-				deviceInfo.CommonIdentifier = "VID_0000&PID_0000";
+				deviceInfo.InputGroupId = "VID_0000&PID_0000";
 			}
 		}
 

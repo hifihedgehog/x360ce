@@ -214,11 +214,11 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                
-                                <DataGridTemplateColumn Header="CommonIdentifier" SortMemberPath="CommonIdentifier" Width="Auto">
+
+                                <DataGridTemplateColumn Header="InputGroupId" SortMemberPath="InputGroupId" Width="Auto">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBox Text="{Binding CommonIdentifier, Mode=OneWay}"/>
+                                            <TextBox Text="{Binding InputGroupId, Mode=OneWay}"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -277,10 +277,10 @@
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
 
-                                <DataGridTemplateColumn Header="InterfacePath" SortMemberPath="InterfacePath" Width="*">
+                                <DataGridTemplateColumn Header="InstanceGuid" SortMemberPath="InstanceGuid" Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBox Text="{Binding InterfacePath, Mode=OneWay}"/>
+                                            <TextBox Text="{Binding InstanceGuid, Mode=OneWay}"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
