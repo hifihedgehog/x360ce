@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using x360ce.App.Input.States;
+using x360ce.Engine;
+using x360ce.Engine.Data;
 
 namespace x360ce.App.Input.Devices
 {
@@ -80,7 +82,10 @@ namespace x360ce.App.Input.Devices
     
             // Update the custom list incrementally instead of clearing
             UpdateCustomInputDeviceList();
-    
+
+            // Add offline devices from SettingsManager
+            AddOfflineDevicesToCustomList();
+
             // RawInputState now directly accesses RawInputDevice.RawInputDeviceInfoList
             // No SetDeviceList call needed - simplified architecture eliminates the method!
     
@@ -108,14 +113,22 @@ namespace x360ce.App.Input.Devices
             // Execute ObservableCollection modifications on UI thread
             var action = new Action(() =>
             {
-                // Remove devices that are no longer present
+                // Remove devices that are no longer present in the live lists
+                // NOTE: We only remove devices that are ONLINE but not in current keys.
+                // Offline devices (IsOnline=false) are managed by AddOfflineDevicesToCustomList.
                 for (int i = CustomInputDeviceInfoList.Count - 1; i >= 0; i--)
                 {
                     var device = CustomInputDeviceInfoList[i];
-                    var key = GetDeviceKey(device.InputType, device.InputGroupId);
-                    if (!currentDeviceKeys.Contains(key))
+
+                    // If device is marked as Online, but not found in current live keys, remove it.
+                    // It might be re-added as Offline later if it exists in Settings.
+                    if (device.IsOnline)
                     {
-                        CustomInputDeviceInfoList.RemoveAt(i);
+                        var key = GetDeviceKey(device.InputType, device.InputGroupId);
+                        if (!currentDeviceKeys.Contains(key))
+                        {
+                            CustomInputDeviceInfoList.RemoveAt(i);
+                        }
                     }
                 }
 
@@ -137,6 +150,138 @@ namespace x360ce.App.Input.Devices
                 // Already on UI thread or no dispatcher set, execute directly
                 action();
             }
+        }
+
+        /// <summary>
+        /// Adds offline devices from SettingsManager.UserDevices to CustomInputDeviceInfoList.
+        /// Checks if a device is already present (Online or Offline) to avoid duplicates.
+        /// </summary>
+        private void AddOfflineDevicesToCustomList()
+        {
+            // Safely access SettingsManager.UserDevices
+            List<UserDevice> offlineDevices;
+            lock (SettingsManager.UserDevices.SyncRoot)
+            {
+                offlineDevices = SettingsManager.UserDevices.Items.ToList();
+            }
+
+            var action = new Action(() =>
+            {
+                // Get set of existing InstanceGuids in the custom list
+                var existingGuids = new HashSet<Guid>(CustomInputDeviceInfoList.Select(x => x.InstanceGuid));
+
+                foreach (var userDevice in offlineDevices)
+                {
+                    // If device is already in the list (Online or Offline), skip it
+                    if (existingGuids.Contains(userDevice.InstanceGuid))
+                        continue;
+
+                    // Create Offline InputDeviceInfo
+                    var offlineInfo = CreateOfflineInputDeviceInfo(userDevice);
+                    if (offlineInfo != null)
+                    {
+                        CustomInputDeviceInfoList.Add(new CustomInputDeviceInfo(offlineInfo));
+                    }
+                }
+
+                // Also check if any "Offline" devices in our list are no longer in SettingsManager
+                // This handles the case where a user deletes a device from the database
+                var settingGuids = new HashSet<Guid>(offlineDevices.Select(x => x.InstanceGuid));
+                for (int i = CustomInputDeviceInfoList.Count - 1; i >= 0; i--)
+                {
+                    var device = CustomInputDeviceInfoList[i];
+                    if (!device.IsOnline && !settingGuids.Contains(device.InstanceGuid))
+                    {
+                        CustomInputDeviceInfoList.RemoveAt(i);
+                    }
+                }
+            });
+
+             // If dispatcher is available and we're not on UI thread, invoke on UI thread
+            if (_dispatcher != null && !_dispatcher.CheckAccess())
+            {
+                _dispatcher.Invoke(action);
+            }
+            else
+            {
+                // Already on UI thread or no dispatcher set, execute directly
+                action();
+            }
+        }
+
+        /// <summary>
+        /// Creates an InputDeviceInfo object from a UserDevice, marked as Offline.
+        /// </summary>
+        private InputDeviceInfo CreateOfflineInputDeviceInfo(UserDevice userDevice)
+        {
+            InputDeviceInfo info = null;
+            string inputType = "DirectInput";
+
+            switch (userDevice.InputMethod)
+            {
+                case InputMethod.DirectInput:
+                    info = new DirectInputDeviceInfo();
+                    inputType = "DirectInput";
+                    break;
+                case InputMethod.XInput:
+                    info = new XInputDeviceInfo();
+                    inputType = "XInput";
+                    break;
+                case InputMethod.RawInput:
+                    info = new RawInputDeviceInfo();
+                    inputType = "RawInput";
+                    break;
+                case InputMethod.GamingInput:
+                    info = new GamingInputDeviceInfo();
+                    inputType = "GamingInput";
+                    break;
+                // Add other types as needed, defaulting to DirectInput or generic
+                default:
+                    info = new DirectInputDeviceInfo();
+                    inputType = "DirectInput";
+                    break;
+            }
+
+            if (info != null)
+            {
+                info.InstanceGuid = userDevice.InstanceGuid;
+                info.ProductName = userDevice.ProductName ?? "";
+                info.InstanceName = userDevice.InstanceName ?? "";
+                info.ProductGuid = userDevice.ProductGuid;
+                info.DeviceType = userDevice.CapType; // CapType maps to DeviceType
+                
+                info.InputType = inputType;
+                
+                // Construct InputGroupId similar to how it is done in live detection
+                // Format: VID_XXXX&PID_XXXX...
+                var vid = userDevice.HidVendorId > 0 ? userDevice.HidVendorId : userDevice.DevVendorId;
+                var pid = userDevice.HidProductId > 0 ? userDevice.HidProductId : userDevice.DevProductId;
+                info.InputGroupId = $"VID_{vid:X4}&PID_{pid:X4}";
+
+                // InterfacePath
+                info.InterfacePath = !string.IsNullOrEmpty(userDevice.HidDevicePath) ? userDevice.HidDevicePath : (userDevice.DevDevicePath ?? "");
+                
+                info.IsOnline = false;
+                info.IsEnabled = userDevice.IsEnabled;
+                
+                // Map other properties if available and necessary
+                info.VendorId = vid;
+                info.ProductId = pid;
+
+                // Initialize counts to 0 as they are not persisted in UserDevices.xml
+                info.AxeCount = 0;
+                info.SliderCount = 0;
+                info.ButtonCount = 0;
+                info.PovCount = 0;
+
+                // Initialize empty state to avoid null reference exceptions in UI
+                info.CustomInputState = new CustomInputState();
+
+                // Initialize AssignedToPad list to avoid NullReferenceException in CustomInputDeviceInfo
+                info.AssignedToPad = new List<bool> { false, false, false, false };
+            }
+
+            return info;
         }
 
         /// <summary>

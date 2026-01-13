@@ -166,6 +166,23 @@
                                     </Style.Triggers>
                                 </Style>
                             </DataGrid.Resources>
+
+                            <!--  Cell - Rows of ofline controllers are transparent.  -->
+                            <DataGrid.CellStyle>
+                                <Style BasedOn="{StaticResource DataGridCell_Default}" TargetType="DataGridCell">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOnline}" Value="False">
+                                            <Setter Property="Opacity" Value="0.2" />
+                                            <!--<Setter Property="IsHitTestVisible" Value="False" />-->
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                                            <Setter Property="Opacity" Value="1" />
+                                            <!--<Setter Property="IsHitTestVisible" Value="True" />-->
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.CellStyle>
+
                             <DataGrid.Columns>
 
                                 <DataGridCheckBoxColumn
