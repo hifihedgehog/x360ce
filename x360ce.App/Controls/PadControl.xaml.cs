@@ -123,7 +123,7 @@ namespace x360ce.App.Controls
 				var ud = CurrentUserDevice;
 				var isOnline = ud != null && ud.IsOnline;
 				var instanceGuid = ud?.InstanceGuid ?? Guid.Empty;
-				var currentInputMethod = ud?.InputMethod ?? InputMethod.DirectInput;
+				var currentInputMethod = ud?.InputMethod ?? InputSourceType.DirectInput;
 				ControlsHelper.SetEnabled(PadFootPanel.RemapAllButton, ud?.DeviceState != null);
 				PadItemPanel.SetEnabled(ud != null);
 				// If device instance changed then...
@@ -444,7 +444,7 @@ namespace x360ce.App.Controls
 
 		//XINPUT_GAMEPAD GamePad;
 		Guid _InstanceGuid;
-		InputMethod _lastInputMethod = InputMethod.DirectInput;
+		InputSourceType _lastInputMethod = InputSourceType.DirectInput;
 
 		///// <summary>
 		///// Get PadSetting from currently selected device.

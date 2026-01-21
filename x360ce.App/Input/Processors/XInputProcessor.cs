@@ -415,7 +415,7 @@ return null;
 		/// <summary>
 		/// Gets the input method supported by this processor.
 		/// </summary>
-		public InputMethod SupportedMethod => InputMethod.XInput;
+		public InputSourceType SupportedMethod => InputSourceType.XInput;
 
 		/// <summary>
 		/// Determines if this processor can handle the specified device.
@@ -448,10 +448,10 @@ return null;
 		public CustomDeviceState ReadState(UserDevice device)
 		{
 			if (device == null)
-				throw new InputMethodException(InputMethod.XInput, device, "Device is null");
+				throw new InputMethodException(InputSourceType.XInput, device, "Device is null");
 
 			if (!device.IsXboxCompatible)
-				throw new InputMethodException(InputMethod.XInput, device, "Device is not Xbox-compatible");
+				throw new InputMethodException(InputSourceType.XInput, device, "Device is not Xbox-compatible");
 
 			try
 			{
@@ -509,7 +509,7 @@ return null;
 			{
 				var message = $"XInput read error: {ex.Message}\nDevice: {device.DisplayName}\nSlot: {GetAssignedSlot(device)}";
 				Debug.WriteLine($"XInput: Exception in ReadState - {message}");
-				throw new InputMethodException(InputMethod.XInput, device, message, ex);
+				throw new InputMethodException(InputSourceType.XInput, device, message, ex);
 			}
 		}
 
@@ -811,7 +811,7 @@ return null;
 			var availableSlots = Enumerable.Range(0, MaxControllers).Where(i => !assignedSlots.Contains(i));
 
 			if (!availableSlots.Any())
-				throw new InputMethodException(InputMethod.XInput, device, $"XInput maximum {MaxControllers} controllers already in use");
+				throw new InputMethodException(InputSourceType.XInput, device, $"XInput maximum {MaxControllers} controllers already in use");
 
 			// Assign the first available slot
 			int newSlot = availableSlots.First();

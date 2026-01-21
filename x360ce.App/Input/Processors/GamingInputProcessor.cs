@@ -43,7 +43,7 @@ namespace x360ce.App.Input.Processors
 		/// <summary>
 		/// Gets the input method supported by this processor.
 		/// </summary>
-		public InputMethod SupportedMethod => InputMethod.GamingInput;
+		public InputSourceType SupportedMethod => InputSourceType.GamingInput;
 
 		#endregion
 
@@ -83,11 +83,11 @@ namespace x360ce.App.Input.Processors
 		public CustomDeviceState ReadState(UserDevice device)
 		{
 			if (device == null)
-				throw new InputMethodException(InputMethod.GamingInput, device, "Device is null");
+				throw new InputMethodException(InputSourceType.GamingInput, device, "Device is null");
 
 			var orchestrator = InputOrchestrator.Current;
 			if (orchestrator == null)
-				throw new InputMethodException(InputMethod.GamingInput, device, "InputOrchestrator not available for Gaming Input processing");
+				throw new InputMethodException(InputSourceType.GamingInput, device, "InputOrchestrator not available for Gaming Input processing");
 
 			try
 			{
@@ -102,7 +102,7 @@ namespace x360ce.App.Input.Processors
 					// - Device not mapped to Gaming Input slot
 					// - No gamepads detected
 					// The original method logs details to Debug output
-					throw new InputMethodException(InputMethod.GamingInput, device, "Gaming Input processing returned null. Check device mapping and Gaming Input availability.");
+					throw new InputMethodException(InputSourceType.GamingInput, device, "Gaming Input processing returned null. Check device mapping and Gaming Input availability.");
 				}
 
 				return result;
@@ -116,7 +116,7 @@ namespace x360ce.App.Input.Processors
 			{
 				// Wrap unexpected exceptions
 				var message = $"Gaming Input read error: {ex.Message}";
-				throw new InputMethodException(InputMethod.GamingInput, device, message, ex);
+				throw new InputMethodException(InputSourceType.GamingInput, device, message, ex);
 			}
 		}
 

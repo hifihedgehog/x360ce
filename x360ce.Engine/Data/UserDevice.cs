@@ -17,7 +17,7 @@ namespace x360ce.Engine.Data
 			IsEnabled = true;
 			ConnectionClass = Guid.Empty;
 			// Set default input method to DirectInput for backward compatibility
-			InputMethod = InputMethod.DirectInput;
+			InputMethod = InputSourceType.DirectInput;
 		}
 
 		[XmlIgnore]
@@ -243,7 +243,7 @@ namespace x360ce.Engine.Data
 		/// Default value is DirectInput for backward compatibility.
 		/// User must manually select appropriate method based on their needs.
 		/// </remarks>
-		public InputMethod InputMethod
+		public InputSourceType InputMethod
 		{
 			get { return _InputMethod; }
 			set
@@ -257,7 +257,7 @@ namespace x360ce.Engine.Data
 				}
 			}
 		}
-		InputMethod _InputMethod;
+		InputSourceType _InputMethod;
 
 		[XmlIgnore]
 		public string InstanceId

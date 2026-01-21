@@ -60,28 +60,28 @@ namespace x360ce.App.Input.Orchestration
 						rawState = customState;
 						stateReadSuccessfully = true;
 					}
-					else if (device.InputMethod == InputMethod.DirectInput)
+					else if (device.InputMethod == InputSourceType.DirectInput)
 					{
 						// Use existing DirectInput processor method
 						var customState = directInputProcessor.ProcessDirectInputDevice(device, detector, options, out newUpdates);
 						rawState = customState;
 						stateReadSuccessfully = (customState != null);
 					}
-					else if (device.InputMethod == InputMethod.XInput)
+					else if (device.InputMethod == InputSourceType.XInput)
 					{
 						// Use existing XInput processor method
 						var customState = xInputProcessor.ProcessXInputDevice(device);
 						rawState = customState;
 						stateReadSuccessfully = (customState != null);
 					}
-					else if (device.InputMethod == InputMethod.GamingInput)
+					else if (device.InputMethod == InputSourceType.GamingInput)
 					{
 						// Use existing Gaming Input processor method
 						var customState = gamingInputProcessor.GetCustomState(device);
 						rawState = customState;
 						stateReadSuccessfully = (customState != null);
 					}
-					else if (device.InputMethod == InputMethod.RawInput)
+					else if (device.InputMethod == InputSourceType.RawInput)
 					{
 						// Use existing Raw Input processor method
 						var customState = rawInputProcessor.GetCustomState(device);

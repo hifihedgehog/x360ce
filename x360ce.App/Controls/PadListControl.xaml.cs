@@ -336,7 +336,7 @@ namespace x360ce.App.Controls
 			// Get the selected InputMethod from ListBox
 			var listBox = sender as ListBox;
 			var selectedListBoxItem = listBox?.SelectedItem as ListBoxItem;
-			if (selectedListBoxItem?.Tag is InputMethod newInputMethod)
+			if (selectedListBoxItem?.Tag is InputSourceType newInputMethod)
 			{
 				// Update device capabilities based on the selected input method
 				// (This method now handles setting ud.InputMethod internally)
@@ -356,7 +356,7 @@ namespace x360ce.App.Controls
 		/// </summary>
 		/// <param name="ud">The UserDevice to update capabilities for</param>
 		/// <param name="inputMethod">The selected input method</param>
-		private void UpdateDeviceCapabilitiesForInputMethod(UserDevice ud, InputMethod inputMethod)
+		private void UpdateDeviceCapabilitiesForInputMethod(UserDevice ud, InputSourceType inputMethod)
 		{
 			if (ud == null)
 				return;
@@ -445,7 +445,7 @@ namespace x360ce.App.Controls
      // Find the ListBoxItem with the matching InputMethod in its Tag
      foreach (ListBoxItem item in InputMethodListBox.Items)
      {
-      if (item.Tag is InputMethod method && method == ud.InputMethod)
+      if (item.Tag is InputSourceType method && method == ud.InputMethod)
       {
        InputMethodListBox.SelectedItem = item;
        break;
@@ -457,7 +457,7 @@ namespace x360ce.App.Controls
      // Default fallback to DirectInput
      foreach (ListBoxItem item in InputMethodListBox.Items)
      {
-      if (item.Tag is InputMethod method && method == InputMethod.DirectInput)
+      if (item.Tag is InputSourceType method && method == InputSourceType.DirectInput)
       {
        InputMethodListBox.SelectedItem = item;
        break;

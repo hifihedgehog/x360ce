@@ -139,6 +139,9 @@
 		<Compile Remove="JocysCom\Runtime\TlvSerializerError.cs" />
 		<EmbeddedResource Remove="JocysCom\Controls\MessageBoxForm.resx" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Input\" />
+	</ItemGroup>
 	<PropertyGroup />
 	<Target Name="PopulateEmbeddedFiles" AfterTargets="BeforeCompile" BeforeTargets="CoreCompile">
 		<ItemGroup>

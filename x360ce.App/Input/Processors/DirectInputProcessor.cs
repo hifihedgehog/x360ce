@@ -337,7 +337,7 @@ namespace x360ce.App.Input.Processors
 		/// <summary>
 		/// Gets the input method supported by this processor.
 		/// </summary>
-		public InputMethod SupportedMethod => InputMethod.DirectInput;
+		public InputSourceType SupportedMethod => InputSourceType.DirectInput;
 
 		/// <summary>
 		/// Determines if this processor can handle the specified device.
@@ -378,10 +378,10 @@ namespace x360ce.App.Input.Processors
 		public CustomDeviceState ReadState(UserDevice device)
 		{
 			if (device == null)
-				throw new InputMethodException(InputMethod.DirectInput, device, "Device is null");
+				throw new InputMethodException(InputSourceType.DirectInput, device, "Device is null");
 
 			if (device.DirectInputDevice == null)
-				throw new InputMethodException(InputMethod.DirectInput, device, "DirectInput Device is null");
+				throw new InputMethodException(InputSourceType.DirectInput, device, "DirectInput Device is null");
 
 			try
 			{
@@ -417,7 +417,7 @@ namespace x360ce.App.Input.Processors
 						}
 						break;
 					default:
-						throw new InputMethodException(InputMethod.DirectInput, device, $"Unknown DirectInput device type: {device.DirectInputDevice.GetType().Name}");
+						throw new InputMethodException(InputSourceType.DirectInput, device, $"Unknown DirectInput device type: {device.DirectInputDevice.GetType().Name}");
 				}
 
 				// Handle mouse coordinate conversion if needed
@@ -435,12 +435,12 @@ namespace x360ce.App.Input.Processors
 			{
 				// Common DirectInput errors that indicate device issues
 				var message = $"DirectInput device error: {dex.ResultCode}. Device may need reacquisition.";
-				throw new InputMethodException(InputMethod.DirectInput, device, message, dex);
+				throw new InputMethodException(InputSourceType.DirectInput, device, message, dex);
 			}
 			catch (Exception ex)
 			{
 				var message = $"DirectInput read error: {ex.Message}";
-				throw new InputMethodException(InputMethod.DirectInput, device, message, ex);
+				throw new InputMethodException(InputSourceType.DirectInput, device, message, ex);
 			}
 		}
 

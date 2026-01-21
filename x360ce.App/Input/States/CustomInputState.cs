@@ -4,6 +4,7 @@ using SharpDX.XInput;
 using Windows.Gaming.Input;
 using x360ce.App.Input.Devices;
 using System.Runtime.CompilerServices;
+using x360ce.Engine;
 
 namespace x360ce.App.Input.States
 {
@@ -66,18 +67,6 @@ namespace x360ce.App.Input.States
 		#region Conversion Methods
 
 		/// <summary>
-		/// Source type for conversion context.
-		/// </summary>
-		public enum InputSourceType
-		{
-			Unknown,
-			DirectInput,
-			XInput,
-			RawInput,
-			GamingInput
-		}
-
-		/// <summary>
 		/// Converts any range axis value (e.g., -32768 to 32767, or 0 to 255) to the standardized 0-65535 range.
 		/// Automatically detects common ranges and normalizes them based on source context.
 		/// </summary>
@@ -137,70 +126,70 @@ namespace x360ce.App.Input.States
 			// RawInput Heuristics
 			if (sourceType == InputSourceType.RawInput || sourceType == InputSourceType.Unknown)
 			{
-			             // Correctly handle joystick axes which are often 0-32767 or 0-65535
-			             // The issue reported "Raw input joystic (index 0 and 1) axis value is converted to wrong 0-49151 range"
-			             // suggests that a 0-32767 (or similar 15-bit) range is being treated as a wider range or scaled incorrectly.
-			             // 49151 is exactly 0xBFFF, which is 3/4 of 65535.
-			             // This implies something was scaling by 1.5x or similar when it should be 2x.
-			             
-			             // Check for known 15-bit range (0 to 32767)
-			             // If a device reports 32767 as max, it should map to 65535.
-			             // 32767 * 2 = 65534.
-			             if (max == 32767 && min == 0)
-			             {
-			                  return Math.Max(0, Math.Min(65535, value * 2));
-			             }
+				// Correctly handle joystick axes which are often 0-32767 or 0-65535
+				// The issue reported "Raw input joystic (index 0 and 1) axis value is converted to wrong 0-49151 range"
+				// suggests that a 0-32767 (or similar 15-bit) range is being treated as a wider range or scaled incorrectly.
+				// 49151 is exactly 0xBFFF, which is 3/4 of 65535.
+				// This implies something was scaling by 1.5x or similar when it should be 2x.
 
-			                      // Heuristic fallback: check if value is already within 0-49151 and looks like it might be 0-32767 mis-scaled
-			                      // The feedback says "wrong 0-49151 range" which corresponds to 0-32767 scaled by 1.5
-			                      // 32767 * 1.5 = ~49150.5.
-			                      // If max was not provided and we are hitting this range, it means some upstream logic or default behavior
-			                      // is likely treating it as signed short or similar but applying unsigned interpretation.
-			                      
-			                      // Explicitly check for values that look like they are in 0-32767 range if no min/max provided
-			                      // Note: This must be done carefully as 0-65535 values will also fall into these ranges initially.
-			                      // However, usually axis values change over time.
-			                      // A value of e.g. 40000 is clearly 0-65535.
-			                      // A value of 10000 is ambiguous.
-			                      // But if we assume 0-32767 range is common for HID, we prioritize scaling it up?
-			                      // This might double-scale valid small inputs from a 0-65535 device.
-			                      // BUT the task is specific: "Test joystic 0 and 1 index axis original value ranges are 0-16383"
-			                      // and "Raw input joystic (index 0 and 1) axis value is converted to wrong 0-49151 range".
-			                      
-			                      if (min == int.MinValue && max == int.MaxValue)
-			                      {
-			                          // Fix: Incorrect axis scaling interpretation for unsigned 16-bit values reported as signed short
-			                          // Some drivers report 0-65535 range but behave strangely when interpreted as signed/unsigned.
-			                          // If first half is 0-65535 and second half is 32768-65535, it indicates a signed/unsigned interpretation conflict.
-			                          // For now, if we detect values > 32767 without explicit max, it might be a full range axis.
-			                          // Standardize 0-65535 range:
-			                          if (value >= 0 && value <= 65535)
-			                          {
-			                              return value;
-			                          }
+				// Check for known 15-bit range (0 to 32767)
+				// If a device reports 32767 as max, it should map to 65535.
+				// 32767 * 2 = 65534.
+				if (max == 32767 && min == 0)
+				{
+					return Math.Max(0, Math.Min(65535, value * 2));
+				}
 
-			                          // Test joystick 0 and 1 index axis original value ranges are 0-16383.
-			                          // If value is in 0-16383 range, it should be scaled to 0-65535.
-			                          // This check must be before 0-32767 because 0-16383 is a subset of 0-32767.
-			                          // 16383 * 4 = 65532.
-			                          // 16383 * 4 = 65532.
-			                          // Also 16383 * 4 + 3 = 65535 (perfect distribution)
-			                          // But simple multiplication is usually enough.
-			                          // If value maps to 0-49151, it means it was multiplied by 3 instead of 4.
-			                          // 16383 * 3 = 49149.
-			                          if (value > 1023 && value <= 16383)
-			                          {
-			                              // Scale 0-16383 to 0-65535
-			                              return Math.Max(0, Math.Min(65535, value * 4));
-			                          }
+				// Heuristic fallback: check if value is already within 0-49151 and looks like it might be 0-32767 mis-scaled
+				// The feedback says "wrong 0-49151 range" which corresponds to 0-32767 scaled by 1.5
+				// 32767 * 1.5 = ~49150.5.
+				// If max was not provided and we are hitting this range, it means some upstream logic or default behavior
+				// is likely treating it as signed short or similar but applying unsigned interpretation.
 
-			                          if (value > 1023 && value <= 32767)
-			                          {
-			                              // Scale 0-32767 to 0-65535
-			                              // value * 2 + (value > 0 ? 1 : 0) to roughly double
-			                              return Math.Max(0, Math.Min(65535, value * 2));
-			                          }
-			                      }
+				// Explicitly check for values that look like they are in 0-32767 range if no min/max provided
+				// Note: This must be done carefully as 0-65535 values will also fall into these ranges initially.
+				// However, usually axis values change over time.
+				// A value of e.g. 40000 is clearly 0-65535.
+				// A value of 10000 is ambiguous.
+				// But if we assume 0-32767 range is common for HID, we prioritize scaling it up?
+				// This might double-scale valid small inputs from a 0-65535 device.
+				// BUT the task is specific: "Test joystic 0 and 1 index axis original value ranges are 0-16383"
+				// and "Raw input joystic (index 0 and 1) axis value is converted to wrong 0-49151 range".
+
+				if (min == int.MinValue && max == int.MaxValue)
+				{
+					// Fix: Incorrect axis scaling interpretation for unsigned 16-bit values reported as signed short
+					// Some drivers report 0-65535 range but behave strangely when interpreted as signed/unsigned.
+					// If first half is 0-65535 and second half is 32768-65535, it indicates a signed/unsigned interpretation conflict.
+					// For now, if we detect values > 32767 without explicit max, it might be a full range axis.
+					// Standardize 0-65535 range:
+					if (value >= 0 && value <= 65535)
+					{
+						return value;
+					}
+
+					// Test joystick 0 and 1 index axis original value ranges are 0-16383.
+					// If value is in 0-16383 range, it should be scaled to 0-65535.
+					// This check must be before 0-32767 because 0-16383 is a subset of 0-32767.
+					// 16383 * 4 = 65532.
+					// 16383 * 4 = 65532.
+					// Also 16383 * 4 + 3 = 65535 (perfect distribution)
+					// But simple multiplication is usually enough.
+					// If value maps to 0-49151, it means it was multiplied by 3 instead of 4.
+					// 16383 * 3 = 49149.
+					if (value > 1023 && value <= 16383)
+					{
+						// Scale 0-16383 to 0-65535
+						return Math.Max(0, Math.Min(65535, value * 4));
+					}
+
+					if (value > 1023 && value <= 32767)
+					{
+						// Scale 0-32767 to 0-65535
+						// value * 2 + (value > 0 ? 1 : 0) to roughly double
+						return Math.Max(0, Math.Min(65535, value * 2));
+					}
+				}
 
 				// Byte Range: 0 to 255 (e.g., RawInput sliders, 8-bit)
 				if (value >= 0 && value <= 255)
@@ -215,8 +204,8 @@ namespace x360ce.App.Input.States
 					return Math.Max(0, Math.Min(65535, value * 128));
 				}
 
-				            // 10-bit Range: 0 to 1023 (common for pedals/triggers)
-				            // 1023 * 64 = 65472
+				// 10-bit Range: 0 to 1023 (common for pedals/triggers)
+				// 1023 * 64 = 65472
 				if (value >= 0 && value <= 1023)
 				{
 					// Scale 0-1023 to 0-65535
@@ -224,24 +213,24 @@ namespace x360ce.App.Input.States
 				}
 
 				// 14-bit Range: 0 to 16383 (RawInput joystick axis)
-				            // Only apply if value > 1023 to protect smaller ranges
+				// Only apply if value > 1023 to protect smaller ranges
 				if (value > 1023 && value <= 16383)
 				{
 					// Scale 0-16383 to 0-65535
 					return Math.Max(0, Math.Min(65535, value * 4));
 				}
-				            
-				            // 10-bit Range: 0 to 1023 (common for pedals/triggers)
-				            // 1023 * 64 = 65472
+
+				// 10-bit Range: 0 to 1023 (common for pedals/triggers)
+				// 1023 * 64 = 65472
 				if (value >= 0 && value <= 1023)
 				{
 					// Scale 0-1023 to 0-65535
 					return Math.Max(0, Math.Min(65535, value * 64));
 				}
 
-				            // NOTE: 0-32767 handling logic moved above to generic block if min/max not provided
-				            // to catch cases where the range is implicit.
-				            
+				// NOTE: 0-32767 handling logic moved above to generic block if min/max not provided
+				// to catch cases where the range is implicit.
+
 				// 15-bit Range: 0 to 32766 (Specific RawInput Joystick Axis reported in feedback)
 				// Must be checked before 0-32767 to avoid overlap ambiguity if they require different scaling
 				// Feedback says 32766 maps to ~49151 with *1.5 scaling, so we need strict *2 scaling.
@@ -384,17 +373,17 @@ namespace x360ce.App.Input.States
 		}
 
 		#endregion
-        
-        #region Integrated State Conversions
-        
-        // Imported from DirectInputStateToListInputState
-        private const int AxisMinValue = 0;
-  private const int AxisMaxValue = 65535;
-  private const int DefaultMouseSensitivity = 20;
-  private const int DefaultMouseWheelSensitivity = 50;
-  private const int MinSensitivity = 1;
 
-        public static CustomInputState ConvertDirectInputStateToListInputState(object diState, DirectInputDeviceInfo deviceInfo = null)
+		#region Integrated State Conversions
+
+		// Imported from DirectInputStateToListInputState
+		private const int AxisMinValue = 0;
+		private const int AxisMaxValue = 65535;
+		private const int DefaultMouseSensitivity = 20;
+		private const int DefaultMouseWheelSensitivity = 50;
+		private const int MinSensitivity = 1;
+
+		public static CustomInputState ConvertDirectInputStateToListInputState(object diState, DirectInputDeviceInfo deviceInfo = null)
 		{
 			if (diState == null)
 				return null;
@@ -414,267 +403,267 @@ namespace x360ce.App.Input.States
 			return null;
 		}
 
-  private static CustomInputState ConvertJoystickState(JoystickState state, DirectInputDeviceInfo deviceInfo)
-  {
-  	// CRITICAL FIX: Reuse existing ListInputState object if it exists
-  	// This maintains the reference in CustomInputDeviceInfo.ListInputState
-  	CustomInputState result = deviceInfo?.CustomInputState;
+		private static CustomInputState ConvertJoystickState(JoystickState state, DirectInputDeviceInfo deviceInfo)
+		{
+			// CRITICAL FIX: Reuse existing ListInputState object if it exists
+			// This maintains the reference in CustomInputDeviceInfo.ListInputState
+			CustomInputState result = deviceInfo?.CustomInputState;
 
-  	if (result == null)
-  	{
-  		// First time - create new ListInputState
-  		result = new CustomInputState();
-  	}
+			if (result == null)
+			{
+				// First time - create new ListInputState
+				result = new CustomInputState();
+			}
 
-  	// Use available axes info if possible to populate the list efficiently
-  	// This ensures that ListInputState axes map 1:1 with AvailableAxes in DirectInputDeviceInfo
-  	var availableAxes = deviceInfo?.AvailableAxes;
-  	var axes = result.Axes;
+			// Use available axes info if possible to populate the list efficiently
+			// This ensures that ListInputState axes map 1:1 with AvailableAxes in DirectInputDeviceInfo
+			var availableAxes = deviceInfo?.AvailableAxes;
+			var axes = result.Axes;
 
-  	if (availableAxes != null && availableAxes.Count > 0)
-  	{
-  		// Update values using specific available axes mapping
-  		for (int i = 0; i < availableAxes.Count && i < MaxAxes; i++)
-  		{
-  			axes[i] = ClampAxisValue(GetAxisValue(state, availableAxes[i]));
-  		}
-  	}
-  	else
-  	{
-  		// Fallback to legacy fixed 24-axis array if no available axes info
-  		// Use ClampAxisValue directly since DirectInput is normalized to 0-65535
-  		axes[0] = ClampAxisValue(state.X);
-  		axes[1] = ClampAxisValue(state.Y);
-  		axes[2] = ClampAxisValue(state.Z);
-  		axes[3] = ClampAxisValue(state.RotationX);
-  		axes[4] = ClampAxisValue(state.RotationY);
-  		axes[5] = ClampAxisValue(state.RotationZ);
-  		axes[6] = ClampAxisValue(state.AccelerationX);
-  		axes[7] = ClampAxisValue(state.AccelerationY);
-  		axes[8] = ClampAxisValue(state.AccelerationZ);
-  		axes[9] = ClampAxisValue(state.AngularAccelerationX);
-  		axes[10] = ClampAxisValue(state.AngularAccelerationY);
-  		axes[11] = ClampAxisValue(state.AngularAccelerationZ);
-  		axes[12] = ClampAxisValue(state.ForceX);
-  		axes[13] = ClampAxisValue(state.ForceY);
-  		axes[14] = ClampAxisValue(state.ForceZ);
-  		axes[15] = ClampAxisValue(state.TorqueX);
-  		axes[16] = ClampAxisValue(state.TorqueY);
-  		axes[17] = ClampAxisValue(state.TorqueZ);
-  		axes[18] = ClampAxisValue(state.VelocityX);
-  		axes[19] = ClampAxisValue(state.VelocityY);
-  		axes[20] = ClampAxisValue(state.VelocityZ);
-  		axes[21] = ClampAxisValue(state.AngularVelocityX);
-  		axes[22] = ClampAxisValue(state.AngularVelocityY);
-  		axes[23] = ClampAxisValue(state.AngularVelocityZ);
-  	}
+			if (availableAxes != null && availableAxes.Count > 0)
+			{
+				// Update values using specific available axes mapping
+				for (hint i = 0; i < availableAxes.Count && i < MaxAxes; i++)
+				{
+					axes[i] = ClampAxisValue(GetAxisValue(state, availableAxes[i]));
+				}
+			}
+			else
+			{
+				// Fallback to legacy fixed 24-axis array if no available axes info
+				// Use ClampAxisValue directly since DirectInput is normalized to 0-65535
+				axes[0] = ClampAxisValue(state.X);
+				axes[1] = ClampAxisValue(state.Y);
+				axes[2] = ClampAxisValue(state.Z);
+				axes[3] = ClampAxisValue(state.RotationX);
+				axes[4] = ClampAxisValue(state.RotationY);
+				axes[5] = ClampAxisValue(state.RotationZ);
+				axes[6] = ClampAxisValue(state.AccelerationX);
+				axes[7] = ClampAxisValue(state.AccelerationY);
+				axes[8] = ClampAxisValue(state.AccelerationZ);
+				axes[9] = ClampAxisValue(state.AngularAccelerationX);
+				axes[10] = ClampAxisValue(state.AngularAccelerationY);
+				axes[11] = ClampAxisValue(state.AngularAccelerationZ);
+				axes[12] = ClampAxisValue(state.ForceX);
+				axes[13] = ClampAxisValue(state.ForceY);
+				axes[14] = ClampAxisValue(state.ForceZ);
+				axes[15] = ClampAxisValue(state.TorqueX);
+				axes[16] = ClampAxisValue(state.TorqueY);
+				axes[17] = ClampAxisValue(state.TorqueZ);
+				axes[18] = ClampAxisValue(state.VelocityX);
+				axes[19] = ClampAxisValue(state.VelocityY);
+				axes[20] = ClampAxisValue(state.VelocityZ);
+				axes[21] = ClampAxisValue(state.AngularVelocityX);
+				axes[22] = ClampAxisValue(state.AngularVelocityY);
+				axes[23] = ClampAxisValue(state.AngularVelocityZ);
+			}
 
-  	// Convert sliders
-  	var availableSliders = deviceInfo?.AvailableSliders;
-  	var sliders = result.Sliders;
+			// Convert sliders
+			var availableSliders = deviceInfo?.AvailableSliders;
+			var sliders = result.Sliders;
 
-  	if (availableSliders != null)
-  	{
-  		// Update values using specific available sliders mapping
-  		for (int i = 0; i < availableSliders.Count && i < MaxSliders; i++)
-  		{
-  			sliders[i] = ClampAxisValue(GetAxisValue(state, availableSliders[i]));
-  		}
-  	}
-  	else
-  	{
-  		// Fallback to legacy 8 sliders
-  		sliders[0] = ClampAxisValue(state.Sliders[0]);
-  		sliders[1] = ClampAxisValue(state.Sliders[1]);
-  		sliders[2] = ClampAxisValue(state.AccelerationSliders[0]);
-  		sliders[3] = ClampAxisValue(state.AccelerationSliders[1]);
-  		sliders[4] = ClampAxisValue(state.ForceSliders[0]);
-  		sliders[5] = ClampAxisValue(state.ForceSliders[1]);
-  		sliders[6] = ClampAxisValue(state.VelocitySliders[0]);
-  		sliders[7] = ClampAxisValue(state.VelocitySliders[1]);
-  	}
+			if (availableSliders != null)
+			{
+				// Update values using specific available sliders mapping
+				for (int i = 0; i < availableSliders.Count && i < MaxSliders; i++)
+				{
+					sliders[i] = ClampAxisValue(GetAxisValue(state, availableSliders[i]));
+				}
+			}
+			else
+			{
+				// Fallback to legacy 8 sliders
+				sliders[0] = ClampAxisValue(state.Sliders[0]);
+				sliders[1] = ClampAxisValue(state.Sliders[1]);
+				sliders[2] = ClampAxisValue(state.AccelerationSliders[0]);
+				sliders[3] = ClampAxisValue(state.AccelerationSliders[1]);
+				sliders[4] = ClampAxisValue(state.ForceSliders[0]);
+				sliders[5] = ClampAxisValue(state.ForceSliders[1]);
+				sliders[6] = ClampAxisValue(state.VelocitySliders[0]);
+				sliders[7] = ClampAxisValue(state.VelocitySliders[1]);
+			}
 
-  	// Convert buttons (DirectInput reports as bool array) - pre-allocate capacity
-  	var buttons = result.Buttons;
-  	var stateButtons = state.Buttons;
-  	for (int i = 0; i < stateButtons.Length && i < MaxButtons; i++)
-  		buttons[i] = ConvertToButtonRange(stateButtons[i]);
+			// Convert buttons (DirectInput reports as bool array) - pre-allocate capacity
+			var buttons = result.Buttons;
+			var stateButtons = state.Buttons;
+			for (int i = 0; i < stateButtons.Length && i < MaxButtons; i++)
+				buttons[i] = ConvertToButtonRange(stateButtons[i]);
 
-  	// Convert POVs (DirectInput reports -1 for neutral, 0-35900 for directions)
-  	var povs = result.POVs;
-  	var statePovs = state.PointOfViewControllers;
-  	for (int i = 0; i < statePovs.Length && i < MaxPOVs; i++)
-  		povs[i] = ConvertToPOVRange(statePovs[i], PovFormat.DirectInput);
+			// Convert POVs (DirectInput reports -1 for neutral, 0-35900 for directions)
+			var povs = result.POVs;
+			var statePovs = state.PointOfViewControllers;
+			for (int i = 0; i < statePovs.Length && i < MaxPOVs; i++)
+				povs[i] = ConvertToPOVRange(statePovs[i], PovFormat.DirectInput);
 
-  	return result;
-  }
+			return result;
+		}
 
-  private static CustomInputState ConvertMouseState(MouseState state, DirectInputDeviceInfo deviceInfo)
-  {
-   // CRITICAL FIX: Reuse existing ListInputState object if it exists
-   // This maintains the reference in CustomInputDeviceInfo.ListInputState
-   CustomInputState result = deviceInfo?.CustomInputState;
+		private static CustomInputState ConvertMouseState(MouseState state, DirectInputDeviceInfo deviceInfo)
+		{
+			// CRITICAL FIX: Reuse existing ListInputState object if it exists
+			// This maintains the reference in CustomInputDeviceInfo.ListInputState
+			CustomInputState result = deviceInfo?.CustomInputState;
 
-   if (result == null)
-   {
-    // First time - create new ListInputState
-    result = new CustomInputState();
-   }
+			if (result == null)
+			{
+				// First time - create new ListInputState
+				result = new CustomInputState();
+			}
 
-   // Get per-axis sensitivity values with defaults and minimum enforcement
-   int sensitivityX = Math.Max(MinSensitivity, deviceInfo?.MouseAxisSensitivity[0] ?? DefaultMouseSensitivity);
-   int sensitivityY = Math.Max(MinSensitivity, deviceInfo?.MouseAxisSensitivity[1] ?? DefaultMouseSensitivity);
-   int sensitivityZ = Math.Max(MinSensitivity, deviceInfo?.MouseAxisSensitivity[2] ?? DefaultMouseWheelSensitivity);
+			// Get per-axis sensitivity values with defaults and minimum enforcement
+			int sensitivityX = Math.Max(MinSensitivity, deviceInfo?.MouseAxisSensitivity[0] ?? DefaultMouseSensitivity);
+			int sensitivityY = Math.Max(MinSensitivity, deviceInfo?.MouseAxisSensitivity[1] ?? DefaultMouseSensitivity);
+			int sensitivityZ = Math.Max(MinSensitivity, deviceInfo?.MouseAxisSensitivity[2] ?? DefaultMouseWheelSensitivity);
 
-   // Apply relative movement with per-axis sensitivity multipliers to accumulated values in deviceInfo
-   // DirectInput mouse reports relative movement (delta values)
-   // Each axis has its own sensitivity: higher values = more responsive
-   var axes = result.Axes;
-   if (deviceInfo != null)
-   {
-    deviceInfo.MouseAxisAccumulatedDelta[0] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[0] + state.X * sensitivityX);
-    deviceInfo.MouseAxisAccumulatedDelta[1] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[1] + state.Y * sensitivityY);
-    deviceInfo.MouseAxisAccumulatedDelta[2] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[2] + state.Z * sensitivityZ);
+			// Apply relative movement with per-axis sensitivity multipliers to accumulated values in deviceInfo
+			// DirectInput mouse reports relative movement (delta values)
+			// Each axis has its own sensitivity: higher values = more responsive
+			var axes = result.Axes;
+			if (deviceInfo != null)
+			{
+				deviceInfo.MouseAxisAccumulatedDelta[0] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[0] + state.X * sensitivityX);
+				deviceInfo.MouseAxisAccumulatedDelta[1] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[1] + state.Y * sensitivityY);
+				deviceInfo.MouseAxisAccumulatedDelta[2] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[2] + state.Z * sensitivityZ);
 
-    // Update or add accumulated axis values
-    axes[0] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[0]);
-    axes[1] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[1]);
-    axes[2] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[2]);
-   }
-   else
-   {
-    // Fallback if deviceInfo is null (shouldn't happen in normal operation)
-    axes[0] = 32767;
-    axes[1] = 32767;
-    axes[2] = 32767;
-   }
+				// Update or add accumulated axis values
+				axes[0] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[0]);
+				axes[1] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[1]);
+				axes[2] = ClampAxisValue(deviceInfo.MouseAxisAccumulatedDelta[2]);
+			}
+			else
+			{
+				// Fallback if deviceInfo is null (shouldn't happen in normal operation)
+				axes[0] = 32767;
+				axes[1] = 32767;
+				axes[2] = 32767;
+			}
 
-   // Update or add buttons
-   var buttons = result.Buttons;
-   for (int i = 0; i < state.Buttons.Length && i < MaxButtons; i++)
-   {
-    buttons[i] = ConvertToButtonRange(state.Buttons[i]);
-   }
+			// Update or add buttons
+			var buttons = result.Buttons;
+			for (int i = 0; i < state.Buttons.Length && i < MaxButtons; i++)
+			{
+				buttons[i] = ConvertToButtonRange(state.Buttons[i]);
+			}
 
-   // Mice have no sliders or POVs (lists remain empty)
+			// Mice have no sliders or POVs (lists remain empty)
 
-   return result;
-  }
+			return result;
+		}
 
-  private static CustomInputState ConvertKeyboardState(KeyboardState state)
-  {
-   var result = new CustomInputState();
+		private static CustomInputState ConvertKeyboardState(KeyboardState state)
+		{
+			var result = new CustomInputState();
 
-   // Initialize all 256 buttons as released (0)
-   // Array is already initialized to 0
+			// Initialize all 256 buttons as released (0)
+			// Array is already initialized to 0
 
-   // Set pressed keys to 1
-   foreach (var key in state.PressedKeys)
-   {
-    int keyIndex = (int)key;
-    if (keyIndex >= 0 && keyIndex < MaxButtons)
-    {
-     result.Buttons[keyIndex] = 1;
-    }
-   }
+			// Set pressed keys to 1
+			foreach (var key in state.PressedKeys)
+			{
+				int keyIndex = (int)key;
+				if (keyIndex >= 0 && keyIndex < MaxButtons)
+				{
+					result.Buttons[keyIndex] = 1;
+				}
+			}
 
-   // Keyboards have no axes, sliders, or POVs (lists remain empty)
+			// Keyboards have no axes, sliders, or POVs (lists remain empty)
 
-   return result;
-  }
+			return result;
+		}
 
-  [MethodImpl(MethodImplOptions.AggressiveInlining)]
-  private static int ClampAxisValue(int value)
-  {
-   return Math.Max(AxisMinValue, Math.Min(AxisMaxValue, value));
-  }
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static int ClampAxisValue(int value)
+		{
+			return Math.Max(AxisMinValue, Math.Min(AxisMaxValue, value));
+		}
 
-  [MethodImpl(MethodImplOptions.AggressiveInlining)]
-  private static int GetAxisValue(JoystickState state, JoystickOffset offset)
-  {
-    switch (offset)
-    {
-        case JoystickOffset.X: return state.X;
-        case JoystickOffset.Y: return state.Y;
-        case JoystickOffset.Z: return state.Z;
-        case JoystickOffset.RotationX: return state.RotationX;
-        case JoystickOffset.RotationY: return state.RotationY;
-        case JoystickOffset.RotationZ: return state.RotationZ;
-        case JoystickOffset.AccelerationX: return state.AccelerationX;
-        case JoystickOffset.AccelerationY: return state.AccelerationY;
-        case JoystickOffset.AccelerationZ: return state.AccelerationZ;
-        case JoystickOffset.AngularAccelerationX: return state.AngularAccelerationX;
-        case JoystickOffset.AngularAccelerationY: return state.AngularAccelerationY;
-        case JoystickOffset.AngularAccelerationZ: return state.AngularAccelerationZ;
-        case JoystickOffset.ForceX: return state.ForceX;
-        case JoystickOffset.ForceY: return state.ForceY;
-        case JoystickOffset.ForceZ: return state.ForceZ;
-        case JoystickOffset.TorqueX: return state.TorqueX;
-        case JoystickOffset.TorqueY: return state.TorqueY;
-        case JoystickOffset.TorqueZ: return state.TorqueZ;
-        case JoystickOffset.VelocityX: return state.VelocityX;
-        case JoystickOffset.VelocityY: return state.VelocityY;
-        case JoystickOffset.VelocityZ: return state.VelocityZ;
-        case JoystickOffset.AngularVelocityX: return state.AngularVelocityX;
-        case JoystickOffset.AngularVelocityY: return state.AngularVelocityY;
-        case JoystickOffset.AngularVelocityZ: return state.AngularVelocityZ;
-    case JoystickOffset.Sliders0: return state.Sliders[0];
-    case JoystickOffset.Sliders1: return state.Sliders[1];
-    case JoystickOffset.AccelerationSliders0: return state.AccelerationSliders[0];
-    case JoystickOffset.AccelerationSliders1: return state.AccelerationSliders[1];
-    case JoystickOffset.ForceSliders0: return state.ForceSliders[0];
-    case JoystickOffset.ForceSliders1: return state.ForceSliders[1];
-    case JoystickOffset.VelocitySliders0: return state.VelocitySliders[0];
-    case JoystickOffset.VelocitySliders1: return state.VelocitySliders[1];
-        default: return 0;
-    }
-  }
-        
-  // Imported from XInputStateToListInputState
-  public static CustomInputState ConvertXInputStateToListInputState(State state)
-  {
-   var result = new CustomInputState();
-   var gamepad = state.Gamepad;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static int GetAxisValue(JoystickState state, JoystickOffset offset)
+		{
+			switch (offset)
+			{
+				case JoystickOffset.X: return state.X;
+				case JoystickOffset.Y: return state.Y;
+				case JoystickOffset.Z: return state.Z;
+				case JoystickOffset.RotationX: return state.RotationX;
+				case JoystickOffset.RotationY: return state.RotationY;
+				case JoystickOffset.RotationZ: return state.RotationZ;
+				case JoystickOffset.AccelerationX: return state.AccelerationX;
+				case JoystickOffset.AccelerationY: return state.AccelerationY;
+				case JoystickOffset.AccelerationZ: return state.AccelerationZ;
+				case JoystickOffset.AngularAccelerationX: return state.AngularAccelerationX;
+				case JoystickOffset.AngularAccelerationY: return state.AngularAccelerationY;
+				case JoystickOffset.AngularAccelerationZ: return state.AngularAccelerationZ;
+				case JoystickOffset.ForceX: return state.ForceX;
+				case JoystickOffset.ForceY: return state.ForceY;
+				case JoystickOffset.ForceZ: return state.ForceZ;
+				case JoystickOffset.TorqueX: return state.TorqueX;
+				case JoystickOffset.TorqueY: return state.TorqueY;
+				case JoystickOffset.TorqueZ: return state.TorqueZ;
+				case JoystickOffset.VelocityX: return state.VelocityX;
+				case JoystickOffset.VelocityY: return state.VelocityY;
+				case JoystickOffset.VelocityZ: return state.VelocityZ;
+				case JoystickOffset.AngularVelocityX: return state.AngularVelocityX;
+				case JoystickOffset.AngularVelocityY: return state.AngularVelocityY;
+				case JoystickOffset.AngularVelocityZ: return state.AngularVelocityZ;
+				case JoystickOffset.Sliders0: return state.Sliders[0];
+				case JoystickOffset.Sliders1: return state.Sliders[1];
+				case JoystickOffset.AccelerationSliders0: return state.AccelerationSliders[0];
+				case JoystickOffset.AccelerationSliders1: return state.AccelerationSliders[1];
+				case JoystickOffset.ForceSliders0: return state.ForceSliders[0];
+				case JoystickOffset.ForceSliders1: return state.ForceSliders[1];
+				case JoystickOffset.VelocitySliders0: return state.VelocitySliders[0];
+				case JoystickOffset.VelocitySliders1: return state.VelocitySliders[1];
+				default: return 0;
+			}
+		}
 
-   // Convert axes (6 axes in XInput)
-   // Thumbsticks: Convert from -32768..32767 to 0..65535
-   result.Axes[0] = ConvertToAxisRange(gamepad.LeftThumbX, -32768, 32767, InputSourceType.XInput);
-   result.Axes[1] = ConvertToAxisRange(gamepad.LeftThumbY, -32768, 32767, InputSourceType.XInput);
-   result.Axes[2] = ConvertToAxisRange(gamepad.RightThumbX, -32768, 32767, InputSourceType.XInput);
-   result.Axes[3] = ConvertToAxisRange(gamepad.RightThumbY, -32768, 32767, InputSourceType.XInput);
+		// Imported from XInputStateToListInputState
+		public static CustomInputState ConvertXInputStateToListInputState(State state)
+		{
+			var result = new CustomInputState();
+			var gamepad = state.Gamepad;
 
-   // Triggers: Convert from 0..255 to 0..65535
-   result.Axes[4] = ConvertToAxisRange(gamepad.LeftTrigger, 0, 255, InputSourceType.XInput);
-   result.Axes[5] = ConvertToAxisRange(gamepad.RightTrigger, 0, 255, InputSourceType.XInput);
+			// Convert axes (6 axes in XInput)
+			// Thumbsticks: Convert from -32768..32767 to 0..65535
+			result.Axes[0] = ConvertToAxisRange(gamepad.LeftThumbX, -32768, 32767, InputSourceType.XInput);
+			result.Axes[1] = ConvertToAxisRange(gamepad.LeftThumbY, -32768, 32767, InputSourceType.XInput);
+			result.Axes[2] = ConvertToAxisRange(gamepad.RightThumbX, -32768, 32767, InputSourceType.XInput);
+			result.Axes[3] = ConvertToAxisRange(gamepad.RightThumbY, -32768, 32767, InputSourceType.XInput);
 
-   // XInput has no sliders (list remains empty)
+			// Triggers: Convert from 0..255 to 0..65535
+			result.Axes[4] = ConvertToAxisRange(gamepad.LeftTrigger, 0, 255, InputSourceType.XInput);
+			result.Axes[5] = ConvertToAxisRange(gamepad.RightTrigger, 0, 255, InputSourceType.XInput);
 
-   // Convert buttons (15 buttons in XInput)
-   var buttons = gamepad.Buttons;
-   result.Buttons[0] = ConvertToButtonRange((buttons & GamepadButtonFlags.A) != 0);
-   result.Buttons[1] = ConvertToButtonRange((buttons & GamepadButtonFlags.B) != 0);
-   result.Buttons[2] = ConvertToButtonRange((buttons & GamepadButtonFlags.X) != 0);
-   result.Buttons[3] = ConvertToButtonRange((buttons & GamepadButtonFlags.Y) != 0);
-   result.Buttons[4] = ConvertToButtonRange((buttons & GamepadButtonFlags.LeftShoulder) != 0);
-   result.Buttons[5] = ConvertToButtonRange((buttons & GamepadButtonFlags.RightShoulder) != 0);
-   result.Buttons[6] = ConvertToButtonRange((buttons & GamepadButtonFlags.Back) != 0);
-   result.Buttons[7] = ConvertToButtonRange((buttons & GamepadButtonFlags.Start) != 0);
-   result.Buttons[8] = ConvertToButtonRange((buttons & GamepadButtonFlags.LeftThumb) != 0);
-   result.Buttons[9] = ConvertToButtonRange((buttons & GamepadButtonFlags.RightThumb) != 0);
+			// XInput has no sliders (list remains empty)
 
-   // D-Pad buttons (XInput represents D-Pad as 4 separate buttons)
-   result.Buttons[10] = ConvertToButtonRange((buttons & GamepadButtonFlags.DPadUp) != 0);
-   result.Buttons[11] = ConvertToButtonRange((buttons & GamepadButtonFlags.DPadDown) != 0);
-   result.Buttons[12] = ConvertToButtonRange((buttons & GamepadButtonFlags.DPadLeft) != 0);
-   result.Buttons[13] = ConvertToButtonRange((buttons & GamepadButtonFlags.DPadRight) != 0);
+			// Convert buttons (15 buttons in XInput)
+			var buttons = gamepad.Buttons;
+			result.Buttons[0] = ConvertToButtonRange((buttons & GamepadButtonFlags.A) != 0);
+			result.Buttons[1] = ConvertToButtonRange((buttons & GamepadButtonFlags.B) != 0);
+			result.Buttons[2] = ConvertToButtonRange((buttons & GamepadButtonFlags.X) != 0);
+			result.Buttons[3] = ConvertToButtonRange((buttons & GamepadButtonFlags.Y) != 0);
+			result.Buttons[4] = ConvertToButtonRange((buttons & GamepadButtonFlags.LeftShoulder) != 0);
+			result.Buttons[5] = ConvertToButtonRange((buttons & GamepadButtonFlags.RightShoulder) != 0);
+			result.Buttons[6] = ConvertToButtonRange((buttons & GamepadButtonFlags.Back) != 0);
+			result.Buttons[7] = ConvertToButtonRange((buttons & GamepadButtonFlags.Start) != 0);
+			result.Buttons[8] = ConvertToButtonRange((buttons & GamepadButtonFlags.LeftThumb) != 0);
+			result.Buttons[9] = ConvertToButtonRange((buttons & GamepadButtonFlags.RightThumb) != 0);
 
-   // XInput has no POVs (D-Pad is represented as buttons, list remains empty)
-   // But we can synthesize one from D-Pad buttons
-   int povValue = ConvertXInputDPadToPOV(buttons);
-   result.POVs[0] = ConvertToPOVRange(povValue);
+			// D-Pad buttons (XInput represents D-Pad as 4 separate buttons)
+			result.Buttons[10] = ConvertToButtonRange((buttons & GamepadButtonFlags.DPadUp) != 0);
+			result.Buttons[11] = ConvertToButtonRange((buttons & GamepadButtonFlags.DPadDown) != 0);
+			result.Buttons[12] = ConvertToButtonRange((buttons & GamepadButtonFlags.DPadLeft) != 0);
+			result.Buttons[13] = ConvertToButtonRange((buttons & GamepadButtonFlags.DPadRight) != 0);
 
-   return result;
-  }
+			// XInput has no POVs (D-Pad is represented as buttons, list remains empty)
+			// But we can synthesize one from D-Pad buttons
+			int povValue = ConvertXInputDPadToPOV(buttons);
+			result.POVs[0] = ConvertToPOVRange(povValue);
+
+			return result;
+		}
 
 		private static int ConvertXInputDPadToPOV(GamepadButtonFlags buttons)
 		{
@@ -755,7 +744,7 @@ namespace x360ce.App.Input.States
 			return result;
 		}
 
-        private static int ConvertDPadToPOV(GamepadButtons buttons)
+		private static int ConvertDPadToPOV(GamepadButtons buttons)
 		{
 			bool up = (buttons & GamepadButtons.DPadUp) != 0;
 			bool down = (buttons & GamepadButtons.DPadDown) != 0;
@@ -784,6 +773,6 @@ namespace x360ce.App.Input.States
 			return -1;
 		}
 
-        #endregion
+		#endregion
 	}
 }

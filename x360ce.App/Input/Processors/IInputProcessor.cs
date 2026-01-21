@@ -11,7 +11,7 @@ namespace x360ce.App.Input.Processors
         /// <summary>
         /// Gets the input method supported by this processor.
         /// </summary>
-        InputMethod SupportedMethod { get; }
+        InputSourceType SupportedMethod { get; }
 
         /// <summary>
         /// Determines if this processor can handle the specified device.

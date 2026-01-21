@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using x360ce.App.Input.Devices;
+using x360ce.Engine;
 
 namespace x360ce.App.Input.States
 {
@@ -528,27 +529,27 @@ namespace x360ce.App.Input.States
                 // Initialize with device capabilities
                 // Axes: Standard Axes + Steering
                 // Initialize at midpoint (32767) for axes to be neutral
-                for (int i = 0; i < device.AxeCount && i < CustomInputState.MaxAxes; i++) device.CustomInputState.Axes[i] = CustomInputState.ConvertToAxisRange(32767, 0, 65535, CustomInputState.InputSourceType.RawInput);
+                for (int i = 0; i < device.AxeCount && i < CustomInputState.MaxAxes; i++) device.CustomInputState.Axes[i] = CustomInputState.ConvertToAxisRange(32767, 0, 65535, InputSourceType.RawInput);
                 int axeOffset = device.AxeCount;
-                for (int i = 0; i < device.SteeringCount && (axeOffset + i) < CustomInputState.MaxAxes; i++) device.CustomInputState.Axes[axeOffset + i] = CustomInputState.ConvertToAxisRange(32767, 0, 65535, CustomInputState.InputSourceType.RawInput);
+                for (int i = 0; i < device.SteeringCount && (axeOffset + i) < CustomInputState.MaxAxes; i++) device.CustomInputState.Axes[axeOffset + i] = CustomInputState.ConvertToAxisRange(32767, 0, 65535, InputSourceType.RawInput);
 
                 // Sliders: Standard Sliders + Throttle + Brake + Accelerator + Clutch
                 // Initialize at 0 for sliders
                 // Note: Array is already initialized to 0, so explicit assignment is redundant but harmless.
                 // Keeping it implicit or explicit for clarity. Explicit matches previous behavior.
-                for (int i = 0; i < device.SliderCount && i < CustomInputState.MaxSliders; i++) device.CustomInputState.Sliders[i] = CustomInputState.ConvertToAxisRange(0, 0, 65535, CustomInputState.InputSourceType.RawInput);
+                for (int i = 0; i < device.SliderCount && i < CustomInputState.MaxSliders; i++) device.CustomInputState.Sliders[i] = CustomInputState.ConvertToAxisRange(0, 0, 65535, InputSourceType.RawInput);
                 
                 int sliderOffset = device.SliderCount;
-                for (int i = 0; i < device.ThrottleCount && (sliderOffset + i) < CustomInputState.MaxSliders; i++) device.CustomInputState.Sliders[sliderOffset + i] = CustomInputState.ConvertToAxisRange(0, 0, 65535, CustomInputState.InputSourceType.RawInput);
+                for (int i = 0; i < device.ThrottleCount && (sliderOffset + i) < CustomInputState.MaxSliders; i++) device.CustomInputState.Sliders[sliderOffset + i] = CustomInputState.ConvertToAxisRange(0, 0, 65535, InputSourceType.RawInput);
                 
                 sliderOffset += device.ThrottleCount;
-                for (int i = 0; i < device.BrakeCount && (sliderOffset + i) < CustomInputState.MaxSliders; i++) device.CustomInputState.Sliders[sliderOffset + i] = CustomInputState.ConvertToAxisRange(0, 0, 65535, CustomInputState.InputSourceType.RawInput);
+                for (int i = 0; i < device.BrakeCount && (sliderOffset + i) < CustomInputState.MaxSliders; i++) device.CustomInputState.Sliders[sliderOffset + i] = CustomInputState.ConvertToAxisRange(0, 0, 65535, InputSourceType.RawInput);
                 
                 sliderOffset += device.BrakeCount;
-                for (int i = 0; i < device.AcceleratorCount && (sliderOffset + i) < CustomInputState.MaxSliders; i++) device.CustomInputState.Sliders[sliderOffset + i] = CustomInputState.ConvertToAxisRange(0, 0, 65535, CustomInputState.InputSourceType.RawInput);
+                for (int i = 0; i < device.AcceleratorCount && (sliderOffset + i) < CustomInputState.MaxSliders; i++) device.CustomInputState.Sliders[sliderOffset + i] = CustomInputState.ConvertToAxisRange(0, 0, 65535, InputSourceType.RawInput);
                 
                 sliderOffset += device.AcceleratorCount;
-                for (int i = 0; i < device.ClutchCount && (sliderOffset + i) < CustomInputState.MaxSliders; i++) device.CustomInputState.Sliders[sliderOffset + i] = CustomInputState.ConvertToAxisRange(0, 0, 65535, CustomInputState.InputSourceType.RawInput);
+                for (int i = 0; i < device.ClutchCount && (sliderOffset + i) < CustomInputState.MaxSliders; i++) device.CustomInputState.Sliders[sliderOffset + i] = CustomInputState.ConvertToAxisRange(0, 0, 65535, InputSourceType.RawInput);
 
                 // Buttons initialized to 0 by default
                 
@@ -609,7 +610,7 @@ namespace x360ce.App.Input.States
                             max = device.DeviceAxisProperties[key].Max;
                         }
 
-                        deviceState.Axes[axisIndex] = CustomInputState.ConvertToAxisRange(value, min, max, CustomInputState.InputSourceType.RawInput);
+                        deviceState.Axes[axisIndex] = CustomInputState.ConvertToAxisRange(value, min, max, InputSourceType.RawInput);
                         axisIndex++; // Move to next axis position
                     }
                 }
@@ -648,7 +649,7 @@ namespace x360ce.App.Input.States
                                 max = device.DeviceAxisProperties[key].Max;
                             }
 
-                            deviceState.Axes[axisIndex] = CustomInputState.ConvertToAxisRange(value, min, max, CustomInputState.InputSourceType.RawInput);
+                            deviceState.Axes[axisIndex] = CustomInputState.ConvertToAxisRange(value, min, max, InputSourceType.RawInput);
                             axisIndex++;
                         }
                     }
@@ -684,7 +685,7 @@ namespace x360ce.App.Input.States
                             max = device.DeviceAxisProperties[key].Max;
                         }
 
-                        deviceState.Sliders[i] = CustomInputState.ConvertToAxisRange(value, min, max, CustomInputState.InputSourceType.RawInput);
+                        deviceState.Sliders[i] = CustomInputState.ConvertToAxisRange(value, min, max, InputSourceType.RawInput);
                     }
                 }
             }
@@ -993,7 +994,7 @@ namespace x360ce.App.Input.States
                     max = device.DeviceAxisProperties[key].Max;
                 }
 
-                targetList[index] = CustomInputState.ConvertToAxisRange(value, min, max, CustomInputState.InputSourceType.RawInput);
+                targetList[index] = CustomInputState.ConvertToAxisRange(value, min, max, InputSourceType.RawInput);
             }
         }
 

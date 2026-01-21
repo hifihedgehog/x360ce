@@ -177,10 +177,10 @@
                                 <ListBox Grid.ColumnSpan="2" Name="InputMethodListBox" Margin="0,0,0,5"
 								         SelectionChanged="InputMethodComboBox_SelectionChanged"
 								         SelectionMode="Single">
-                                    <ListBoxItem Name="DirectInputItem" Content="DirectInput - Default (most compatible)" Tag="{x:Static engine:InputMethod.DirectInput}" />
-                                    <ListBoxItem Name="XInputItem" Content="XInput" Tag="{x:Static engine:InputMethod.XInput}" />
-                                    <ListBoxItem Name="GamingInputItem" Content="GamingInput" Tag="{x:Static engine:InputMethod.GamingInput}" />
-                                    <ListBoxItem Name="RawInputItem" Content="RawInput - Advanced (with background access)" Tag="{x:Static engine:InputMethod.RawInput}" />
+                                    <ListBoxItem Name="DirectInputItem" Content="DirectInput - Default (most compatible)" Tag="{x:Static engine:InputSourceType.DirectInput}" />
+                                    <ListBoxItem Name="XInputItem" Content="XInput" Tag="{x:Static engine:InputSourceType.XInput}" />
+                                    <ListBoxItem Name="GamingInputItem" Content="GamingInput" Tag="{x:Static engine:InputSourceType.GamingInput}" />
+                                    <ListBoxItem Name="RawInputItem" Content="RawInput - Advanced (with background access)" Tag="{x:Static engine:InputSourceType.RawInput}" />
                                 </ListBox>
 								<!--Vendor-->
                                 <Label Grid.Row="2" Content="Vendor" />

@@ -81,16 +81,16 @@ namespace x360ce.App.Input.Orchestration
 			{
 				switch (device.InputMethod)
 				{
-					case InputMethod.DirectInput:
+					case InputSourceType.DirectInput:
 						directInputProcessor.LoadCapabilities(device);
 						break;
-					case InputMethod.XInput:
+					case InputSourceType.XInput:
 						xInputProcessor.LoadCapabilities(device);
 						break;
-					case InputMethod.GamingInput:
+					case InputSourceType.GamingInput:
 						gamingInputProcessor.LoadCapabilities(device);
 						break;
-					case InputMethod.RawInput:
+					case InputSourceType.RawInput:
 						rawInputProcessor.LoadCapabilities(device);
 						break;
 					default:
@@ -127,13 +127,13 @@ namespace x360ce.App.Input.Orchestration
 			{
 				switch (device.InputMethod)
 				{
-					case InputMethod.DirectInput:
+					case InputSourceType.DirectInput:
 						return directInputProcessor.GetCapabilitiesInfo(device);
-					case InputMethod.XInput:
+					case InputSourceType.XInput:
 						return xInputProcessor.GetCapabilitiesInfo(device);
-					case InputMethod.GamingInput:
+					case InputSourceType.GamingInput:
 						return gamingInputProcessor.GetCapabilitiesInfo(device);
-					case InputMethod.RawInput:
+					case InputSourceType.RawInput:
 						return rawInputProcessor.GetCapabilitiesInfo(device);
 					default:
 						return $"Unknown InputMethod: {device.InputMethod}";

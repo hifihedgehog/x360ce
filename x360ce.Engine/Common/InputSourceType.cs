@@ -4,8 +4,10 @@ namespace x360ce.Engine
 	/// Defines the input method used to read controller data.
 	/// Each method has specific capabilities and limitations that must be understood by the user.
 	/// </summary>
-	public enum InputMethod
+	[System.Flags]	
+	public enum InputSourceType
 	{
+		Unknown = 0,
 		/// <summary>
 		/// DirectInput - Legacy Microsoft DirectInput API (SharpDX wrapper)
 		/// 
@@ -22,7 +24,7 @@ namespace x360ce.Engine
 		/// • Windows Store Apps cannot use DirectInput
 		/// • Microsoft no longer recommends using DirectInput (deprecated)
 		/// </summary>
-		DirectInput = 0,
+		DirectInput = 1,
 
 		/// <summary>
 		/// XInput - Microsoft XInput API for Xbox controllers
@@ -40,7 +42,7 @@ namespace x360ce.Engine
 		/// • Cannot activate extra 2 rumble motors in Xbox One controller triggers
 		/// • No support for generic gamepads or specialized controllers
 		/// </summary>
-		XInput = 1,
+		XInput = 2,
 
 		/// <summary>
 		/// Gaming Input - Windows.Gaming.Input API (Windows 10+)
@@ -58,7 +60,7 @@ namespace x360ce.Engine
 		/// • Desktop apps need special WinRT bridging (complex implementation)
 		/// • May not work properly in non-UWP desktop applications
 		/// </summary>
-		GamingInput = 2,
+		GamingInput = 4,
 
 		/// <summary>
 		/// Raw Input - Windows Raw Input API for direct HID access
@@ -78,6 +80,6 @@ namespace x360ce.Engine
 		/// • No built-in controller abstraction (custom profiles needed)
 		/// • Complex device capability detection required
 		/// </summary>
-		RawInput = 3
+		RawInput = 8
 	}
 }

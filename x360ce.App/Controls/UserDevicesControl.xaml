@@ -201,10 +201,10 @@
 						<DataGridTemplateColumn.CellEditingTemplate>
 							<DataTemplate>
 								<ComboBox Name="InputMethodComboBox" SelectedItem="{Binding InputMethod, Mode=TwoWay}">
-									<engine:InputMethod>DirectInput</engine:InputMethod>
-									<engine:InputMethod>XInput</engine:InputMethod>
-									<engine:InputMethod>GamingInput</engine:InputMethod>
-									<engine:InputMethod>RawInput</engine:InputMethod>
+									<engine:InputSourceType>DirectInput</engine:InputSourceType>
+									<engine:InputSourceType>XInput</engine:InputSourceType>
+									<engine:InputSourceType>GamingInput</engine:InputSourceType>
+									<engine:InputSourceType>RawInput</engine:InputSourceType>
 								</ComboBox>
 							</DataTemplate>
 						</DataGridTemplateColumn.CellEditingTemplate>

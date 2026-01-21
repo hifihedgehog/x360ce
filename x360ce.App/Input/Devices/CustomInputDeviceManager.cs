@@ -219,19 +219,19 @@ namespace x360ce.App.Input.Devices
 
             switch (userDevice.InputMethod)
             {
-                case InputMethod.DirectInput:
+                case InputSourceType.DirectInput:
                     info = new DirectInputDeviceInfo();
                     inputType = "DirectInput";
                     break;
-                case InputMethod.XInput:
+                case InputSourceType.XInput:
                     info = new XInputDeviceInfo();
                     inputType = "XInput";
                     break;
-                case InputMethod.RawInput:
+                case InputSourceType.RawInput:
                     info = new RawInputDeviceInfo();
                     inputType = "RawInput";
                     break;
-                case InputMethod.GamingInput:
+                case InputSourceType.GamingInput:
                     info = new GamingInputDeviceInfo();
                     inputType = "GamingInput";
                     break;

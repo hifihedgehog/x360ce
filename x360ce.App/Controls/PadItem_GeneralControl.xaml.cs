@@ -373,7 +373,7 @@ namespace x360ce.App.Controls
 
 			// Sliders - Use DiSliderMask to detect which sliders are available
 			// This provides accurate slider detection based on device capabilities
-			if (ud.InputMethod == x360ce.Engine.InputMethod.DirectInput)
+			if (ud.InputMethod == x360ce.Engine.InputSourceType.DirectInput)
 			{
 				// For DirectInput, use the DiSliderMask calculated during capability loading
 				// This mask indicates which slider offsets are present on the device
@@ -391,7 +391,7 @@ namespace x360ce.App.Controls
 				// For non-DirectInput input methods, handle sliders based on specific input method
 				switch (ud.InputMethod)
 				{
-					case x360ce.Engine.InputMethod.XInput:
+					case x360ce.Engine.InputSourceType.XInput:
 						// XInput doesn't use sliders - triggers are handled as separate axes (axes 4 and 5)
 						// No sliders should be added for XInput to match the reported capabilities
 						break;
@@ -474,7 +474,7 @@ namespace x360ce.App.Controls
 			foreach (var kvp in AxisDictionary)
 			{
 				int aDS = ud.DeviceState.Axis[kvp.Key];
-				bool active = (ud.InputMethod == x360ce.Engine.InputMethod.XInput) ? aDS > DragAndDropAxisDeadzone : aDS < 32767 - DragAndDropAxisDeadzone || aDS > 32767 + DragAndDropAxisDeadzone;
+				bool active = (ud.InputMethod == x360ce.Engine.InputSourceType.XInput) ? aDS > DragAndDropAxisDeadzone : aDS < 32767 - DragAndDropAxisDeadzone || aDS > 32767 + DragAndDropAxisDeadzone;
 				AxisDictionary[kvp.Key].Item1.Background = active ? colorActive : Brushes.Transparent;
 				AxisDictionary[kvp.Key].Item2.Content = aDS;
 
@@ -549,20 +549,20 @@ namespace x360ce.App.Controls
 		/// <param name="ud">The UserDevice to check</param>
 		/// <param name="inputMethod">The input method to check</param>
 		/// <returns>True if the input method is supported</returns>
-		private bool IsInputMethodSupported(UserDevice ud, Engine.InputMethod inputMethod)
+		private bool IsInputMethodSupported(UserDevice ud, Engine.InputSourceType inputMethod)
 		{
 			if (ud == null)
 				return false;
 
 			switch (inputMethod)
 			{
-				case Engine.InputMethod.DirectInput:
+				case Engine.InputSourceType.DirectInput:
 					return InputMethodDetector.SupportsDirectInput(ud);
-				case Engine.InputMethod.XInput:
+				case Engine.InputSourceType.XInput:
 					return InputMethodDetector.SupportsXInput(ud);
-				case Engine.InputMethod.GamingInput:
+				case Engine.InputSourceType.GamingInput:
 					return InputMethodDetector.SupportsGamingInput(ud);
-				case Engine.InputMethod.RawInput:
+				case Engine.InputSourceType.RawInput:
 					return InputMethodDetector.SupportsRawInput(ud);
 				default:
 					return false;
@@ -575,7 +575,7 @@ namespace x360ce.App.Controls
 		/// <param name="ud">The UserDevice</param>
 		/// <param name="inputMethod">The current input method</param>
 		/// <param name="isSupported">Whether the input method is supported</param>
-		private void UpdateInputMethodTooltip(UserDevice ud, Engine.InputMethod inputMethod, bool isSupported)
+		private void UpdateInputMethodTooltip(UserDevice ud, Engine.InputSourceType inputMethod, bool isSupported)
 		{
 			if (!isSupported)
 			{
@@ -586,28 +586,28 @@ namespace x360ce.App.Controls
 
 			switch (inputMethod)
 			{
-				case Engine.InputMethod.DirectInput:
+				case Engine.InputSourceType.DirectInput:
 					var diLimitation = ud.IsXboxCompatible && InputMethodDetector.IsWindows10OrLater()
 						? "\n\nNote: Xbox controllers may lose background access on Windows 10+"
 						: "";
 					InputMethodStatusLabel.ToolTip = $"DirectInput provides universal controller support.{diLimitation}";
 					break;
 
-				case Engine.InputMethod.XInput:
+				case Engine.InputSourceType.XInput:
 					var slotsInfo = InputMethodDetector.GetAvailableXInputSlots() < 4
 						? $"\n\n{4 - InputMethodDetector.GetAvailableXInputSlots()} XInput slots available"
 						: "\n\nAll 4 XInput slots available";
 					InputMethodStatusLabel.ToolTip = $"XInput provides Xbox controller support with background access.{slotsInfo}";
 					break;
 
-				case Engine.InputMethod.GamingInput:
+				case Engine.InputSourceType.GamingInput:
 					var support = ud.IsXboxCompatible
 						? "full Xbox features including trigger rumble"
 						: "basic gamepad support";
 					InputMethodStatusLabel.ToolTip = $"GamingInput provides {support}.\n\nRequires Windows 10+. No background access.";
 					break;
 
-				case Engine.InputMethod.RawInput:
+				case Engine.InputSourceType.RawInput:
 					InputMethodStatusLabel.ToolTip = "RawInput provides direct HID access with background support.\n\nMore complex setup but works with all controllers.";
 					break;
 
@@ -667,7 +667,7 @@ namespace x360ce.App.Controls
 
 
             // Update all XILabel controls to show appropriate visual feedback
-            bool showXILabels = ud != null && ud.InputMethod == Engine.InputMethod.XInput && InputMethodDetector.SupportsXInput(ud);
+            bool showXILabels = ud != null && ud.InputMethod == Engine.InputSourceType.XInput && InputMethodDetector.SupportsXInput(ud);
             var foregroundBrush = showXILabels ? Brushes.Gray : Brushes.Green;
             foreach (Label label in labels)
 			{
@@ -675,7 +675,7 @@ namespace x360ce.App.Controls
             }
 
             // Set content to indicate unavailable state when not supported
-            if (!showXILabels && ud?.InputMethod == Engine.InputMethod.XInput)
+            if (!showXILabels && ud?.InputMethod == Engine.InputSourceType.XInput)
 			{
                 var unavailableText = "-";
                 foreach (Label label in labels)

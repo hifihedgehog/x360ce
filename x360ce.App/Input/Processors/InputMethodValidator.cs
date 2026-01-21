@@ -83,7 +83,7 @@ namespace x360ce.App.Input.Processors
 		/// This method provides centralized device validation by dispatching to the
 		/// appropriate input processor's validation method.
 		/// </remarks>
-		public static ValidationResult ValidateDeviceForInputMethod(UserDevice device, InputMethod inputMethod)
+		public static ValidationResult ValidateDeviceForInputMethod(UserDevice device, InputSourceType inputMethod)
 		{
 			if (device == null)
 				return ValidationResult.Error("Device is null");
@@ -100,16 +100,16 @@ namespace x360ce.App.Input.Processors
 
 				switch (inputMethod)
 				{
-					case InputMethod.DirectInput:
+					case InputSourceType.DirectInput:
 						return ValidateDirectInputDevice(device);
 
-					case InputMethod.XInput:
+					case InputSourceType.XInput:
 						return orchestrator.xInputProcessor.ValidateXInputDevice(device);
 
-					case InputMethod.GamingInput:
+					case InputSourceType.GamingInput:
 						return orchestrator.gamingInputProcessor.ValidateDevice(device);
 
-					case InputMethod.RawInput:
+					case InputSourceType.RawInput:
 						return orchestrator.rawInputProcessor.ValidateDevice(device);
 
 					default:
@@ -142,32 +142,32 @@ namespace x360ce.App.Input.Processors
 			{
 				new InputMethodRecommendation
 				{
-					InputMethod = InputMethod.DirectInput,
-					Validation = ValidateDeviceForInputMethod(device, InputMethod.DirectInput),
+					InputMethod = InputSourceType.DirectInput,
+					Validation = ValidateDeviceForInputMethod(device, InputSourceType.DirectInput),
 					Description = "DirectInput - Universal compatibility",
 					Capabilities = "✅ All controllers ✅ Unlimited devices",
 					Limitations = "⚠️ Xbox background issues ⚠️ Combined triggers ⚠️ No rumble for Xbox"
 				},
 				new InputMethodRecommendation
 				{
-					InputMethod = InputMethod.XInput,
-					Validation = ValidateDeviceForInputMethod(device, InputMethod.XInput),
+					InputMethod = InputSourceType.XInput,
+					Validation = ValidateDeviceForInputMethod(device, InputSourceType.XInput),
 					Description = "XInput - Xbox controllers only",
 					Capabilities = "✅ Background access ✅ Separate triggers ✅ Full rumble ✅ Guide button",
 					Limitations = "❌ Max 4 controllers ❌ Xbox only"
 				},
 				new InputMethodRecommendation
 				{
-					InputMethod = InputMethod.GamingInput,
-					Validation = ValidateDeviceForInputMethod(device, InputMethod.GamingInput),
+					InputMethod = InputSourceType.GamingInput,
+					Validation = ValidateDeviceForInputMethod(device, InputSourceType.GamingInput),
 					Description = "Gaming Input - Windows 10+ only",
 					Capabilities = "✅ Unlimited controllers ✅ Modern API ✅ Trigger rumble",
 					Limitations = "❌ Windows 10+ only ⚠️ No background access ❌ Complex setup"
 				},
 				new InputMethodRecommendation
 				{
-					InputMethod = InputMethod.RawInput,
-					Validation = ValidateDeviceForInputMethod(device, InputMethod.RawInput),
+					InputMethod = InputSourceType.RawInput,
+					Validation = ValidateDeviceForInputMethod(device, InputSourceType.RawInput),
 					Description = "Raw Input - Low-level access",
 					Capabilities = "✅ Background access ✅ Unlimited controllers ✅ Any HID device",
 					Limitations = "⚠️ Combined triggers ⚠️ No rumble ❌ Complex implementation"
@@ -319,7 +319,7 @@ namespace x360ce.App.Input.Processors
 		/// <summary>
 		/// Gets or sets the input method being recommended.
 		/// </summary>
-		public InputMethod InputMethod { get; set; }
+		public InputSourceType InputMethod { get; set; }
 
 		/// <summary>
 		/// Gets or sets the validation result for this input method.

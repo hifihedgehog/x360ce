@@ -11,7 +11,7 @@ namespace x360ce.App.Input.Processors
         /// <summary>
         /// Gets the input method that caused the exception.
         /// </summary>
-        public InputMethod InputMethod { get; }
+        public InputSourceType InputMethod { get; }
 
         /// <summary>
         /// Gets the device that was being processed when the error occurred.
@@ -24,7 +24,7 @@ namespace x360ce.App.Input.Processors
         /// <param name="inputMethod">The input method that caused the exception</param>
         /// <param name="device">The device being processed</param>
         /// <param name="message">The error message</param>
-        public InputMethodException(InputMethod inputMethod, UserDevice device, string message)
+        public InputMethodException(InputSourceType inputMethod, UserDevice device, string message)
             : base(message)
         {
             InputMethod = inputMethod;
@@ -38,7 +38,7 @@ namespace x360ce.App.Input.Processors
         /// <param name="device">The device being processed</param>
         /// <param name="message">The error message</param>
         /// <param name="innerException">The exception that caused this exception</param>
-        public InputMethodException(InputMethod inputMethod, UserDevice device, string message, System.Exception innerException)
+        public InputMethodException(InputSourceType inputMethod, UserDevice device, string message, System.Exception innerException)
             : base(message, innerException)
         {
             InputMethod = inputMethod;
