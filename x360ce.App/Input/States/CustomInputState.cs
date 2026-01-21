@@ -423,7 +423,7 @@ namespace x360ce.App.Input.States
 			if (availableAxes != null && availableAxes.Count > 0)
 			{
 				// Update values using specific available axes mapping
-				for (hint i = 0; i < availableAxes.Count && i < MaxAxes; i++)
+				for (int i = 0; i < availableAxes.Count && i < MaxAxes; i++)
 				{
 					axes[i] = ClampAxisValue(GetAxisValue(state, availableAxes[i]));
 				}
