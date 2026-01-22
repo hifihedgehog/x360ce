@@ -138,7 +138,7 @@ namespace x360ce.App.Controls
 			if (_MappedTo == MapTo.None)
 				return;
 			var game = SettingsManager.CurrentGame;
-			var flag = AppHelper.GetMapFlag(_MappedTo);
+			var flag = EngineHelper.GetMapFlag(_MappedTo);
 			// Update Virtual.
 			var virt = game != null && ((MapToMask)game.EnableMask).HasFlag(flag);
 			EnabledCheckBox.IsChecked = virt;
@@ -172,7 +172,7 @@ namespace x360ce.App.Controls
 		{
 			var grid = DevicesDataGrid;
 			var game = SettingsManager.CurrentGame;
-			var flag = AppHelper.GetMapFlag(_MappedTo);
+			var flag = EngineHelper.GetMapFlag(_MappedTo);
 			var auto = game != null && ((MapToMask)game.AutoMapMask).HasFlag(flag);
 			// Buttons must be disabled if AutoMapping enabled for the game.
 			RemoveButton.IsEnabled = !auto && grid.SelectedItems.Count > 0;
@@ -192,7 +192,7 @@ namespace x360ce.App.Controls
 			// If no game selected then ignore click.
 			if (game == null)
 				return;
-			var currentPad = AppHelper.GetMapFlag(_MappedTo);
+			var currentPad = EngineHelper.GetMapFlag(_MappedTo);
 			var enabledPads = (MapToMask)game.EnableMask;
 			// If current controller is enabled then...
 			if (enabledPads.HasFlag(currentPad))
@@ -233,7 +233,7 @@ namespace x360ce.App.Controls
 			// If no game selected then ignore click.
 			if (game == null)
 				return;
-			var flag = AppHelper.GetMapFlag(_MappedTo);
+			var flag = EngineHelper.GetMapFlag(_MappedTo);
 			var value = (MapToMask)game.AutoMapMask;
 			var autoMap = value.HasFlag(flag);
 			// If AUTO enabled then...

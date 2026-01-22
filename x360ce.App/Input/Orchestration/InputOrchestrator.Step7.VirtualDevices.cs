@@ -50,7 +50,7 @@ namespace x360ce.App.Input.Orchestration
 			for (uint i = 1; i <= 4; i++)
 			{
 				var mapTo = (MapTo)i;
-				var flag = AppHelper.GetMapFlag(mapTo);
+				var flag = EngineHelper.GetMapFlag(mapTo);
 				var value = (MapToMask)(game?.EnableMask ?? (int)MapToMask.None);
 				var virtualEnabled = value.HasFlag(flag);
 				var feedingState = FeedingState[i - 1];

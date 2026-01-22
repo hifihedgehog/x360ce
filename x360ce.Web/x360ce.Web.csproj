@@ -207,8 +207,8 @@
     <Compile Include="..\x360ce.Engine\Common\IDisplayName.cs">
       <Link>Engine\IDisplayName.cs</Link>
     </Compile>
-    <Compile Include="..\x360ce.Engine\Common\InputMethod.cs">
-      <Link>JocysCom\InputMethod.cs</Link>
+    <Compile Include="..\x360ce.Engine\Common\InputSourceType.cs">
+      <Link>JocysCom\InputSourceType.cs</Link>
     </Compile>
     <Compile Include="..\x360ce.Engine\Common\IWebService.cs">
       <Link>Engine\IWebService.cs</Link>

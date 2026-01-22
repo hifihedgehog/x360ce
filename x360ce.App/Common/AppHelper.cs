@@ -1,5 +1,4 @@
-﻿using SharpDX.DirectInput;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -9,7 +8,6 @@ using x360ce.Engine;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using x360ce.Engine.Data;
-using SharpDX.XInput;
 using JocysCom.ClassLibrary.Win32;
 using x360ce.App.ViGEm;
 // using System.Diagnostics;
@@ -197,23 +195,6 @@ namespace x360ce.App
 			newSetting.IsEnabled = true;
 			newSetting.MapTo = (int)mapTo;
 			return newSetting;
-		}
-
-		public static MapToMask GetMapFlag(MapTo mapTo)
-		{
-			switch (mapTo)
-			{
-				case MapTo.Controller1:
-					return MapToMask.Controller1;
-				case MapTo.Controller2:
-					return MapToMask.Controller2;
-				case MapTo.Controller3:
-					return MapToMask.Controller3;
-				case MapTo.Controller4:
-					return MapToMask.Controller4;
-				default:
-					return MapToMask.None;
-			}
 		}
 
 		#region ■ HID Guardian
