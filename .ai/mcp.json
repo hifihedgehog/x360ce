@@ -1,0 +1,52 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--extension"
+      ],
+      "disabled": true,
+      "alwaysAllow": []
+    },
+    "databsename-sql-mcp": {
+      "_comment": "Azure-Samples MssqlMcp is more granular than a raw SQL server; prefer it when you want to limit available operations.",
+      "_source": "https://github.com/Azure-Samples/SQL-AI-samples/tree/main/MssqlMcp",
+      "type": "stdio",
+      "command": "dotnet",
+      "args": [
+        ".\\.ai\\MCP\\MssqlMcp\\MssqlMcp.dll"
+      ],
+      "disabled": true,
+      "env": {
+        "CONNECTION_STRING": "Server=localhost;Database=DatabaseName;Trusted_Connection=True;TrustServerCertificate=True;ApplicationIntent=ReadOnly;",
+        "READONLY": "true"
+      },
+      "alwaysAllow": [
+        "ListTables",
+        "DescribeTable",
+        "ReadData"
+      ]
+    },
+    "mssql-direct-query": {
+      "_comment": "SECURITY: This MCP can execute arbitrary SQL. It is NOT inherently read-only; enforce read-only via SQL Server/user permissions if you must use it.",
+      "_source": "https://github.com/microsoft/sql-server-mcp",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "microsoft-sql-server-mcp",
+        "mssql_mcp_server.exe"
+      ],
+      "env": {
+        "MSSQL_SERVER": "localhost",
+        "MSSQL_DATABASE": "DatabaseName",
+        "MSSQL_WINDOWS_AUTH": "true",
+        "MSSQL_ENCRYPT": "true",
+        "MSSQL_PORT": "1433"
+      },
+      "disabled": true,
+      "alwaysAllow": []
+    }
+  }
+}

@@ -68,10 +68,33 @@ function ConvertFrom-SecureString {
     return $plainText
 }
 
-function Read-ApiKey {
-    param([string]$PromptText)
-    $apiKeySecure = Read-Host "`nEnter $PromptText" -AsSecureString
-    return ConvertFrom-SecureString -SecureString $apiKeySecure
+
+function Mask-Secret {
+    param([string]$Secret)
+    if ([string]::IsNullOrWhiteSpace($Secret)) { return "" }
+    $len = $Secret.Length
+    $pre = $Secret.Substring(0, [Math]::Min(4, $len))
+    $suf = $Secret.Substring([Math]::Max(0, $len - 4))
+    return "$pre****$suf"
+}
+
+function Prompt-ForKey {
+    param([string]$PromptText, [string]$ExistingKey)
+    $masked = Mask-Secret -Secret $ExistingKey
+    if ([string]::IsNullOrWhiteSpace($masked)) {
+        $secureInput = Read-Host "`nEnter $PromptText" -AsSecureString
+    }
+    else {
+        $prompt = "`nEnter $PromptText [default: $masked]"
+        $secureInput = Read-Host $prompt -AsSecureString
+    }
+    $inputKey = ConvertFrom-SecureString -SecureString $secureInput
+    if ([string]::IsNullOrWhiteSpace($inputKey)) {
+        return $ExistingKey
+    }
+    else {
+        return $inputKey
+    }
 }
 
 #==============================================================================
@@ -91,15 +114,6 @@ function Get-CredentialChoice {
     return $choice
 }
 
-function Get-CredentialFromEnvironment {
-    param([string]$EnvVarName)
-    return [Environment]::GetEnvironmentVariable($EnvVarName)
-}
-
-function Set-CredentialToEnvironment {
-    param([string]$PromptText)
-    return Read-ApiKey -PromptText $PromptText
-}
 
 function Get-CredentialFromSecretManagement {
     param([string]$VaultName, [string]$SecretName)
@@ -200,26 +214,8 @@ function Get-OrSetCredential {
     )
     switch ($Choice) {
         '1' {
-            $existingKey = Get-CredentialFromEnvironment -EnvVarName $EnvVarName
-            if (-not [string]::IsNullOrWhiteSpace($existingKey)) {
-                $len = $existingKey.Length
-                $pre = $existingKey.Substring(0, [Math]::Min(4, $len))
-                $suf = $existingKey.Substring([Math]::Max(0, $len - 4))
-                $masked = "$pre****$suf"
-                $prompt = "`nEnter $PromptText [default: $masked]"
-                $secureInput = Read-Host $prompt -AsSecureString
-                $inputKey = ConvertFrom-SecureString -SecureString $secureInput
-                if ([string]::IsNullOrWhiteSpace($inputKey)) {
-                    $apiKey = $existingKey
-                }
-                else {
-                    $apiKey = $inputKey
-                }
-            }
-            else {
-                Write-Host "`n> Environment variable `$EnvVarName is empty or whitespace; prompting for secure input..." -ForegroundColor Yellow
-                $apiKey = Set-CredentialToEnvironment -PromptText $PromptText
-            }
+            $existingKey = [Environment]::GetEnvironmentVariable($EnvVarName)
+            $apiKey = Prompt-ForKey -PromptText $PromptText -ExistingKey $existingKey
             return $apiKey
         }
         '2' {
@@ -328,10 +324,8 @@ if ($choice -ne '1') {
 $apiKey = Get-OrSetCredential -Choice $choice -VaultName $vaultName -SecretName $currentSecretName -EnvVarName $envVarName -PromptText $promptText
 
 if ($apiKey) {
-    $len = $apiKey.Length
-    $pre = $apiKey.Substring(0, [Math]::Min(4, $len))
-    $suf = $apiKey.Substring([Math]::Max(0, $len - 4))
-    Write-Host "`n> Using API key: $pre****$suf" -ForegroundColor Cyan
+    $masked = Mask-Secret -Secret $apiKey
+    Write-Host "`n> Using API key: $masked" -ForegroundColor Cyan
 }
 
 # ---------- 5. Configure environment and Codex ----------

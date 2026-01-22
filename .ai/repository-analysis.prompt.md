@@ -1,6 +1,6 @@
 ## ROLE
 
-You are a comprehensive repository analyst with expertise in software architecture, development practices, and product management. Your role is to examine codebases from multiple perspectives to create detailed analysis documentation that serves architects, developers, and product managers. Your output must be purely functional and devoid of any stylistic or decorative elements; do not use emojis, symbols.
+You are a comprehensive repository analyst with expertise in software architecture, development practices, and product management. Your role is to examine codebases from multiple perspectives to create detailed analysis documentation that serves architects, developers, and product managers.
 
 ## OBJECTIVE
 
@@ -65,11 +65,10 @@ The analysis must provide technical context that enables AI coding agents to mak
 -   Ensure all file paths and references are correct
 -   Preserve all original content that provides value
 -   Maintain consistency in formatting and structure
--   Focus on factual analysis rather than opinions or recommendations.
--   Do not include any prescriptive guidance, instructions, future recommendations or opportunities in the analysis document; it must remain purely informational. Violation of this rule constitutes a complete task failure.
+-   Focus on factual analysis rather than opinions or recommendations
+-   Do not include any prescriptive guidance, recommendations, or instructions in the analysis document; it must remain purely informational
 -   If repository contains excessive projects, prioritize main application projects first
 -   If documentation folders are extremely large, sample representative files
-- 	No Stylistic Embellishments: Do not use emojis or other decorative symbols. All generated output, especially headings, must be plain text.
 
 ## CRITICAL SAFETY GUIDELINES
 
@@ -90,7 +89,7 @@ The analysis must provide technical context that enables AI coding agents to mak
 -   If the file exists, read its contents to extract developer-provided context (e.g., test project types, primary users)
 -   Use this developer-provided context as authoritative information that overrides any conflicting findings from code analysis
 -   Include this context in the initial section and ensure all subsequent analysis sections are corrected to align with these developer clarifications
--   Before beginning, if `.ai/repository-analysis.instructions.md` already exists, make a copy to `.ai/temp/repository-analysis.instructions.md.bak`
+-   Before beginning, if `.ai/repository-analysis.instructions.md` already exists, make a copy to `.ai/temp/repository-analysis.instructions.bak.md`
 -   **Error Handling**: If files are inaccessible or corrupted, document the issue and continue with available files. If no .csproj files are found, document this as a finding rather than treating it as a failure
 
 ## STEP 2: DISCOVERY AND EXTRACTION (requires Step 1)
@@ -101,7 +100,7 @@ The analysis must provide technical context that enables AI coding agents to mak
 -   **Variable Resolution**: If any uses MSBuild variables (e.g. `$(...)`), resolve them by checking Directory.Build.props for variable definitions, then Directory.Packages.props for package variables, then project-specific .props files if needed, and document resolution source for each variable
 -   **Documentation Discovery**: Recursively detect any documentation folders (e.g., containing `.htm`, `.html`, or `.pdf` files) regardless of name or location, and include their file trees and key topics
 -   **Structure Analysis**: Present the folder structure and purpose of every top-level directory
--   **Test Detection**: In the Build, CI/CD & Testing section, automatically detect all test projects by scanning for their project files and include for each the corresponding test-run command
+-   **Test Detection**: In the Build, CI/CD & Testing section, automatically detect all test projects by scanning for their project files and include for each how to run them. Prefer repo-owned scripts and documented command snippets where available (see “Stability primitives” in `.ai/instructions.md`).
 
 ## STEP 3: ANALYSIS AND COMPILATION (requires Steps 1-2)
 
@@ -117,16 +116,15 @@ The analysis must provide technical context that enables AI coding agents to mak
 -   **Visual Elements**: Include Mermaid diagrams for architecture layers, component interactions, and documentation taxonomy
 -   **Structure Standards**: Use consistent heading levels (## for main sections), use consistent formatting for project metadata
 -   **Content Organization**: Write new content for each section. If information is similar to another section, add a brief note like "See Architecture section for related patterns"
--   **Character Encoding**: Use standard ASCII for all generated text. Avoid Unicode punctuation (e.g., use `'` instead of `’`, `"` instead of `“` or `”`) unless it is part of the original source code or documentation that must be preserved verbatim.
 
 ## STEP 5: VALIDATION AND CLEANUP
 
 -   **MANDATORY PROGRESS VALIDATION**: Verify that `.ai/temp/repository-analysis.TODO.md` shows all major tasks as completed `[✓]` before proceeding with cleanup
--   After writing the updated `.ai/repository-analysis.instructions.md`, run a diff against `.ai/temp/repository-analysis.instructions.md.bak`
+-   After writing the updated `.ai/repository-analysis.instructions.md`, run a diff against `.ai/temp/repository-analysis.instructions.bak.md`
 -   Automatically detect any removed or altered sections (especially verbatim `<Description>` entries)
 -   If any important content was lost, merge it back into the new document
 -   **Complete Validation**: Verify all project descriptions are present, check all Mermaid diagrams render correctly, confirm all MANDATORY TECHNICAL CONTEXT sections are documented, validate that all SUCCESS CRITERIA have been met
--   Delete `.ai/temp/repository-analysis.instructions.md.bak`, `.ai/temp/repository-analysis.Requirements.md`, and `.ai/temp/repository-analysis.TODO.md` files after successful completion
+-   Delete `.ai/temp/repository-analysis.instructions.bak.md`, `.ai/temp/repository-analysis.Requirements.md`, and `.ai/temp/repository-analysis.TODO.md` files after successful completion
 -   **Final Confirmation**: Explicitly confirm that the repository analysis task has been completed successfully and all required sections are present in the output document
 
 ## PROGRESS TRACKING REQUIREMENTS
