@@ -664,16 +664,6 @@ Mobile applications handle remote controller functionality:
 
 ==== END OF INSTRUCTIONS FROM: repository-analysis.instructions.md ====
 
-==== START OF INSTRUCTIONS FROM: self-improvement.instructions.md ====
-
-# Instructions from: self-improvement.instructions.md
-
-## Self-Improvement
-
-When the user asks you to improve, analyze, or modify your own instructions or processes, read `.ai/self-improvement.instructions-detail.md` for detailed instructions.
-
-==== END OF INSTRUCTIONS FROM: self-improvement.instructions.md ====
-
 ==== START OF INSTRUCTIONS FROM: tool.instructions.md ====
 
 # Instructions from: tool.instructions.md
