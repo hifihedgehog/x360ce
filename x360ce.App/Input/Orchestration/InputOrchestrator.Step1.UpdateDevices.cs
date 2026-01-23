@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using x360ce.App.Controls;
 using x360ce.App.Input.Devices;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.Orchestration;
 
 namespace x360ce.App.Input.Orchestration
 {

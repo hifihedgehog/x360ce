@@ -51,7 +51,7 @@ namespace x360ce.App.Input.Orchestration
 				}
 			}
 
-			StatesRetrieved?.Invoke(this, new DInputEventArgs(error));
+			StatesRetrieved?.Invoke(this, new x360ce.Engine.Input.Orchestration.DInputEventArgs(error));
 		}
 
 		//void RetrieveXiStates(bool getXInputStates)

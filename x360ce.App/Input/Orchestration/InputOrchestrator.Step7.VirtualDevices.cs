@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Input;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.Orchestration;
 
 namespace x360ce.App.Input.Orchestration
 {

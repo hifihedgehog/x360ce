@@ -1,7 +1,7 @@
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
-namespace x360ce.App.Input.Processors
+namespace x360ce.Engine.Input.Processors
 {
     /// <summary>
     /// Exception thrown when an input method encounters an error specific to its limitations.

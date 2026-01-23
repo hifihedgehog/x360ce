@@ -7,6 +7,7 @@ using System.Threading;
 using x360ce.App.Input.Processors;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.Orchestration;
 
 namespace x360ce.App.Input.Orchestration
 {
