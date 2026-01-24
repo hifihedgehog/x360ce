@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using x360ce.Engine.Input.Devices;
 
-namespace x360ce.App.Input.Triggers
+namespace x360ce.Engine.Input.Triggers
 {
     /// <summary>
     /// Monitors device list changes and maintains a custom input device list.
     /// Triggers CustomInputDeviceInfoList updates when any source list changes.
     /// Updates are incremental - only affected items are modified (existing devices updated in place, new devices added, removed devices deleted).
     /// </summary>
-    internal class CustomInputDeviceConnection
+    public class CustomInputDeviceConnection
     {
         /// <summary>
         /// Event triggered when the custom device list needs to be updated.
@@ -194,7 +194,7 @@ namespace x360ce.App.Input.Triggers
     /// <summary>
     /// Event arguments for custom device list update events.
     /// </summary>
-    internal class CustomDeviceListUpdateEventArgs : EventArgs
+    public class CustomDeviceListUpdateEventArgs : EventArgs
     {
         /// <summary>
         /// Input type that triggered the update (PnPInput, RawInput, DirectInput, XInput, GamingInput).

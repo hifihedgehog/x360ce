@@ -7,13 +7,13 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using x360ce.Engine.Input.Devices;
 
-namespace x360ce.App.Input.Triggers
+namespace x360ce.Engine.Input.Triggers
 {
 	/// <summary>
 	/// Handles device selection events and generates device information display.
 	/// Extracts detailed device properties and formats them for display in a 3-column layout.
 	/// </summary>
-	internal class DevicesTab_DeviceSelectedInfo
+	public class DevicesTab_DeviceSelectedInfo
 	{
 		private readonly CustomInputDeviceManager _customInputDeviceInfoInternal;
 
@@ -97,7 +97,7 @@ namespace x360ce.App.Input.Triggers
 		/// </summary>
 		/// <param name="deviceObject">The device object to extract properties from</param>
 		/// <returns>List of property name-value pairs</returns>
-		internal static List<(string Name, string Value)> ExtractDeviceProperties(object deviceObject)
+		public static List<(string Name, string Value)> ExtractDeviceProperties(object deviceObject)
 		{
 			var properties = new List<(string Name, string Value)>();
 

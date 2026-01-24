@@ -7,13 +7,13 @@ using System.Windows.Media;
 using x360ce.Engine.Input.Devices;
 using x360ce.Engine.Input.States;
 
-namespace x360ce.App.Input.Triggers
+namespace x360ce.Engine.Input.Triggers
 {
     /// <summary>
     /// Handles device selection events and generates device information display.
     /// Extracts detailed device inputs and formats them for display.
     /// </summary>
-    internal class DevicesTab_DeviceSelectedInput
+    public class DevicesTab_DeviceSelectedInput
     {
         private readonly CustomInputDeviceManager _customInputDeviceInfoInternal;
 

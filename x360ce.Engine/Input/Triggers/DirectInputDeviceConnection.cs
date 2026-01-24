@@ -3,7 +3,7 @@ using System;
 using System.Linq;
 using System.Threading;
 
-namespace x360ce.App.Input.Triggers
+namespace x360ce.Engine.Input.Triggers
 {
 	/// <summary>
 	/// Monitors DirectInput device connections using periodic polling.
@@ -14,7 +14,7 @@ namespace x360ce.App.Input.Triggers
 	/// uses lightweight periodic polling combined with Windows device change messages for efficiency.
 	/// Polling interval: 2000ms (2 seconds) - sufficient for user-initiated device changes.
 	/// </remarks>
-	internal class DirectInputDeviceConnection : IDisposable
+	public class DirectInputDeviceConnection : IDisposable
 	{
 		private Timer _pollingTimer;
 		private int _lastDeviceCount;

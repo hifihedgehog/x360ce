@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace x360ce.App.Input.Triggers
+namespace x360ce.Engine.Input.Triggers
 {
 	/// <summary>
 	/// Monitors PnP Input device connections using Windows WM_DEVICECHANGE messages.
@@ -17,7 +17,7 @@ namespace x360ce.App.Input.Triggers
 	/// - GUID_DEVCLASS_KEYBOARD (Keyboards)
 	/// - GUID_DEVCLASS_MOUSE (Mice and pointing devices)
 	/// </remarks>
-	internal class PnPInputDeviceConnection : IDisposable
+	public class PnPInputDeviceConnection : IDisposable
 	{
 		#region Win32 Constants and Structures
 

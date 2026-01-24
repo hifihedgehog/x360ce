@@ -1,7 +1,7 @@
 ﻿using System;
 using Windows.Gaming.Input;
 
-namespace x360ce.App.Input.Triggers
+namespace x360ce.Engine.Input.Triggers
 {
 	/// <summary>
 	/// Monitors GamingInput device connections using native event notifications.
@@ -12,7 +12,7 @@ namespace x360ce.App.Input.Triggers
 	/// event-driven device monitoring without polling overhead.
 	/// Requires Windows 10+ for Gaming Input API availability.
 	/// </remarks>
-	internal class GamingInputDeviceConnection : IDisposable
+	public class GamingInputDeviceConnection : IDisposable
 	{
 		private bool _isMonitoring;
 		private bool _disposed;

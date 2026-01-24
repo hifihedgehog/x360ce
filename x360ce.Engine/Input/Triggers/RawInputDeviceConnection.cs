@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace x360ce.App.Input.Triggers
+namespace x360ce.Engine.Input.Triggers
 {
 	/// <summary>
 	/// Monitors RawInput device connections using Windows WM_INPUT_DEVICE_CHANGE messages.
@@ -15,7 +15,7 @@ namespace x360ce.App.Input.Triggers
 	/// Filters device changes to only trigger updates for device types that are actually enumerated
 	/// (Mouse, Keyboard, and HID devices), preventing unnecessary list updates for other device types.
 	/// </remarks>
-	internal class RawInputDeviceConnection : IDisposable
+	public class RawInputDeviceConnection : IDisposable
 	{
 		#region Win32 Constants and Structures
 

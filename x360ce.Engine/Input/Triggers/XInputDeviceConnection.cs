@@ -2,7 +2,7 @@
 using System.Threading;
 using SharpDX.XInput;
 
-namespace x360ce.App.Input.Triggers
+namespace x360ce.Engine.Input.Triggers
 {
 	/// <summary>
 	/// Monitors XInput device connections using periodic polling.
@@ -13,7 +13,7 @@ namespace x360ce.App.Input.Triggers
 	/// uses lightweight periodic polling of the 4 XInput controller slots.
 	/// Polling interval: 1000ms (1 second) - XInput polling is very lightweight.
 	/// </remarks>
-	internal class XInputDeviceConnection : IDisposable
+	public class XInputDeviceConnection : IDisposable
 	{
 		private Timer _pollingTimer;
 		private readonly bool[] _lastSlotStates = new bool[4];

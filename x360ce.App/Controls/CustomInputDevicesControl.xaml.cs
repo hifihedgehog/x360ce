@@ -12,7 +12,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using x360ce.Engine.Input.Devices;
 using x360ce.Engine.Input.States;
-using x360ce.App.Input.Triggers;
+using x360ce.Engine.Input.Triggers;
 using x360ce.App.Timers;
 
 namespace x360ce.App.Controls
