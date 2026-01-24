@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
-namespace x360ce.App.Input.Processors
+namespace x360ce.Engine.Input.Processors
 {
 	/// <summary>
 	/// HID state mapping for Raw Input devices.

@@ -101,7 +101,7 @@ namespace x360ce.App.Input.Orchestration
 		public DirectInputProcessor directInputProcessor = new DirectInputProcessor();
 		public XInputProcessor xInputProcessor = new XInputProcessor();
 		public GamingInputProcessor gamingInputProcessor = new GamingInputProcessor();
-		public RawInputProcessor rawInputProcessor = new RawInputProcessor();
+		public x360ce.Engine.Input.Processors.RawInputProcessor rawInputProcessor = new x360ce.Engine.Input.Processors.RawInputProcessor();
 
 		#endregion
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using x360ce.Engine;
 
-namespace x360ce.App.Input.Processors
+namespace x360ce.Engine.Input.Processors
 {
 	/// <summary>
 	/// Represents information about a Raw Input device.

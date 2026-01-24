@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.Processors;
 
 namespace x360ce.App.Input.Processors
 {

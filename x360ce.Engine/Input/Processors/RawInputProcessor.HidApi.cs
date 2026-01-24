@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace x360ce.App.Input.Processors
+namespace x360ce.Engine.Input.Processors
 {
 	/// <summary>
 	/// Windows HID API declarations and structures for Raw Input processing.

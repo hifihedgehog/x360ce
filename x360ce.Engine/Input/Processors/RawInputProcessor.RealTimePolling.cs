@@ -5,7 +5,7 @@ using System.Diagnostics;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
-namespace x360ce.App.Input.Processors
+namespace x360ce.Engine.Input.Processors
 {
 	/// <summary>
 	/// Real-time polling support for RawInputProcessor.

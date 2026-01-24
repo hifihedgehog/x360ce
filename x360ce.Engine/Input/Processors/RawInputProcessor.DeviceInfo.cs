@@ -5,7 +5,7 @@ using SharpDX.DirectInput;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
-namespace x360ce.App.Input.Processors
+namespace x360ce.Engine.Input.Processors
 {
 	/// <summary>
 	/// Device information and capability management for Raw Input devices.

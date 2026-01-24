@@ -7,7 +7,7 @@ using x360ce.Engine;
 using x360ce.Engine.Data;
 using x360ce.Engine.Input.Processors;
 
-namespace x360ce.App.Input.Processors
+namespace x360ce.Engine.Input.Processors
 {
 	/// <summary>
 	/// TRUE Raw Input processor - Uses actual Windows Raw Input API for HID-compliant devices.
@@ -130,6 +130,11 @@ namespace x360ce.App.Input.Processors
 		private bool _isInitialized = false;
 
 		/// <summary>
+		/// Gets or sets whether Raw Input should use real-time polling instead of cached WM_INPUT states.
+		/// </summary>
+		public bool UseRealTimePolling { get; set; }
+
+		/// <summary>
 		/// Hidden window for Raw Input message processing.
 		/// </summary>
 		private RawInputWindow _hiddenWindow;
@@ -224,7 +229,7 @@ namespace x360ce.App.Input.Processors
 			// No need to set them here - they're handled by the orchestrator flag-based system
 
 			// Check configuration to determine reading mode
-			var useRealTime = SettingsManager.Options.RawInputUseRealTimePolling;
+			var useRealTime = UseRealTimePolling;
 			
 			if (useRealTime)
 			{
