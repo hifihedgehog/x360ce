@@ -2,11 +2,11 @@ using System;
 using SharpDX.DirectInput;
 using SharpDX.XInput;
 using Windows.Gaming.Input;
-using x360ce.App.Input.Devices;
+using x360ce.Engine.Input.Devices;
 using System.Runtime.CompilerServices;
 using x360ce.Engine;
 
-namespace x360ce.App.Input.States
+namespace x360ce.Engine.Input.States
 {
 	/// <summary>
 	/// Standardized state representation for all input methods (RawInput, DirectInput, XInput, GamingInput).

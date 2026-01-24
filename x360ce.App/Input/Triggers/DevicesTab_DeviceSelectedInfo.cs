@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using x360ce.App.Input.Devices;
+using x360ce.Engine.Input.Devices;
 
 namespace x360ce.App.Input.Triggers
 {

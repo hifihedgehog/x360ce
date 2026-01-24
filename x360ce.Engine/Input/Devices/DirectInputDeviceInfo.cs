@@ -1,10 +1,10 @@
-﻿using SharpDX.DirectInput;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-namespace x360ce.App.Input.Devices
-{
+﻿	using SharpDX.DirectInput;
+	using System;
+	using System.Collections.Generic;
+	using System.Diagnostics;
+	using System.Linq;
+	namespace x360ce.Engine.Input.Devices
+	{
 	/// <summary>
 	/// DirectInput device container with both device information and the actual device object.
 	/// Contains comprehensive device metadata plus the live DirectInput device for input reading.

@@ -1,10 +1,10 @@
-﻿using SharpDX.XInput;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using x360ce.App.Input.States;
-namespace x360ce.App.Input.Devices
-{
+﻿	using SharpDX.XInput;
+	using System;
+	using System.Collections.Generic;
+	using System.Diagnostics;
+	using x360ce.Engine.Input.States;
+	namespace x360ce.Engine.Input.Devices
+	{
 	/// <summary>
 	/// XInput device container with device metadata and live XInput controller object.
 	/// Note: XInput API abstracts hardware details and reports generic Microsoft VID/PID (045E:028E)

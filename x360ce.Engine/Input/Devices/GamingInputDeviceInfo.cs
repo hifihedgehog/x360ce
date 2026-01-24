@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using Windows.Gaming.Input;
+﻿	using System;
+	using System.Collections.Generic;
+	using System.Diagnostics;
+	using Windows.Gaming.Input;
 
-namespace x360ce.App.Input.Devices
-{
+	namespace x360ce.Engine.Input.Devices
+	{
 	/// <summary>
 	/// Gaming Input device container with both device information and the actual Gaming Input gamepad object.
 	/// Contains comprehensive device metadata plus the live Gaming Input gamepad for input reading.

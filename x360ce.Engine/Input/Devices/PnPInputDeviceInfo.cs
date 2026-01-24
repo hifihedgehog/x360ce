@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace x360ce.App.Input.Devices
+namespace x360ce.Engine.Input.Devices
 {
     /// <summary>
     /// Physical input device container with comprehensive device information from Windows Plug and Play Manager.

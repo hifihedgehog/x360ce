@@ -2,18 +2,18 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using x360ce.App.Input.States;
+using x360ce.Engine.Input.States;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
-namespace x360ce.App.Input.Devices
+namespace x360ce.Engine.Input.Devices
 {
-    /// <summary>
-    /// Combined device management class that orchestrates different input device types.
-    /// Provides custom access to DirectInput, XInput, and other input methods.
-    /// </summary>
-    internal class CustomInputDeviceManager
-    {
+	/// <summary>
+	/// Combined device management class that orchestrates different input device types.
+	/// Provides custom access to DirectInput, XInput, and other input methods.
+	/// </summary>
+	public class CustomInputDeviceManager
+	{
         private readonly PnPInputDevice pnPInputDevice = new PnPInputDevice();
         private readonly RawInputDevice rawInputDevice = new RawInputDevice();
         private readonly DirectInputDevice directInputDevice = new DirectInputDevice();
@@ -34,8 +34,15 @@ namespace x360ce.App.Input.Devices
         // State collection manager for all device types
         private readonly CustomInputStateTimer _stateCollector = CustomInputStateTimer.Instance;
 
-        // Dispatcher for UI thread synchronization
-        private System.Windows.Threading.Dispatcher _dispatcher;
+		// Dispatcher for UI thread synchronization
+		private System.Windows.Threading.Dispatcher _dispatcher;
+
+		/// <summary>
+		/// Optional provider which returns a snapshot of persisted devices (including offline ones).
+		/// If set, devices returned by this provider will be merged into <see cref="CustomInputDeviceInfoList" />
+		/// when they are not present in the currently enumerated online device lists.
+		/// </summary>
+		public Func<IList<UserDevice>> OfflineDevicesProvider { get; set; }
 
         /// <summary>
         /// Sets the dispatcher for UI thread synchronization.
@@ -80,11 +87,11 @@ namespace x360ce.App.Input.Devices
             // Build DirectInput name cache for efficient lookups
             BuildDirectInputNameCache();
     
-            // Update the custom list incrementally instead of clearing
-            UpdateCustomInputDeviceList();
+			// Update the custom list incrementally instead of clearing
+			UpdateCustomInputDeviceList();
 
-            // Add offline devices from SettingsManager
-            AddOfflineDevicesToCustomList();
+			// Add offline devices from external settings provider.
+			AddOfflineDevicesToCustomList();
 
             // RawInputState now directly accesses RawInputDevice.RawInputDeviceInfoList
             // No SetDeviceList call needed - simplified architecture eliminates the method!
@@ -152,29 +159,32 @@ namespace x360ce.App.Input.Devices
             }
         }
 
-        /// <summary>
-        /// Adds offline devices from SettingsManager.UserDevices to CustomInputDeviceInfoList.
-        /// Checks if a device is already present (Online or Offline) to avoid duplicates.
-        /// </summary>
-        private void AddOfflineDevicesToCustomList()
-        {
-            // Safely access SettingsManager.UserDevices
-            List<UserDevice> offlineDevices;
-            lock (SettingsManager.UserDevices.SyncRoot)
-            {
-                offlineDevices = SettingsManager.UserDevices.Items.ToList();
-            }
+		/// <summary>
+		/// Adds offline devices returned by <see cref="OfflineDevicesProvider" /> to <see cref="CustomInputDeviceInfoList" />.
+		/// Checks if a device is already present (Online or Offline) to avoid duplicates.
+		/// </summary>
+		private void AddOfflineDevicesToCustomList()
+		{
+			var provider = OfflineDevicesProvider;
+			if (provider == null)
+				return;
+
+			var offlineDevices = provider();
+			if (offlineDevices == null)
+				return;
+
+			var offlineDevicesList = offlineDevices.ToList();
 
             var action = new Action(() =>
             {
                 // Get set of existing InstanceGuids in the custom list
                 var existingGuids = new HashSet<Guid>(CustomInputDeviceInfoList.Select(x => x.InstanceGuid));
 
-                foreach (var userDevice in offlineDevices)
-                {
-                    // If device is already in the list (Online or Offline), skip it
-                    if (existingGuids.Contains(userDevice.InstanceGuid))
-                        continue;
+				foreach (var userDevice in offlineDevicesList)
+				{
+					// If device is already in the list (Online or Offline), skip it
+					if (existingGuids.Contains(userDevice.InstanceGuid))
+						continue;
 
                     // Create Offline InputDeviceInfo
                     var offlineInfo = CreateOfflineInputDeviceInfo(userDevice);
@@ -186,11 +196,11 @@ namespace x360ce.App.Input.Devices
 
                 // Also check if any "Offline" devices in our list are no longer in SettingsManager
                 // This handles the case where a user deletes a device from the database
-                var settingGuids = new HashSet<Guid>(offlineDevices.Select(x => x.InstanceGuid));
-                for (int i = CustomInputDeviceInfoList.Count - 1; i >= 0; i--)
-                {
-                    var device = CustomInputDeviceInfoList[i];
-                    if (!device.IsOnline && !settingGuids.Contains(device.InstanceGuid))
+				var settingGuids = new HashSet<Guid>(offlineDevicesList.Select(x => x.InstanceGuid));
+				for (int i = CustomInputDeviceInfoList.Count - 1; i >= 0; i--)
+				{
+					var device = CustomInputDeviceInfoList[i];
+					if (!device.IsOnline && !settingGuids.Contains(device.InstanceGuid))
                     {
                         CustomInputDeviceInfoList.RemoveAt(i);
                     }

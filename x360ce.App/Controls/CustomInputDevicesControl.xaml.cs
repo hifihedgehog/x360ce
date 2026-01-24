@@ -10,8 +10,8 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
-using x360ce.App.Input.Devices;
-using x360ce.App.Input.States;
+using x360ce.Engine.Input.Devices;
+using x360ce.Engine.Input.States;
 using x360ce.App.Input.Triggers;
 using x360ce.App.Timers;
 
@@ -118,16 +118,17 @@ namespace x360ce.App.Controls
             UpdateAllDevicesInformation();
         }
 
-        private void InputDevicesControl_Loaded(object sender, RoutedEventArgs e)
-        {
-            if (ControlsHelper.IsDesignMode(this))
-                return;
+		private void InputDevicesControl_Loaded(object sender, RoutedEventArgs e)
+		{
+			if (ControlsHelper.IsDesignMode(this))
+				return;
 
-            // Set dispatcher for UI thread synchronization
-            _customInputDeviceManager.SetDispatcher(Dispatcher);
+			// Set dispatcher for UI thread synchronization
+			_customInputDeviceManager.SetDispatcher(Dispatcher);
+			_customInputDeviceManager.OfflineDevicesProvider = () => SettingsManager.UserDevices.ItemsToArraySynchronized();
 
-            // Create input devices lists: PnPInput, RawInput, DirectInput, XInput, GamingInput
-            _customInputDeviceManager.GetCustomInputDeviceList();
+			// Create input devices lists: PnPInput, RawInput, DirectInput, XInput, GamingInput
+			_customInputDeviceManager.GetCustomInputDeviceList();
 
             // Initialize checkbox states from settings
             PnPInputDevicesCheckBox.IsChecked = SettingsManager.Options.ShowPnPDevices;

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using x360ce.App.Input.States;
+using x360ce.Engine.Input.States;
 
-namespace x360ce.App.Input.Devices
+namespace x360ce.Engine.Input.Devices
 {
 	/// <summary>
 	/// Base class defining common properties for all input devices (DirectInput, XInput, etc.).

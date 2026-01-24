@@ -3,9 +3,9 @@ using SharpDX.DirectInput;
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using x360ce.App.Input.Devices;
+using x360ce.Engine.Input.Devices;
 
-namespace x360ce.App.Input.States
+namespace x360ce.Engine.Input.States
 {
 	/// <summary>
 	/// Provides methods to retrieve DirectInput device states.

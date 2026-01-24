@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
-namespace x360ce.App.Input.Devices
+namespace x360ce.Engine.Input.Devices
 {
     /// <summary>
     /// RawInput device container with both device information and the actual device handle.

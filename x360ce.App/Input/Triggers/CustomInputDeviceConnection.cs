@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using x360ce.App.Input.Devices;
+using x360ce.Engine.Input.Devices;
 
 namespace x360ce.App.Input.Triggers
 {

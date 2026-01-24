@@ -1,9 +1,9 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using x360ce.App.Input.States;
+using x360ce.Engine.Input.States;
 
-namespace x360ce.App.Input.Devices
+namespace x360ce.Engine.Input.Devices
 {
 	/// <summary>
 	/// Custom device information structure containing properties common to all input types.

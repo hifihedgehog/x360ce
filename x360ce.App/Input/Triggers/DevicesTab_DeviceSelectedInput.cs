@@ -4,8 +4,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
-using x360ce.App.Input.Devices;
-using x360ce.App.Input.States;
+using x360ce.Engine.Input.Devices;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.App.Input.Triggers
 {

@@ -1,7 +1,7 @@
 ﻿using SharpDX.XInput;
-using x360ce.App.Input.Devices;
+using x360ce.Engine.Input.Devices;
 
-namespace x360ce.App.Input.States
+namespace x360ce.Engine.Input.States
 {
 	/// <summary>
 	/// Provides methods to retrieve XInput device states.

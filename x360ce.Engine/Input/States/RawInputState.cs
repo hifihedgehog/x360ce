@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using x360ce.App.Input.Devices;
+using x360ce.Engine.Input.Devices;
 using x360ce.Engine;
 
-namespace x360ce.App.Input.States
+namespace x360ce.Engine.Input.States
 {
     /// <summary>
     /// Provides NON-BLOCKING RawInput device state reading using Windows WM_INPUT messages.

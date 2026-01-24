@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Windows.Threading;
-using x360ce.App.Input.Devices;
+using x360ce.Engine.Input.Devices;
 
-namespace x360ce.App.Input.States
+namespace x360ce.Engine.Input.States
 {
     /// <summary>
     /// Gets current states from input devices and saves them to device info ListInputState property.
@@ -29,8 +29,8 @@ namespace x360ce.App.Input.States
     /// • XInputDeviceInfoList - x360ce.App/Input/Devices/XInputDeviceInfo.cs
     /// • GamingInputDeviceInfoList - x360ce.App/Input/Devices/GamingInputDeviceInfo.cs
     /// </remarks>
-    internal class CustomInputStateTimer
-    {
+	public class CustomInputStateTimer
+	{
         #region Singleton Pattern
 
         private static readonly object _lock = new object();
