@@ -5,12 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using x360ce.App.Input.Orchestration;
 using x360ce.Engine;
 using x360ce.Engine.Data;
-using x360ce.Engine.Input.Processors;
 
-namespace x360ce.App.Input.Processors
+namespace x360ce.Engine.Input.Processors
 {
 	/// <summary>
 	/// DirectInput processor - Handles Microsoft DirectInput API for all controller types.
@@ -83,12 +81,19 @@ namespace x360ce.App.Input.Processors
 		/// <param name="detector">Device detector for acquisition</param>
 		/// <param name="newUpdates">Output parameter for buffered updates</param>
 		/// <returns>CustomDeviceState for the device</returns>
-		public CustomDeviceState ProcessDirectInputDevice(UserDevice device, DeviceDetector detector, Options options, out CustomDeviceUpdate[] newUpdates)
+		public CustomDeviceState ProcessDirectInputDevice(
+			UserDevice device,
+			DeviceDetector detector,
+			bool useDeviceBufferedData,
+			bool acquireMappedDevicesInExclusiveModeOption,
+			bool isVirtual,
+			long currentTicks,
+			out CustomDeviceUpdate[] newUpdates)
 		{
 			newUpdates = null;
 
 			bool useData = false;
-			if (options.UseDeviceBufferedData && device.DirectInputDevice.Properties.BufferSize == 0)
+			if (useDeviceBufferedData && device.DirectInputDevice.Properties.BufferSize == 0)
 			{
 				// Set BufferSize in order to use buffered data.
 				device.DirectInputDevice.Properties.BufferSize = 128;
@@ -100,13 +105,13 @@ namespace x360ce.App.Input.Processors
 			// If device is not keyboard or mouse then apply AcquireMappedDevicesInExclusiveMode option.
 			var acquireMappedDevicesInExclusiveMode =
 				(deviceType != SharpDX.DirectInput.DeviceType.Keyboard && deviceType != SharpDX.DirectInput.DeviceType.Mouse)
-				? options.AcquireMappedDevicesInExclusiveMode
+				? acquireMappedDevicesInExclusiveModeOption
 				: false;
 
 			// Exclusive mode required only if force feedback is available and device is virtual or there is no info about effects.
 			var hasForceFeedback = device.DirectInputDevice.Capabilities.Flags.HasFlag(DeviceFlags.ForceFeedback);
 			var exclusiveRequired = acquireMappedDevicesInExclusiveMode ||
-				(hasForceFeedback && (InputOrchestrator.Current.isVirtual || device.DeviceEffects == null));
+				(hasForceFeedback && (isVirtual || device.DeviceEffects == null));
 
 			// Check if the current mode is unknown or differs from the desired, then reacquire the device.
 			if (!device.IsExclusiveMode.HasValue || device.IsExclusiveMode.Value != exclusiveRequired)
@@ -166,47 +171,6 @@ namespace x360ce.App.Input.Processors
 					throw new Exception($"Unknown device: {device.DirectInputDevice}");
 			}
 
-			// Handle force feedback if supported.
-			if (hasForceFeedback)
-			{
-				// Get setting related to user device.
-				var setting = SettingsManager.UserSettings.ItemsToArraySynchronized()
-					.FirstOrDefault(x => x.InstanceGuid == device.InstanceGuid);
-				if (setting != null && setting.MapTo > (int)MapTo.None)
-				{
-					// Get pad setting attached to device.
-					var ps = SettingsManager.GetPadSetting(setting.PadSettingChecksum);
-					if (ps != null)
-					{
-						if (ps.ForceEnable == "1")
-						{
-							device.FFState = device.FFState ?? new Engine.ForceFeedbackState();
-							// If force update supplied then...
-							var force = InputOrchestrator.Current.CopyAndClearFeedbacks()[setting.MapTo - 1];
-							if (force != null || device.FFState.Changed(ps))
-							{
-								var vibration = new SharpDX.XInput.Vibration
-								{
-									LeftMotorSpeed = (force == null) ? short.MinValue : ConvertHelper.ConvertMotorSpeed(force.LargeMotor),
-									RightMotorSpeed = (force == null) ? short.MinValue : ConvertHelper.ConvertMotorSpeed(force.SmallMotor)
-								};
-								// For the future: Investigate device states if force feedback is not working. 
-								// var st = device.Device.GetForceFeedbackState();
-								// st == SharpDX.DirectInput.ForceFeedbackState
-								// device.Device.SendForceFeedbackCommand(ForceFeedbackCommand.SetActuatorsOn);
-								device.FFState.SetDeviceForces(device, device.DirectInputDevice, ps, vibration);
-							}
-						}
-						else if (device.FFState != null)
-						{
-							// Stop device forces.
-							device.FFState.StopDeviceForces(device.DirectInputDevice);
-							device.FFState = null;
-						}
-					}
-				}
-			}
-
 			// Mouse needs special update.
 			if (device.DirectInputDevice != null && device.DirectInputDevice.Information.Type == SharpDX.DirectInput.DeviceType.Mouse)
 			{
@@ -215,7 +179,7 @@ namespace x360ce.App.Input.Processors
 				{
 					// Store current values.
 					device.OrgDeviceState = newState;
-					device.OrgDeviceStateTime = InputOrchestrator.Current._Stopwatch.ElapsedTicks;
+					device.OrgDeviceStateTime = currentTicks;
 					// Make sure new states have zero values.
 					for (int a = 0; a < newState.Axis.Length; a++)
 						newState.Axis[a] = -short.MinValue;

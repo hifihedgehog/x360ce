@@ -4,12 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using x360ce.App.Input.Orchestration;
 using x360ce.Engine;
 using x360ce.Engine.Data;
-using x360ce.Engine.Input.Processors;
 
-namespace x360ce.App.Input.Processors
+namespace x360ce.Engine.Input.Processors
 {
 	/// <summary>
 	/// XInput processor - Handles Microsoft XInput API for Xbox controllers.
@@ -123,12 +121,6 @@ ex.Data["Device"] = device.DisplayName;
 ex.Data["InputMethod"] = "XInput";
 JocysCom.ClassLibrary.Runtime.LogHelper.Current.WriteException(ex);
 
-// For slot limit errors, mark devices as needing update
-if (ex.Message.Contains("maximum") || ex.Message.Contains("controllers already in use"))
-{
-  InputOrchestrator.Current.DevicesNeedUpdating = true;
-}
-
 return null;
 }
 catch (Exception ex)
@@ -158,48 +150,9 @@ return null;
 		/// </remarks>
 		private void HandleXInputForceFeedback(UserDevice device)
 		{
-			try
-			{
-				// Get setting related to user device (same logic as DirectInput)
-				var setting = SettingsManager.UserSettings.ItemsToArraySynchronized()
-					.FirstOrDefault(x => x.InstanceGuid == device.InstanceGuid);
-
-				if (setting != null && setting.MapTo > (int)MapTo.None)
-				{
-					// Get pad setting attached to device
-					var ps = SettingsManager.GetPadSetting(setting.PadSettingChecksum);
-					if (ps != null && ps.ForceEnable == "1")
-					{
-						// Initialize force feedback state if needed
-						device.FFState = device.FFState ?? new Engine.ForceFeedbackState();
-
-						// Get force feedback from virtual controllers (same source as DirectInput)
-						var feedbacks = InputOrchestrator.Current.CopyAndClearFeedbacks();
-						var force = feedbacks[setting.MapTo - 1];
-
-						if (force != null || device.FFState.Changed(ps))
-						{
-							// Convert ViGEm feedback values to XInput vibration format
-							// Use same conversion logic as existing DirectInput code
-							var leftMotorSpeed = (force == null) ? (ushort)0 : ConvertByteToUshort(force.LargeMotor);
-							var rightMotorSpeed = (force == null) ? (ushort)0 : ConvertByteToUshort(force.SmallMotor);
-
-							// Apply XInput vibration
-							ApplyXInputVibration(device, leftMotorSpeed, rightMotorSpeed);
-						}
-					}
-					else if (device.FFState != null)
-					{
-						// Force feedback disabled - stop vibration
-						StopVibration(device);
-						device.FFState = null;
-					}
-				}
-			}
-			catch
-			{
-				// Force feedback errors are not critical - continue processing
-			}
+			// Force feedback for physical XInput devices depends on application-level settings
+			// (PadSetting.ForceEnable, etc.) and virtual controller feedback (ViGEm).
+			// This integration is handled by the host/orchestrator layer.
 		}
 
 		/// <summary>

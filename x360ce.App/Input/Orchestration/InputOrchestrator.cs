@@ -4,10 +4,10 @@ using SharpDX.XInput;
 using System;
 using System.Diagnostics;
 using System.Threading;
-using x360ce.App.Input.Processors;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 using x360ce.Engine.Input.Orchestration;
+using x360ce.Engine.Input.Processors;
 
 namespace x360ce.App.Input.Orchestration
 {

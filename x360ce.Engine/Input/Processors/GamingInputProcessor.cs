@@ -3,12 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Windows.Gaming.Input;
-using x360ce.App.Input.Orchestration;
 using x360ce.Engine;
 using x360ce.Engine.Data;
-using x360ce.Engine.Input.Processors;
 
-namespace x360ce.App.Input.Processors
+namespace x360ce.Engine.Input.Processors
 {
 	/// <summary>
 	/// Gaming Input processor for Windows.Gaming.Input API (Windows 10+).
@@ -86,14 +84,8 @@ namespace x360ce.App.Input.Processors
 			if (device == null)
 				throw new InputMethodException(InputSourceType.GamingInput, device, "Device is null");
 
-			var orchestrator = InputOrchestrator.Current;
-			if (orchestrator == null)
-				throw new InputMethodException(InputSourceType.GamingInput, device, "InputOrchestrator not available for Gaming Input processing");
-
 			try
 			{
-				// Delegate to the existing Gaming Input implementation in InputOrchestrator
-				// This ensures we use the tested, working Gaming Input code path
 				var result = GetCustomState(device);
 
 				if (result == null)
@@ -355,22 +347,13 @@ namespace x360ce.App.Input.Processors
 				if (!IsAvailable())
 					return null;
 
-				// Get setting related to user device - using same pattern as XInput
-				var setting = SettingsManager.UserSettings.ItemsToArraySynchronized()
-					.FirstOrDefault(x => x.InstanceGuid == device.InstanceGuid);
-
-				if (setting == null || setting.MapTo <= (int)MapTo.None)
-					return null;
-
-				// Convert MapTo to zero-based gamepad index
-				var gamepadIndex = setting.MapTo - 1;
-
-				// Get gamepad directly - no caching needed for simple access
+				// Gaming Input API does not provide a stable mapping to x360ce MapTo slot.
+				// Use the first available gamepad for now.
 				var gamepads = Gamepad.Gamepads;
-				if (gamepadIndex < 0 || gamepadIndex >= gamepads.Count)
+				if (gamepads == null || gamepads.Count == 0)
 					return null;
 
-				var gamepad = gamepads[gamepadIndex];
+				var gamepad = gamepads[0];
 				var reading = gamepad.GetCurrentReading();
 
 				// Create and populate CustomDeviceState
@@ -592,33 +575,10 @@ namespace x360ce.App.Input.Processors
 				return ValidationResult.Error("Gaming Input is not available on this system");
 			}
 
-			// Check if device mapping is valid
-			try
-			{
-				// Get setting related to user device
-				var setting = SettingsManager.UserSettings.ItemsToArraySynchronized()
-					.FirstOrDefault(x => x.InstanceGuid == device.InstanceGuid);
-
-				if (setting == null || setting.MapTo <= (int)MapTo.None)
-				{
-					return ValidationResult.Error("Gaming Input: Device is not mapped to a virtual controller slot");
-				}
-
-				var gamepadIndex = setting.MapTo - 1;
-				var gamepads = Gamepad.Gamepads;
-				if (gamepadIndex < 0 || gamepadIndex >= gamepads.Count)
-				{
-					return ValidationResult.Error($"Gaming Input: No gamepad found at index {gamepadIndex + 1}. Available gamepads: {gamepads.Count}");
-				}
-
-				// Warning about background access limitation
-				var warning = "⚠️ Gaming Input controllers cannot be accessed when the application is in the background (UWP limitation)";
-				return ValidationResult.Success(warning);
-			}
-			catch (Exception ex)
-			{
-				return ValidationResult.Error($"Gaming Input validation failed: {ex.Message}");
-			}
+			// Gaming Input does not provide stable per-device mapping in this layer.
+			// Validate availability only.
+			var warning = "⚠️ Gaming Input controllers cannot be accessed when the application is in the background (UWP limitation)";
+			return ValidationResult.Success(warning);
 		}
 
 

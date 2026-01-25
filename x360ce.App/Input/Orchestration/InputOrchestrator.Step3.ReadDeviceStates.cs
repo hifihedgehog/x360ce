@@ -2,7 +2,6 @@ using JocysCom.ClassLibrary.IO;
 using SharpDX;
 using System;
 using System.Linq;
-using x360ce.App.Input.Processors;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 using x360ce.Engine.Input.Processors;
@@ -64,7 +63,14 @@ namespace x360ce.App.Input.Orchestration
 					else if (device.InputMethod == InputSourceType.DirectInput)
 					{
 						// Use existing DirectInput processor method
-						var customState = directInputProcessor.ProcessDirectInputDevice(device, detector, options, out newUpdates);
+						var customState = directInputProcessor.ProcessDirectInputDevice(
+							device,
+							detector,
+							options.UseDeviceBufferedData,
+							options.AcquireMappedDevicesInExclusiveMode,
+							isVirtual,
+							_Stopwatch.ElapsedTicks,
+							out newUpdates);
 						rawState = customState;
 						stateReadSuccessfully = (customState != null);
 					}
