@@ -1,11 +1,14 @@
 using System;
 using System.Diagnostics;
-using x360ce.App.Input.Orchestration;
+using Windows.Gaming.Input;
 using x360ce.Engine;
 using x360ce.Engine.Data;
-using x360ce.Engine.Input.Processors;
 
-namespace x360ce.App.Input.Processors
+using XInputController = SharpDX.XInput.Controller;
+using XInputUserIndex = SharpDX.XInput.UserIndex;
+using XInputState = SharpDX.XInput.State;
+
+namespace x360ce.Engine.Input.Processors
 {
 	/// <summary>
 	/// Centralized validation service for input methods.
@@ -23,6 +26,12 @@ namespace x360ce.App.Input.Processors
 	/// </remarks>
 	public static class InputMethodValidator
 	{
+		#region Constants
+
+		private const int MaxXInputControllers = 4;
+
+		#endregion
+
 		#region System Compatibility Checks
 
 		/// <summary>
@@ -47,17 +56,19 @@ namespace x360ce.App.Input.Processors
 				result.DirectInputAvailable = CheckDirectInputAvailability();
 
 				// Check XInput availability and controller count
-				result.XInputAvailable = InputOrchestrator.Current.xInputProcessor.IsAvailable();
-				result.XInputControllerCount = InputOrchestrator.Current.xInputProcessor.GetAssignedControllerCount();
-				result.XInputSlotsAvailable = 4 - result.XInputControllerCount;
+				result.XInputAvailable = CheckXInputAvailability();
+				result.XInputControllerCount = GetConnectedXInputControllerCount();
+				result.XInputSlotsAvailable = MaxXInputControllers - result.XInputControllerCount;
 
-				// Check Gaming Input availability (Windows 10+ requirement)
-				result.GamingInputAvailable = InputOrchestrator.Current.gamingInputProcessor.IsAvailable();
+ 				// Windows version requirements
 				result.WindowsVersion = Environment.OSVersion.Version;
 				result.IsWindows10Plus = result.WindowsVersion.Major >= 10;
 
+				// Check Gaming Input availability (Windows 10+ requirement)
+				result.GamingInputAvailable = CheckGamingInputAvailability(result.IsWindows10Plus);
+
 				// Check Raw Input availability
-				result.RawInputAvailable = InputOrchestrator.Current.rawInputProcessor.IsAvailable();
+				result.RawInputAvailable = CheckRawInputAvailability();
 
 				// Overall system status
 				result.IsSystemCompatible = result.DirectInputAvailable || result.XInputAvailable;
@@ -94,24 +105,19 @@ namespace x360ce.App.Input.Processors
 
 			try
 			{
-				// Get the appropriate processor for validation
-				var orchestrator = InputOrchestrator.Current;
-				if (orchestrator == null)
-					return ValidationResult.Error("InputOrchestrator not available");
-
 				switch (inputMethod)
 				{
 					case InputSourceType.DirectInput:
 						return ValidateDirectInputDevice(device);
 
 					case InputSourceType.XInput:
-						return orchestrator.xInputProcessor.ValidateXInputDevice(device);
+						return ValidateXInputDevice(device);
 
 					case InputSourceType.GamingInput:
-						return orchestrator.gamingInputProcessor.ValidateDevice(device);
+						return ValidateGamingInputDevice(device);
 
 					case InputSourceType.RawInput:
-						return orchestrator.rawInputProcessor.ValidateDevice(device);
+						return ValidateRawInputDevice(device);
 
 					default:
 						return ValidationResult.Error($"Unknown input method: {inputMethod}");
@@ -213,6 +219,88 @@ namespace x360ce.App.Input.Processors
 		}
 
 		/// <summary>
+		/// Checks if XInput API is available on the current system.
+		/// </summary>
+		/// <returns>True if XInput is available</returns>
+		private static bool CheckXInputAvailability()
+		{
+			try
+			{
+				// Test XInput availability by creating a controller instance.
+				var testController = new XInputController(XInputUserIndex.One);
+				XInputState testState;
+				testController.GetState(out testState);
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		/// <summary>
+		/// Gets the number of currently connected XInput controllers.
+		/// </summary>
+		/// <returns>Number of connected XInput controllers (0-4)</returns>
+		private static int GetConnectedXInputControllerCount()
+		{
+			int count = 0;
+			for (int i = 0; i < MaxXInputControllers; i++)
+			{
+				try
+				{
+					var controller = new XInputController((XInputUserIndex)i);
+					if (controller.IsConnected)
+						count++;
+				}
+				catch
+				{
+					// Ignore slot read failures.
+				}
+			}
+			return count;
+		}
+
+		/// <summary>
+		/// Checks if Gaming Input API is available on the current system.
+		/// </summary>
+		/// <param name="isWindows10Plus">True if the OS is Windows 10 or later</param>
+		/// <returns>True if Gaming Input is available</returns>
+		private static bool CheckGamingInputAvailability(bool isWindows10Plus)
+		{
+			if (!isWindows10Plus)
+				return false;
+
+			try
+			{
+				var gamepads = Gamepad.Gamepads;
+				return gamepads != null;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		/// <summary>
+		/// Checks if Raw Input API is available on the current system.
+		/// </summary>
+		/// <returns>True if Raw Input is available</returns>
+		private static bool CheckRawInputAvailability()
+		{
+			try
+			{
+				// Raw Input is available on Windows XP and later.
+				var osVersion = Environment.OSVersion.Version;
+				return osVersion.Major >= 5;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		/// <summary>
 		/// Validates DirectInput compatibility for a device.
 		/// </summary>
 		/// <param name="device">The device to validate</param>
@@ -249,6 +337,111 @@ namespace x360ce.App.Input.Processors
 
 			// DirectInput works with all controller types
 			return ValidationResult.Success("DirectInput compatible (works with all controller types)");
+		}
+
+		/// <summary>
+		/// Validates XInput compatibility for a device.
+		/// </summary>
+		/// <param name="device">The device to validate</param>
+		/// <returns>ValidationResult for XInput compatibility</returns>
+		private static ValidationResult ValidateXInputDevice(UserDevice device)
+		{
+			if (device == null)
+				return ValidationResult.Error("Device is null");
+
+			if (!device.IsOnline)
+				return ValidationResult.Error("Device is offline");
+
+			if (!CheckXInputAvailability())
+				return ValidationResult.Error("XInput is not available on this system");
+
+			if (!device.IsXboxCompatible)
+			{
+				return ValidationResult.Error(
+					"XInput only supports Xbox-compatible controllers (Xbox 360/One). " +
+					"This device does not appear to be Xbox-compatible based on its VID/PID and name.");
+			}
+
+			// XInput has a hard limit of 4 controllers.
+			// Without an assignment context, we can only report current slot usage.
+			var connectedControllers = GetConnectedXInputControllerCount();
+			if (connectedControllers >= MaxXInputControllers)
+			{
+				return ValidationResult.Warning(
+					"XInput supports a maximum of 4 controllers. " +
+					"All slots appear to be in use. If this controller is not already connected, " +
+					"free a slot or use a different input method.");
+			}
+
+			return ValidationResult.Success("XInput compatible (Xbox-compatible controller detected)");
+		}
+
+		/// <summary>
+		/// Validates Gaming Input compatibility for a device.
+		/// </summary>
+		/// <param name="device">The device to validate</param>
+		/// <returns>ValidationResult for Gaming Input compatibility</returns>
+		private static ValidationResult ValidateGamingInputDevice(UserDevice device)
+		{
+			if (device == null)
+				return ValidationResult.Error("Device is null");
+
+			if (!device.IsOnline)
+				return ValidationResult.Error("Device is offline");
+
+			var osVersion = Environment.OSVersion.Version;
+			var isWindows10Plus = osVersion.Major >= 10;
+			if (!CheckGamingInputAvailability(isWindows10Plus))
+			{
+				return ValidationResult.Error(isWindows10Plus
+					? "Gaming Input is not available on this system"
+					: "Gaming Input requires Windows 10 or later");
+			}
+
+			if (device.IsKeyboard || device.IsMouse)
+				return ValidationResult.Error("Gaming Input is intended for game controllers (not keyboard/mouse)");
+
+			return ValidationResult.Warning(
+				"Gaming Input compatible. ⚠️ Limitation: No background access (UWP restriction). ");
+		}
+
+		/// <summary>
+		/// Validates Raw Input compatibility for a device.
+		/// </summary>
+		/// <param name="device">The device to validate</param>
+		/// <returns>ValidationResult for Raw Input compatibility</returns>
+		private static ValidationResult ValidateRawInputDevice(UserDevice device)
+		{
+			if (device == null)
+				return ValidationResult.Error("Device is null");
+
+			if (!device.IsOnline)
+				return ValidationResult.Error("Device is offline");
+
+			if (!CheckRawInputAvailability())
+				return ValidationResult.Error("Raw Input is not available on this system");
+
+			if (device.IsKeyboard || device.IsMouse)
+				return ValidationResult.Error("Raw Input is intended for HID game controllers (not keyboard/mouse)");
+
+			if (string.IsNullOrEmpty(device.HidDevicePath))
+				return ValidationResult.Error("Raw Input requires a valid HID device path");
+
+			if (!device.CapIsHumanInterfaceDevice)
+				return ValidationResult.Error("Raw Input requires a HID-compliant device");
+
+			if (device.IsXboxCompatible)
+			{
+				return ValidationResult.Warning(
+					"⚠️ Raw Input limitations for Xbox controllers: " +
+					"Triggers combined on same axis (HID limitation), no Guide button access, " +
+					"NO rumble support (input-only). " +
+					"✅ Background access available. " +
+					"Consider XInput for full Xbox controller features including rumble.");
+			}
+
+			return ValidationResult.Success(
+				"Raw Input compatible. ✅ Background access, unlimited controllers. ⚠️ No rumble support.");
 		}
 
 		#endregion
