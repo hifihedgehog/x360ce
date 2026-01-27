@@ -5,6 +5,7 @@ using System.Linq;
 using Windows.Gaming.Input;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.Orchestration;
 
 namespace x360ce.Engine.Input.Processors
 {
@@ -19,6 +20,17 @@ namespace x360ce.Engine.Input.Processors
 	/// </remarks>
 	public class GamingInputProcessor : IInputProcessor
 	{
+		/// <summary>
+		/// Optional resolver which maps a <see cref="UserDevice" /> to a zero-based
+		/// <c>Windows.Gaming.Input.Gamepad</c> index.
+		/// </summary>
+		/// <remarks>
+		/// Gaming Input does not expose a stable, per-device identifier suitable for deterministic mapping
+		/// in the Engine layer. The host should provide a mapping strategy (typically by using the x360ce
+		/// <c>MapTo</c> slot and caching the mapping outside the 1000Hz loop).
+		/// </remarks>
+		public GamingInputGamepadIndexResolver GamepadIndexResolver { get; set; }
+
 		#region Constructor
 
 		/// <summary>
@@ -348,12 +360,27 @@ namespace x360ce.Engine.Input.Processors
 					return null;
 
 				// Gaming Input API does not provide a stable mapping to x360ce MapTo slot.
-				// Use the first available gamepad for now.
+				// The host may supply a resolver (cached outside the 1000Hz loop) to map devices to
+				// a specific Gamepad.Gamepads index.
 				var gamepads = Gamepad.Gamepads;
 				if (gamepads == null || gamepads.Count == 0)
 					return null;
 
-				var gamepad = gamepads[0];
+				int gamepadIndex = 0;
+				var resolver = GamepadIndexResolver;
+				if (resolver != null)
+				{
+					var resolvedIndex = resolver(device);
+					if (resolvedIndex.HasValue)
+						gamepadIndex = resolvedIndex.Value;
+				}
+
+				// If resolved index is invalid then return null (do not fall back to index 0,
+				// because it would defeat explicit slot mapping).
+				if (gamepadIndex < 0 || gamepadIndex >= gamepads.Count)
+					return null;
+
+				var gamepad = gamepads[gamepadIndex];
 				var reading = gamepad.GetCurrentReading();
 
 				// Create and populate CustomDeviceState

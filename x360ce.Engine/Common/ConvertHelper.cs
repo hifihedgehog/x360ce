@@ -241,6 +241,24 @@ namespace x360ce.Engine
 		}
 
 		/// <summary>
+		/// Converts a motor speed stored in signed-short form (<see cref="short.MinValue" />.. <see cref="short.MaxValue" />)
+		/// to the unsigned 0..65535 range used by XInput.
+		/// </summary>
+		/// <remarks>
+		/// x360ce commonly represents 16-bit motor values in a signed <see cref="short" /> range for convenience:
+		/// <list type="bullet">
+		/// <item><description><see cref="short.MinValue" /> represents 0 (no vibration)</description></item>
+		/// <item><description><see cref="short.MaxValue" /> represents 65535 (full vibration)</description></item>
+		/// </list>
+		/// This method provides the monotonic conversion needed for <c>XInputSetState</c>.
+		/// </remarks>
+		public static ushort ConvertMotorSpeedToUshort(short motorSpeed)
+		{
+			// Range mapping: [-32768..32767] -> [0..65535]
+			return (ushort)(motorSpeed - short.MinValue);
+		}
+
+		/// <summary>
 		/// Scale motor speed with overflow protection.
 		/// Takes absolute value safely and scales to full range.
 		/// </summary>
