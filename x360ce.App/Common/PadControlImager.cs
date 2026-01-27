@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using x360ce.App.Input.Orchestration;
 using x360ce.Engine;
+using x360ce.Engine.Input.States;
 //using System.Drawing;
 //using System.Linq;
 //using System.Windows;
@@ -193,7 +194,7 @@ namespace x360ce.App.Controls
         //    return true; // Value has changed.
         //}
 
-        public void DrawState(ImageInfo ii, Gamepad gp, CustomDeviceState ds)
+        public void DrawState(ImageInfo ii, Gamepad gp, CustomInputState ds)
 		{
 			short stickLDeadzone = Gamepad.LeftThumbDeadZone;
 			short stickRDeadzone = Gamepad.RightThumbDeadZone;

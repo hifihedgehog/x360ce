@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.Engine.Input.Processors
 {
@@ -91,7 +92,7 @@ namespace x360ce.Engine.Input.Processors
 		/// • Cannot activate extra 2 rumble motors in Xbox One controller triggers
 		/// • No support for generic gamepads or specialized controllers
 		/// </remarks>
-		public CustomDeviceState ProcessXInputDevice(UserDevice device)
+		public CustomInputState ProcessXInputDevice(UserDevice device)
 		{
 			if (device == null)
 				return null;
@@ -399,7 +400,7 @@ return null;
 		/// <param name="device">The device to read from</param>
 		/// <returns>CustomDeviceState representing the current controller state</returns>
 		/// <exception cref="InputMethodException">Thrown when XInput encounters errors</exception>
-		public CustomDeviceState ReadState(UserDevice device)
+		public CustomInputState ReadState(UserDevice device)
 		{
 			if (device == null)
 				throw new InputMethodException(InputSourceType.XInput, device, "Device is null");
@@ -809,31 +810,31 @@ return null;
 		/// 
 		/// For XInput, we map to the most common DirectInput pattern for Xbox controllers.
 		/// </remarks>
-		private static CustomDeviceState ConvertGamepadToCustomDeviceState(Gamepad gamepad, UserDevice device = null)
+		private static CustomInputState ConvertGamepadToCustomDeviceState(Gamepad gamepad, UserDevice device = null)
 		{
-			var customState = new CustomDeviceState();
+			var customState = new CustomInputState();
 
 			// Map buttons to match DirectInput button enumeration for Xbox controllers
 			// Button mapping follows how DirectInput typically enumerates Xbox controller buttons
-			customState.Buttons[0] = gamepad.Buttons.HasFlag(GamepadButtonFlags.A);           // Button 0: A
-			customState.Buttons[1] = gamepad.Buttons.HasFlag(GamepadButtonFlags.B);           // Button 1: B
-			customState.Buttons[2] = gamepad.Buttons.HasFlag(GamepadButtonFlags.X);           // Button 2: X
-			customState.Buttons[3] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Y);           // Button 3: Y
-			customState.Buttons[4] = gamepad.Buttons.HasFlag(GamepadButtonFlags.LeftShoulder);  // Button 4: LB
-			customState.Buttons[5] = gamepad.Buttons.HasFlag(GamepadButtonFlags.RightShoulder); // Button 5: RB
-			customState.Buttons[6] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Back);        // Button 6: Back
-			customState.Buttons[7] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Start);       // Button 7: Start
-			customState.Buttons[8] = gamepad.Buttons.HasFlag(GamepadButtonFlags.LeftThumb);   // Button 8: LS
-			customState.Buttons[9] = gamepad.Buttons.HasFlag(GamepadButtonFlags.RightThumb);  // Button 9: RS
+			customState.Buttons[0] = gamepad.Buttons.HasFlag(GamepadButtonFlags.A) ? 1 : 0;           // Button 0: A
+			customState.Buttons[1] = gamepad.Buttons.HasFlag(GamepadButtonFlags.B) ? 1 : 0;           // Button 1: B
+			customState.Buttons[2] = gamepad.Buttons.HasFlag(GamepadButtonFlags.X) ? 1 : 0;           // Button 2: X
+			customState.Buttons[3] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Y) ? 1 : 0;           // Button 3: Y
+			customState.Buttons[4] = gamepad.Buttons.HasFlag(GamepadButtonFlags.LeftShoulder) ? 1 : 0;  // Button 4: LB
+			customState.Buttons[5] = gamepad.Buttons.HasFlag(GamepadButtonFlags.RightShoulder) ? 1 : 0; // Button 5: RB
+			customState.Buttons[6] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Back) ? 1 : 0;        // Button 6: Back
+			customState.Buttons[7] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Start) ? 1 : 0;       // Button 7: Start
+			customState.Buttons[8] = gamepad.Buttons.HasFlag(GamepadButtonFlags.LeftThumb) ? 1 : 0;   // Button 8: LS
+			customState.Buttons[9] = gamepad.Buttons.HasFlag(GamepadButtonFlags.RightThumb) ? 1 : 0;  // Button 9: RS
 
 			// D-Pad mapping to buttons (DirectInput POV often mapped to buttons for Xbox controllers)
-			customState.Buttons[10] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadUp);     // Button 10: D-Up
-			customState.Buttons[11] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight);  // Button 11: D-Right
-			customState.Buttons[12] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadDown);   // Button 12: D-Down
-			customState.Buttons[13] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft);   // Button 13: D-Left
+			customState.Buttons[10] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadUp) ? 1 : 0;     // Button 10: D-Up
+			customState.Buttons[11] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadRight) ? 1 : 0;  // Button 11: D-Right
+			customState.Buttons[12] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadDown) ? 1 : 0;   // Button 12: D-Down
+			customState.Buttons[13] = gamepad.Buttons.HasFlag(GamepadButtonFlags.DPadLeft) ? 1 : 0;   // Button 13: D-Left
 
 			// Guide button (when available) - not always accessible via DirectInput
-			customState.Buttons[14] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Guide);      // Button 14: Guide
+			customState.Buttons[14] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Guide) ? 1 : 0;      // Button 14: Guide
 
 			// CRITICAL: Map axes to match DirectInput's typical Xbox controller mapping
 			customState.Axes[0] = gamepad.LeftThumbX;   // Axis 0: Left Thumbstick X (DirectInput X)
@@ -870,7 +871,7 @@ return null;
 		/// </summary>
 		/// <param name="device">The device to track changes for</param>
 		/// <param name="customState">The current CustomDeviceState to check for changes</param>
-		private void LogInputChanges(UserDevice device, CustomDeviceState customState)
+		private void LogInputChanges(UserDevice device, CustomInputState customState)
 		{
 			if (device?.InstanceGuid == null || customState == null)
 				return;
@@ -906,7 +907,7 @@ return null;
 			
 			for (int i = 0; i < 15; i++)
 			{
-				bool currentState = customState.Buttons[i];
+				bool currentState = customState.Buttons[i] == 1;
 				if (currentState != prevButtons[i])
 				{
 					string action = currentState ? "pressed" : "released";
@@ -1172,7 +1173,7 @@ return null;
 		/// <param name="device">The device to count buttons for</param>
 		/// <param name="customState">The current state (used to validate button functionality)</param>
 		/// <returns>Number of available buttons</returns>
-		private static int GetControllerButtonCount(UserDevice device, CustomDeviceState customState)
+		private static int GetControllerButtonCount(UserDevice device, CustomInputState customState)
 		{
 			// XInput has a standard set of 15 buttons: A, B, X, Y, LB, RB, Back, Start, LS, RS, DPad (4), Guide
 			int standardXInputButtons = 15;
@@ -1199,7 +1200,7 @@ return null;
 		/// <param name="device">The device to count axes for</param>
 		/// <param name="customState">The current state (used to validate axis functionality)</param>
 		/// <returns>Number of available axes</returns>
-		private static int GetControllerAxisCount(UserDevice device, CustomDeviceState customState)
+		private static int GetControllerAxisCount(UserDevice device, CustomInputState customState)
 		{
 			// XInput has a standard set of 6 axes: Left Stick X/Y, Right Stick X/Y, Left/Right Triggers
 			int standardXInputAxes = 6;

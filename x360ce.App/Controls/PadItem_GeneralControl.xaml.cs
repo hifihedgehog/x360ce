@@ -11,6 +11,7 @@ using System.Windows.Media;
 using x360ce.Engine;
 using x360ce.Engine.Common;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.App.Controls
 {
@@ -142,7 +143,7 @@ namespace x360ce.App.Controls
 
 		UniformGrid PovUnifromGrid;
 
-        public CustomDeviceState GetCustomDeviceState(UserDevice ud)
+        public CustomInputState GetCustomDeviceState(UserDevice ud)
         {
             // Use the existing DiState property that should be populated by all input methods
             // instead of trying to create a new CustomDeviceState from DirectInput-specific DeviceState
@@ -426,7 +427,7 @@ namespace x360ce.App.Controls
 			// Buttons.
 			foreach (var kvp in ButtonDictionary)
 			{
-				bool bDS = ud.DeviceState.Buttons[kvp.Key];
+				bool bDS = ud.DeviceState.Buttons[kvp.Key] == 1;
 
 				ButtonDictionary[kvp.Key].Item1.Background = bDS ? colorActive : Brushes.Transparent;
 				ButtonDictionary[kvp.Key].Item2.Content = bDS.ToString();

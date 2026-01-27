@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.Engine.Input.Processors
 {
@@ -24,7 +25,7 @@ namespace x360ce.Engine.Input.Processors
 		/// <param name="buffer">Raw input buffer</param>
 		/// <param name="bufferSize">Buffer size</param>
 		/// <returns>CustomDeviceState or null if reading failed</returns>
-		private static CustomDeviceState ReadHidStateWithApi(RawInputDeviceInfo deviceInfo, IntPtr buffer, uint bufferSize)
+		private static CustomInputState ReadHidStateWithApi(RawInputDeviceInfo deviceInfo, IntPtr buffer, uint bufferSize)
 		{
 			if (deviceInfo?.HidCapabilities?.PreparsedData == IntPtr.Zero)
 			{
@@ -46,7 +47,7 @@ namespace x360ce.Engine.Input.Processors
 					return null;
 				}
 
-				var state = new CustomDeviceState();
+				var state = new CustomInputState();
 				var hidCaps = deviceInfo.HidCapabilities;
 
 				// Read button states using HID API
@@ -75,7 +76,7 @@ namespace x360ce.Engine.Input.Processors
 		/// <param name="report">HID report pointer</param>
 		/// <param name="reportLength">Report length</param>
 		/// <param name="state">CustomDeviceState to populate</param>
-		private static void ReadButtonStatesWithHidApi(HidDeviceCapabilities hidCaps, IntPtr report, uint reportLength, CustomDeviceState state)
+		private static void ReadButtonStatesWithHidApi(HidDeviceCapabilities hidCaps, IntPtr report, uint reportLength, CustomInputState state)
 		{
 			try
 			{
@@ -129,7 +130,7 @@ namespace x360ce.Engine.Input.Processors
 							// Set button state if index is valid
 							if (buttonIndex >= 0 && buttonIndex < state.Buttons.Length)
 							{
-								state.Buttons[buttonIndex] = true;
+								state.Buttons[buttonIndex] = 1;
 								Debug.WriteLine($"Raw Input: Button {buttonIndex} pressed (HID usage: {buttonUsage})");
 							}
 						}
@@ -158,7 +159,7 @@ namespace x360ce.Engine.Input.Processors
 		/// <param name="report">HID report pointer</param>
 		/// <param name="reportLength">Report length</param>
 		/// <param name="state">CustomDeviceState to populate</param>
-		private static void ReadAxisValuesWithHidApi(HidDeviceCapabilities hidCaps, IntPtr report, uint reportLength, CustomDeviceState state)
+		private static void ReadAxisValuesWithHidApi(HidDeviceCapabilities hidCaps, IntPtr report, uint reportLength, CustomInputState state)
 		{
 			try
 			{
@@ -218,7 +219,7 @@ namespace x360ce.Engine.Input.Processors
 		/// <param name="report">HID report pointer</param>
 		/// <param name="reportLength">Report length</param>
 		/// <param name="state">CustomDeviceState to populate</param>
-		private static void ReadPovValuesWithHidApi(HidDeviceCapabilities hidCaps, IntPtr report, uint reportLength, CustomDeviceState state)
+		private static void ReadPovValuesWithHidApi(HidDeviceCapabilities hidCaps, IntPtr report, uint reportLength, CustomInputState state)
 		{
 			try
 			{
@@ -327,7 +328,7 @@ namespace x360ce.Engine.Input.Processors
 		/// <param name="buffer">Raw input buffer</param>
 		/// <param name="bufferSize">Buffer size</param>
 		/// <returns>CustomDeviceState with fallback parsing</returns>
-		private static CustomDeviceState ReadHidStateFallback(RawInputDeviceInfo deviceInfo, IntPtr buffer, uint bufferSize)
+		private static CustomInputState ReadHidStateFallback(RawInputDeviceInfo deviceInfo, IntPtr buffer, uint bufferSize)
 		{
 			try
 			{
@@ -346,7 +347,7 @@ namespace x360ce.Engine.Input.Processors
 
 				Debug.WriteLine($"Raw Input: Fallback parsing HID report ({hidDataSize} bytes): {BitConverter.ToString(hidData)}");
 
-				var state = new CustomDeviceState();
+				var state = new CustomInputState();
 
 				if (deviceInfo.IsXboxController)
 				{
@@ -369,7 +370,7 @@ namespace x360ce.Engine.Input.Processors
 		/// <summary>
 		/// Fallback Xbox controller parsing.
 		/// </summary>
-		private static void ParseXboxHidReportFallback(byte[] hidData, CustomDeviceState state)
+		private static void ParseXboxHidReportFallback(byte[] hidData, CustomInputState state)
 		{
 			if (hidData.Length < 8)
 				return;
@@ -397,7 +398,7 @@ namespace x360ce.Engine.Input.Processors
 				byte buttonByte = hidData[1];
 				for (int i = 0; i < 8 && i < state.Buttons.Length; i++)
 				{
-					state.Buttons[i] = (buttonByte & (1 << i)) != 0;
+					state.Buttons[i] = ((buttonByte & (1 << i)) != 0) ? 1 : 0;
 				}
 			}
 		}
@@ -405,7 +406,7 @@ namespace x360ce.Engine.Input.Processors
 		/// <summary>
 		/// Fallback generic controller parsing.
 		/// </summary>
-		private static void ParseGenericHidReportFallback(byte[] hidData, CustomDeviceState state)
+		private static void ParseGenericHidReportFallback(byte[] hidData, CustomInputState state)
 		{
 			if (hidData.Length < 4)
 				return;
@@ -427,7 +428,7 @@ namespace x360ce.Engine.Input.Processors
 				byte buttonByte = hidData[buttonStartByte];
 				for (int i = 0; i < 8 && i < state.Buttons.Length; i++)
 				{
-					state.Buttons[i] = (buttonByte & (1 << i)) != 0;
+					state.Buttons[i] = ((buttonByte & (1 << i)) != 0) ? 1 : 0;
 				}
 			}
 		}

@@ -162,8 +162,8 @@
     <Compile Include="..\x360ce.Engine\Common\ConvertHelper.cs">
       <Link>Engine\ConvertHelper.cs</Link>
     </Compile>
-    <Compile Include="..\x360ce.Engine\Common\CustomDeviceState.cs">
-      <Link>Engine\CustomDeviceState.cs</Link>
+    <Compile Include="..\x360ce.Engine\Input\States\CustomInputState.cs">
+      <Link>Engine\Input\States\CustomInputState.cs</Link>
     </Compile>
     <Compile Include="..\x360ce.Engine\Common\CustomDeviceUpdate.cs">
       <Link>Engine\CustomDeviceUpdate.cs</Link>

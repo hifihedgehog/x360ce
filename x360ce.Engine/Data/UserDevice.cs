@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Xml.Serialization;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.Engine.Data
 {
@@ -186,7 +187,7 @@ namespace x360ce.Engine.Data
 
 		/// <summary>X360CE custom DirectInput state used for configuration.</summary>
 		[XmlIgnore, NonSerialized]
-		public CustomDeviceState DeviceState;
+		public CustomInputState DeviceState;
 
 		[XmlIgnore, NonSerialized]
 		public CustomDeviceUpdate[] DeviceUpdates;
@@ -195,7 +196,7 @@ namespace x360ce.Engine.Data
 		public long DeviceStateTime;
 
 		[XmlIgnore, NonSerialized]
-		public CustomDeviceState OldDeviceState;
+		public CustomInputState OldDeviceState;
 
 		[XmlIgnore, NonSerialized]
 		public CustomDeviceUpdate[] OldDeviceUpdates;
@@ -204,7 +205,7 @@ namespace x360ce.Engine.Data
 		public long OldDiStateTime;
 
 		[XmlIgnore, NonSerialized]
-		public CustomDeviceState OrgDeviceState;
+		public CustomInputState OrgDeviceState;
 
 		[XmlIgnore, NonSerialized]
 		public long OrgDeviceStateTime;

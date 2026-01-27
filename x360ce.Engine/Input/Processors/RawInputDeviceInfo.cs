@@ -1,5 +1,6 @@
 ﻿using System;
 using x360ce.Engine;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.Engine.Input.Processors
 {
@@ -15,7 +16,7 @@ namespace x360ce.Engine.Input.Processors
 		public ushort UsagePage { get; set; }
 		public ushort Usage { get; set; }
 		public bool IsXboxController { get; set; }
-		public CustomDeviceState LastState { get; set; }
+		public CustomInputState LastState { get; set; }
 		
 		/// <summary>
 		/// Parsed HID capabilities for this device.

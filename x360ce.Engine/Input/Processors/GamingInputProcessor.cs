@@ -6,6 +6,7 @@ using Windows.Gaming.Input;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 using x360ce.Engine.Input.Orchestration;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.Engine.Input.Processors
 {
@@ -91,7 +92,7 @@ namespace x360ce.Engine.Input.Processors
 		/// The delegation approach ensures Gaming Input continues to work with existing
 		/// implementation while providing processor pattern compatibility for UI selection.
 		/// </remarks>
-		public CustomDeviceState ReadState(UserDevice device)
+		public CustomInputState ReadState(UserDevice device)
 		{
 			if (device == null)
 				throw new InputMethodException(InputSourceType.GamingInput, device, "Device is null");
@@ -349,7 +350,7 @@ namespace x360ce.Engine.Input.Processors
 		/// 
 		/// CustomDeviceState mapping matches DirectInput/XInput exactly for UI compatibility.
 		/// </remarks>
-		public CustomDeviceState GetCustomState(UserDevice device)
+		public CustomInputState GetCustomState(UserDevice device)
 		{
 			if (device == null)
 				return null;
@@ -384,7 +385,7 @@ namespace x360ce.Engine.Input.Processors
 				var reading = gamepad.GetCurrentReading();
 
 				// Create and populate CustomDeviceState
-				var newState = new CustomDeviceState();
+				var newState = new CustomInputState();
 				ConvertGamingInputToCustomDeviceState(reading, newState);
 
 				// Store the reading as device state for debugging/monitoring
@@ -407,31 +408,30 @@ namespace x360ce.Engine.Input.Processors
 		/// Convert Windows.Gaming.Input GamepadReading to x360ce CustomDeviceState format.
 		/// Ensures exact mapping consistency with DirectInput and XInput processors.
 		/// </summary>
-		private void ConvertGamingInputToCustomDeviceState(GamepadReading reading, CustomDeviceState diState)
+		private void ConvertGamingInputToCustomDeviceState(GamepadReading reading, CustomInputState diState)
 		{
 			if (diState == null) return;
 
 			// Convert buttons - Gaming.Input uses flags, CustomDeviceState uses bool array
 			// CRITICAL: These indices MUST match DirectInput and XInput implementations
-			diState.Buttons[0] = reading.Buttons.HasFlag(GamepadButtons.A);
-			diState.Buttons[1] = reading.Buttons.HasFlag(GamepadButtons.B);
-			diState.Buttons[2] = reading.Buttons.HasFlag(GamepadButtons.X);
-			diState.Buttons[3] = reading.Buttons.HasFlag(GamepadButtons.Y);
-			diState.Buttons[4] = reading.Buttons.HasFlag(GamepadButtons.LeftShoulder);
-			diState.Buttons[5] = reading.Buttons.HasFlag(GamepadButtons.RightShoulder);
-			diState.Buttons[6] = reading.Buttons.HasFlag(GamepadButtons.View); // Back/Select
-			diState.Buttons[7] = reading.Buttons.HasFlag(GamepadButtons.Menu); // Start
-			diState.Buttons[8] = reading.Buttons.HasFlag(GamepadButtons.LeftThumbstick);
-			diState.Buttons[9] = reading.Buttons.HasFlag(GamepadButtons.RightThumbstick);
+			diState.Buttons[0] = reading.Buttons.HasFlag(GamepadButtons.A) ? 1 : 0;
+			diState.Buttons[1] = reading.Buttons.HasFlag(GamepadButtons.B) ? 1 : 0;
+			diState.Buttons[2] = reading.Buttons.HasFlag(GamepadButtons.X) ? 1 : 0;
+			diState.Buttons[4] = reading.Buttons.HasFlag(GamepadButtons.LeftShoulder) ? 1 : 0;
+			diState.Buttons[5] = reading.Buttons.HasFlag(GamepadButtons.RightShoulder) ? 1 : 0;
+			diState.Buttons[6] = reading.Buttons.HasFlag(GamepadButtons.View) ? 1 : 0; // Back/Select
+			diState.Buttons[7] = reading.Buttons.HasFlag(GamepadButtons.Menu) ? 1 : 0; // Start
+			diState.Buttons[8] = reading.Buttons.HasFlag(GamepadButtons.LeftThumbstick) ? 1 : 0;
+			diState.Buttons[9] = reading.Buttons.HasFlag(GamepadButtons.RightThumbstick) ? 1 : 0;
 
 			// D-Pad as buttons (for compatibility with existing mapping)
-			diState.Buttons[10] = reading.Buttons.HasFlag(GamepadButtons.DPadUp);
-			diState.Buttons[11] = reading.Buttons.HasFlag(GamepadButtons.DPadRight);
-			diState.Buttons[12] = reading.Buttons.HasFlag(GamepadButtons.DPadDown);
-			diState.Buttons[13] = reading.Buttons.HasFlag(GamepadButtons.DPadLeft);
+			diState.Buttons[10] = reading.Buttons.HasFlag(GamepadButtons.DPadUp) ? 1 : 0;
+			diState.Buttons[11] = reading.Buttons.HasFlag(GamepadButtons.DPadRight) ? 1 : 0;
+			diState.Buttons[12] = reading.Buttons.HasFlag(GamepadButtons.DPadDown) ? 1 : 0;
+			diState.Buttons[13] = reading.Buttons.HasFlag(GamepadButtons.DPadLeft) ? 1 : 0;
 
 			// Guide button (if available - Gaming.Input doesn't typically expose this)
-			diState.Buttons[14] = false; // Not available in Windows.Gaming.Input
+			diState.Buttons[14] = 0; // Not available in Windows.Gaming.Input
 
 			// Convert analog sticks - Gaming.Input uses -1.0 to 1.0, CustomDeviceState uses 0-65535
 			// CRITICAL: These indices MUST match DirectInput and XInput implementations

@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.Engine.Input.Processors
 {
@@ -81,7 +82,7 @@ namespace x360ce.Engine.Input.Processors
 		/// <param name="detector">Device detector for acquisition</param>
 		/// <param name="newUpdates">Output parameter for buffered updates</param>
 		/// <returns>CustomDeviceState for the device</returns>
-		public CustomDeviceState ProcessDirectInputDevice(
+		public CustomInputState ProcessDirectInputDevice(
 			UserDevice device,
 			DeviceDetector detector,
 			bool useDeviceBufferedData,
@@ -129,7 +130,7 @@ namespace x360ce.Engine.Input.Processors
 			// events (if buffered data is enabled), and set notification events (if notification is enabled).
 			device.DirectInputDevice.Poll();
 
-			CustomDeviceState newState = null;
+			CustomInputState newState = null;
 
 			// Use switch based on pattern matching for supported device types.
 			switch (device.DirectInputDevice)
@@ -138,7 +139,7 @@ namespace x360ce.Engine.Input.Processors
 					newUpdates = useData ? mDevice.GetBufferedData()?.Select(x => new CustomDeviceUpdate(x)).ToArray() : null;
 					{
 						var state = mDevice.GetCurrentState();
-						newState = new CustomDeviceState(state);
+						newState = new CustomInputState(state);
 						device.DirectInputDeviceState = state;
 					}
 					break;
@@ -146,7 +147,7 @@ namespace x360ce.Engine.Input.Processors
 					newUpdates = useData ? kDevice.GetBufferedData()?.Select(x => new CustomDeviceUpdate(x)).ToArray() : null;
 					{
 						var state = kDevice.GetCurrentState();
-						newState = new CustomDeviceState(state);
+						newState = new CustomInputState(state);
 						device.DirectInputDeviceState = state;
 					}
 					break;
@@ -154,7 +155,7 @@ namespace x360ce.Engine.Input.Processors
 					newUpdates = useData ? jDevice.GetBufferedData()?.Select(x => new CustomDeviceUpdate(x)).ToArray() : null;
 					{
 						var state = jDevice.GetCurrentState();
-						newState = new CustomDeviceState(state);
+						newState = new CustomInputState(state);
 
 						// Test if button 0 was pressed.
 						var oldState = device.DirectInputDeviceState as JoystickState;
@@ -186,7 +187,7 @@ namespace x360ce.Engine.Input.Processors
 					for (int s = 0; s < newState.Sliders.Length; s++)
 						newState.Sliders[s] = -short.MinValue;
 				}
-				var mouseState = new CustomDeviceState(new JoystickState());
+				var mouseState = new CustomInputState(new JoystickState());
 				// Clone button values.
 				Array.Copy(newState.Buttons, mouseState.Buttons, mouseState.Buttons.Length);
 
@@ -340,7 +341,7 @@ namespace x360ce.Engine.Input.Processors
 		/// 
 		/// The method maintains backward compatibility with existing configurations.
 		/// </remarks>
-		public CustomDeviceState ReadState(UserDevice device)
+		public CustomInputState ReadState(UserDevice device)
 		{
 			if (device == null)
 				throw new InputMethodException(InputSourceType.DirectInput, device, "Device is null");
@@ -355,7 +356,7 @@ namespace x360ce.Engine.Input.Processors
 				// If the device does not require polling, calling this method has no effect.
 				device.DirectInputDevice.Poll();
 
-				CustomDeviceState newState = null;
+				CustomInputState newState = null;
 
 				// Use switch based on pattern matching for supported device types.
 				switch (device.DirectInputDevice)
@@ -363,21 +364,21 @@ namespace x360ce.Engine.Input.Processors
 					case Mouse mDevice:
 						{
 							var state = mDevice.GetCurrentState();
-							newState = new CustomDeviceState(state);
+							newState = new CustomInputState(state);
 							device.DirectInputDeviceState = state;
 						}
 						break;
 					case Keyboard kDevice:
 						{
 							var state = kDevice.GetCurrentState();
-							newState = new CustomDeviceState(state);
+							newState = new CustomInputState(state);
 							device.DirectInputDeviceState = state;
 						}
 						break;
 					case Joystick jDevice:
 						{
 							var state = jDevice.GetCurrentState();
-							newState = new CustomDeviceState(state);
+							newState = new CustomInputState(state);
 							device.DirectInputDeviceState = state;
 						}
 						break;
@@ -846,7 +847,7 @@ namespace x360ce.Engine.Input.Processors
 		/// NOTE: Mouse coordinate processing for DirectInput is handled by the main InputOrchestrator
 		/// in the ProcessDirectInputDevice method. This method serves as a reference implementation.
 		/// </remarks>
-		private CustomDeviceState ProcessMouseCoordinates(UserDevice device, CustomDeviceState newState)
+		private CustomInputState ProcessMouseCoordinates(UserDevice device, CustomInputState newState)
 		{
 			// If original state is missing then store current values
 			if (device.OrgDeviceState == null)
@@ -861,7 +862,7 @@ namespace x360ce.Engine.Input.Processors
 					newState.Sliders[s] = -short.MinValue;
 			}
 
-			var mouseState = new CustomDeviceState(new JoystickState());
+			var mouseState = new CustomInputState(new JoystickState());
 
 			// Clone button values
 			Array.Copy(newState.Buttons, mouseState.Buttons, mouseState.Buttons.Length);

@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.Engine.Input.Processors
 {
@@ -107,9 +108,9 @@ namespace x360ce.Engine.Input.Processors
 		/// <summary>
 		/// Parses HID report directly to CustomDeviceState (real-time)
 		/// </summary>
-		private CustomDeviceState ParseHidReportToCustomDeviceState(byte[] report, UserDevice device)
+		private CustomInputState ParseHidReportToCustomDeviceState(byte[] report, UserDevice device)
 		{
-			var state = new CustomDeviceState();
+			var state = new CustomInputState();
 			
 			// Get device HID capabilities for parsing
 			var rawInputHandle = GetOrCreateRawInputMapping(device);
@@ -151,10 +152,10 @@ namespace x360ce.Engine.Input.Processors
 		/// <summary>
 		/// Fallback HID report parsing for real-time reading
 		/// </summary>
-		private CustomDeviceState ReadHidStateFallback(byte[] report)
+		private CustomInputState ReadHidStateFallback(byte[] report)
 		{
 			// Use basic parsing for common controller layouts
-			var state = new CustomDeviceState();
+			var state = new CustomInputState();
 			
 			// Basic parsing for common controller layouts
 			if (report != null && report.Length >= 8)
@@ -169,7 +170,7 @@ namespace x360ce.Engine.Input.Processors
 				// Buttons
 				for (int i = 0; i < Math.Min(16, state.Buttons.Length); i++)
 				{
-					state.Buttons[i] = (report[5] & (1 << i)) != 0;
+					state.Buttons[i] = ((report[5] & (1 << i)) != 0) ? 1 : 0;
 				}
 			}
 

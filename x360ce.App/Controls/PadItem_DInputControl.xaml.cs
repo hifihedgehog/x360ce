@@ -9,6 +9,7 @@ using System.Text;
 using System.Windows.Controls;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.App.Controls
 {
@@ -81,7 +82,7 @@ namespace x360ce.App.Controls
 			private string _M;
 		}
 
-		void UpdateButtonsTable(bool[] buttons)
+		void UpdateButtonsTable(int[] buttons)
 		{
 			var buttonsText = "";
 			var id = new List<int>();
@@ -89,7 +90,7 @@ namespace x360ce.App.Controls
 			{
 				var ids = new List<string>();
 				for (int i = 0; i < buttons.Length; i++)
-					if (buttons[i])
+					if (buttons[i] == 1)
 					{
 						ids.Add(i.ToString("00"));
 						id.Add(i);
@@ -365,7 +366,7 @@ namespace x360ce.App.Controls
 				return;
 			if (state == oldMState)
 				return;
-			UpdateButtonsTable(state.Buttons);
+			UpdateButtonsTable(state.Buttons.Select(x=>x ? 1: 0).ToArray());
 			UpdateAxisTable(state);
 			ControlsHelper.SetVisible(DiAxisDataGridView, true);
 			ControlsHelper.SetVisible(DiSlidersDataGridView, false);
@@ -382,7 +383,7 @@ namespace x360ce.App.Controls
 				return;
 			if (state == oldKState)
 				return;
-			var cds = new CustomDeviceState(state);
+			var cds = new CustomInputState(state);
 			UpdateButtonsTable(cds.Buttons);
 			ControlsHelper.SetVisible(DiAxisDataGridView, false);
 			ControlsHelper.SetVisible(DiSlidersDataGridView, false);
@@ -399,7 +400,7 @@ namespace x360ce.App.Controls
 				return;
 			if (state == oldJState)
 				return;
-			UpdateButtonsTable(state.Buttons);
+			UpdateButtonsTable(state.Buttons.Select(x=>x ? 1: 0).ToArray());
 			UpdateAxisTable(state);
 			UpdateSlidersTable(state);
 			UpdatePovsTable(state);

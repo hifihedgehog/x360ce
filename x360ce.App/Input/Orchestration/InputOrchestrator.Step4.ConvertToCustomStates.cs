@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using x360ce.Engine;
 using x360ce.Engine.Data;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.App.Input.Orchestration
 {
@@ -32,7 +33,7 @@ namespace x360ce.App.Input.Orchestration
 				{
 					// The RawInputState is already a CustomDeviceState from Step3
 					// So we just need to process it and update the device state
-					var newState = device.RawInputState as CustomDeviceState;
+					var newState = device.RawInputState as CustomInputState;
 
 					if (newState != null)
 					{
@@ -65,7 +66,7 @@ namespace x360ce.App.Input.Orchestration
 		/// • State history management (old/new state tracking)
 		/// • Timestamp tracking for input timing analysis
 		/// </remarks>
-		private void UpdateDeviceState(UserDevice device, CustomDeviceState newState, CustomDeviceUpdate[] newUpdates)
+		private void UpdateDeviceState(UserDevice device, CustomInputState newState, CustomDeviceUpdate[] newUpdates)
 		{
 			// Handle button state analysis for buffered data
 			if (newUpdates != null && newUpdates.Count(x => x.Type == MapType.Button) > 1 && device.DeviceState != null)
@@ -80,7 +81,7 @@ namespace x360ce.App.Input.Orchestration
 						if (newUpdates.Count(x => x.Type == MapType.Button && x.Index == b) > 1)
 						{
 							// Invert state to give the game a chance to recognize the press
-							newState.Buttons[b] = !newState.Buttons[b];
+							newState.Buttons[b] = newState.Buttons[b] == 1 ? 0 : 1;
 						}
 					}
 				}

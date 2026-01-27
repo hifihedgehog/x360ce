@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using x360ce.Engine;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.App.Input.Orchestration
 {
@@ -57,14 +58,14 @@ namespace x360ce.App.Input.Orchestration
 		}
 
 		/// <summary>Initial Direct Input activity state</summary>
-		CustomDeviceState recordingSnapshot;
+		CustomInputState recordingSnapshot;
 
 		/// <summary>
 		/// Called when recording is in progress.
 		/// </summary>
 		/// <param name="state">Current direct input activity.</param>
 		/// <returns>True if recording stopped, otherwise false.</returns>
-		public bool StopRecording(CustomDeviceState state = null)
+		public bool StopRecording(CustomInputState state = null)
 		{
 			lock (recordingLock)
 			{
@@ -181,7 +182,7 @@ namespace x360ce.App.Input.Orchestration
 		/// <summary>
 		/// Compare to another state.
 		/// </summary>
-		public static string[] CompareTo(CustomDeviceState oldState, CustomDeviceState newState, MapCode mappingTo)
+		public static string[] CompareTo(CustomInputState oldState, CustomInputState newState, MapCode mappingTo)
 		{
 			if (oldState == null)
 				throw new ArgumentNullException(nameof(oldState));

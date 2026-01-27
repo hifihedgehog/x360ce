@@ -7,26 +7,26 @@ namespace x360ce.Engine
 	/// <summary>
 	///  Custom X360CE direct input state class used for configuration.
 	/// </summary>
-	public partial class CustomDeviceState
+	public partial class CustomInputState2
 	{
 
-		public CustomDeviceState()
+		public CustomInputState2()
 		{
 		}
 
-		public CustomDeviceState(MouseState state)
+		public CustomInputState2(MouseState state)
 		{
 			Copy(state.Buttons, Buttons);
 			CopyAxis(state, Axes);
 		}
 
-		public CustomDeviceState(KeyboardState state)
+		public CustomInputState2(KeyboardState state)
 		{
 			foreach (var key in state.PressedKeys)
 				Buttons[(int)key] = true;
 		}
 
-		public CustomDeviceState(JoystickState state)
+		public CustomInputState2(JoystickState state)
 		{
 			CopyAxis(state, Axes);
 			CopySliders(state, Sliders);
@@ -156,7 +156,7 @@ namespace x360ce.Engine
 		/// <summary>
 		/// Compare states and return differences
 		/// </summary>
-		public static CustomDeviceUpdate[] CompareTo(CustomDeviceState oldState, CustomDeviceState newState)
+		public static CustomDeviceUpdate[] CompareTo(CustomInputState2 oldState, CustomInputState2 newState)
 		{
 			if (oldState == null)
 				throw new ArgumentNullException(nameof(oldState));

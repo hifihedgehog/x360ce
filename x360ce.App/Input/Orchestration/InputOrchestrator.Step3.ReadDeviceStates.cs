@@ -5,6 +5,7 @@ using System.Linq;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 using x360ce.Engine.Input.Processors;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.App.Input.Orchestration
 {
@@ -165,7 +166,7 @@ namespace x360ce.App.Input.Orchestration
 		/// Test devices provide simulated controller input for testing purposes.
 		/// They generate consistent CustomDeviceState output without requiring physical hardware.
 		/// </remarks>
-		private CustomDeviceState ProcessTestDevice(UserDevice device)
+		private CustomInputState ProcessTestDevice(UserDevice device)
 		{
 			// Fill device objects and update masks for test devices
 			if (device.DeviceObjects == null)
@@ -177,7 +178,7 @@ namespace x360ce.App.Input.Orchestration
 			device.DeviceEffects = device.DeviceEffects ?? new DeviceEffectItem[0];
 
 			var state = TestDeviceHelper.GetCurrentState(device);
-			var customState = new CustomDeviceState(state);
+			var customState = new CustomInputState(state);
 			device.DirectInputDeviceState = state;
 
 			return customState;

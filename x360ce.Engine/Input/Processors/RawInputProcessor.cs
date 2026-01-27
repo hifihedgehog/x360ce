@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 using x360ce.Engine.Input.Processors;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.Engine.Input.Processors
 {
@@ -220,10 +221,10 @@ namespace x360ce.Engine.Input.Processors
 		/// <param name="device">The device to read from</param>
 		/// <returns>CustomDeviceState representing the current controller state</returns>
 		/// <exception cref="InputMethodException">Thrown when Raw Input encounters errors</exception>
-		public CustomDeviceState ReadState(UserDevice device)
+		public CustomInputState ReadState(UserDevice device)
 		{
 			if (device == null)
-				return new CustomDeviceState();
+				return new CustomInputState();
 
 			// Note: Device properties (capabilities) are managed centrally by Step2.LoadCapabilities.cs
 			// No need to set them here - they're handled by the orchestrator flag-based system
@@ -246,7 +247,7 @@ namespace x360ce.Engine.Input.Processors
 		/// <summary>
 		/// Real-time state reading - immediate response, no lag (like DirectInput)
 		/// </summary>
-		private CustomDeviceState ReadStateRealTime(UserDevice device)
+		private CustomInputState ReadStateRealTime(UserDevice device)
 		{
 			try
 			{
@@ -273,26 +274,26 @@ namespace x360ce.Engine.Input.Processors
 				return ReadStateCached(device);
 			}
 			
-			return new CustomDeviceState();
+			return new CustomInputState();
 		}
 
 		/// <summary>
 		/// Cached state reading - existing method with potential 2-3 second lag
 		/// </summary>
-		private CustomDeviceState ReadStateCached(UserDevice device)
+		private CustomInputState ReadStateCached(UserDevice device)
 		{
 			// EXISTING IMPLEMENTATION - returns cached state from background messages
 			var rawInputHandle = GetOrCreateRawInputMapping(device);
 			if (rawInputHandle == IntPtr.Zero)
-				return new CustomDeviceState();
+				return new CustomInputState();
 
 			// Get the tracked device info
 			if (!_trackedDevices.TryGetValue(rawInputHandle, out var deviceInfo))
-				return new CustomDeviceState();
+				return new CustomInputState();
 
 			// Return the cached state (similar to how DirectInput uses device.DiState)
 			// The state is updated by WM_INPUT messages in the background
-			return deviceInfo.LastState ?? new CustomDeviceState();
+			return deviceInfo.LastState ?? new CustomInputState();
 		}
 
 		/// <summary>
@@ -430,7 +431,7 @@ namespace x360ce.Engine.Input.Processors
 		/// </summary>
 		/// <param name="device">The device to read state from</param>
 		/// <returns>CustomDeviceState representing the current controller state</returns>
-		public CustomDeviceState GetCustomState(UserDevice device)
+		public CustomInputState GetCustomState(UserDevice device)
 		{
 			if (device == null)
 				return null;
@@ -628,7 +629,7 @@ namespace x360ce.Engine.Input.Processors
 			}
 
 			// Use the new HID API-based state reading if HID capabilities are available
-			CustomDeviceState newState = null;
+			CustomInputState newState = null;
 
 			if (deviceInfo.HidCapabilities != null)
 			{
@@ -680,7 +681,7 @@ namespace x360ce.Engine.Input.Processors
 							ProductId = hidInfo.dwProductId,
 							UsagePage = hidInfo.usUsagePage,
 							Usage = hidInfo.usUsage,
-							LastState = new CustomDeviceState(),
+							LastState = new CustomInputState(),
 							IsXboxController = IsXboxController(hidInfo.dwVendorId, hidInfo.dwProductId)
 						};
 
@@ -843,7 +844,7 @@ namespace x360ce.Engine.Input.Processors
 		/// <param name="vendorId">Vendor ID to match</param>
 		/// <param name="productId">Product ID to match</param>
 		/// <returns>Cached CustomDeviceState or null if not found</returns>
-		public CustomDeviceState GetCachedDeviceState(int vendorId, int productId)
+		public CustomInputState GetCachedDeviceState(int vendorId, int productId)
 		{
 			if (vendorId == 0 && productId == 0)
 				return null;

@@ -1,6 +1,7 @@
 using x360ce.Engine;
 using x360ce.Engine.Data;
 using x360ce.Engine.Input.Processors;
+using x360ce.Engine.Input.States;
 
 namespace x360ce.Engine.Input.Processors
 {
@@ -27,7 +28,7 @@ namespace x360ce.Engine.Input.Processors
         /// <param name="device">The device to read from</param>
         /// <returns>CustomDeviceState representing the current controller state</returns>
         /// <exception cref="InputMethodException">Thrown when the input method encounters errors</exception>
-        CustomDeviceState ReadState(UserDevice device);
+        CustomInputState ReadState(UserDevice device);
 
         /// <summary>
         /// Handles force feedback for the specified device.

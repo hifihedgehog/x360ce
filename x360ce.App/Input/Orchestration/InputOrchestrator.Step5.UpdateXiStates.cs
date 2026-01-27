@@ -123,7 +123,7 @@ namespace x360ce.App.Input.Orchestration
 					if (map.IsButton)
 					{
 						// If mapped index is in range and pressed...
-						if (map.Index < diState.Buttons.Length && diState.Buttons[map.Index - 1])
+						if (map.Index < diState.Buttons.Length && diState.Buttons[map.Index - 1] ==1)
 						{
 							switch (map.Target)
 							{
