@@ -161,10 +161,10 @@ namespace x360ce.Engine.Input.Processors
 			{
 				// Example basic parsing - this would need to be expanded
 				// based on actual device HID descriptors
-				state.Axis[0] = (report[1] - 128) * 256; // X axis
-				state.Axis[1] = (report[2] - 128) * 256; // Y axis
-				state.Axis[2] = (report[3] - 128) * 256; // Z axis
-				state.Axis[3] = (report[4] - 128) * 256; // RZ axis
+				state.Axes[0] = (report[1] - 128) * 256; // X axis
+				state.Axes[1] = (report[2] - 128) * 256; // Y axis
+				state.Axes[2] = (report[3] - 128) * 256; // Z axis
+				state.Axes[3] = (report[4] - 128) * 256; // RZ axis
 
 				// Buttons
 				for (int i = 0; i < Math.Min(16, state.Buttons.Length); i++)

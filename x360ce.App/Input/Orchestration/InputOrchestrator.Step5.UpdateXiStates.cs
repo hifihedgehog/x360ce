@@ -227,7 +227,7 @@ namespace x360ce.App.Input.Orchestration
 					{
 						// Get source value.
 						int[] values = map.IsAxis
-							? diState.Axis
+							? diState.Axes
 							: diState.Sliders;
 
 						// If index is out of range then...

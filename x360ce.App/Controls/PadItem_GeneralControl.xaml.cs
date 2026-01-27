@@ -473,7 +473,7 @@ namespace x360ce.App.Controls
 			const int DragAndDropAxisDeadzone = 8000;
 			foreach (var kvp in AxisDictionary)
 			{
-				int aDS = ud.DeviceState.Axis[kvp.Key];
+				int aDS = ud.DeviceState.Axes[kvp.Key];
 				bool active = (ud.InputMethod == x360ce.Engine.InputSourceType.XInput) ? aDS > DragAndDropAxisDeadzone : aDS < 32767 - DragAndDropAxisDeadzone || aDS > 32767 + DragAndDropAxisDeadzone;
 				AxisDictionary[kvp.Key].Item1.Background = active ? colorActive : Brushes.Transparent;
 				AxisDictionary[kvp.Key].Item2.Content = aDS;

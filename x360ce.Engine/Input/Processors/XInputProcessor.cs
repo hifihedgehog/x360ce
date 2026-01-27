@@ -836,14 +836,14 @@ return null;
 			customState.Buttons[14] = gamepad.Buttons.HasFlag(GamepadButtonFlags.Guide);      // Button 14: Guide
 
 			// CRITICAL: Map axes to match DirectInput's typical Xbox controller mapping
-			customState.Axis[0] = gamepad.LeftThumbX;   // Axis 0: Left Thumbstick X (DirectInput X)
-			customState.Axis[1] = gamepad.LeftThumbY;   // Axis 1: Left Thumbstick Y (DirectInput Y)
-			customState.Axis[2] = gamepad.RightThumbX;  // Axis 2: Right Thumbstick X (DirectInput Z or RotationX)
-			customState.Axis[3] = gamepad.RightThumbY;  // Axis 3: Right Thumbstick Y (DirectInput RotationX or RotationY)
+			customState.Axes[0] = gamepad.LeftThumbX;   // Axis 0: Left Thumbstick X (DirectInput X)
+			customState.Axes[1] = gamepad.LeftThumbY;   // Axis 1: Left Thumbstick Y (DirectInput Y)
+			customState.Axes[2] = gamepad.RightThumbX;  // Axis 2: Right Thumbstick X (DirectInput Z or RotationX)
+			customState.Axes[3] = gamepad.RightThumbY;  // Axis 3: Right Thumbstick Y (DirectInput RotationX or RotationY)
 
 			// Trigger mapping: XInput advantage is separate triggers, but match DirectInput pattern
-			customState.Axis[4] = ConvertTriggerToAxis(gamepad.LeftTrigger);   // Axis 4: Left Trigger (DirectInput RotationY)
-			customState.Axis[5] = ConvertTriggerToAxis(gamepad.RightTrigger);  // Axis 5: Right Trigger (DirectInput RotationZ)
+			customState.Axes[4] = ConvertTriggerToAxis(gamepad.LeftTrigger);   // Axis 4: Left Trigger (DirectInput RotationY)
+			customState.Axes[5] = ConvertTriggerToAxis(gamepad.RightTrigger);  // Axis 5: Right Trigger (DirectInput RotationZ)
 
 			// Note: XInput provides cleaner mapping than DirectInput for Xbox controllers
 			// DirectInput often combines triggers or uses different axis assignments
@@ -887,14 +887,14 @@ return null;
 				// This prevents logging of "changes" from initialized zero values to actual controller state
 				for (int i = 0; i < 6; i++)
 				{
-					_previousAxisValues[deviceGuid][i] = customState.Axis[i];
+					_previousAxisValues[deviceGuid][i] = customState.Axes[i];
 				}
 				
 				// Count actual controller capabilities
 				int buttonCount = GetControllerButtonCount(device, customState);
 				int axisCount = GetControllerAxisCount(device, customState);
 				
-				Debug.WriteLine($"XInput: Started tracking input changes for {device.DisplayName} - Buttons: {buttonCount}, Axes: {axisCount} - Initial axis values: [{customState.Axis[0]}, {customState.Axis[1]}, {customState.Axis[2]}, {customState.Axis[3]}, {customState.Axis[4]}, {customState.Axis[5]}]");
+				Debug.WriteLine($"XInput: Started tracking input changes for {device.DisplayName} - Buttons: {buttonCount}, Axes: {axisCount} - Initial axis values: [{customState.Axes[0]}, {customState.Axes[1]}, {customState.Axes[2]}, {customState.Axes[3]}, {customState.Axes[4]}, {customState.Axes[5]}]");
 				return; // Skip logging changes on first initialization
 			}
 
@@ -920,7 +920,7 @@ return null;
 			
 			for (int i = 0; i < 6; i++)
 			{
-				int currentValue = customState.Axis[i];
+				int currentValue = customState.Axes[i];
 				int previousValue = prevAxes[i];
 				int delta = Math.Abs(currentValue - previousValue);
 				

@@ -188,9 +188,9 @@ namespace x360ce.Engine.Input.Processors
 						);
 
 						// Set axis value if index is valid
-						if (valueInfo.CustomDeviceStateIndex >= 0 && valueInfo.CustomDeviceStateIndex < state.Axis.Length)
+						if (valueInfo.CustomDeviceStateIndex >= 0 && valueInfo.CustomDeviceStateIndex < state.Axes.Length)
 						{
-							state.Axis[valueInfo.CustomDeviceStateIndex] = convertedValue;
+							state.Axes[valueInfo.CustomDeviceStateIndex] = convertedValue;
 							
 							// Only log significant changes to avoid spam
 							if (Math.Abs(convertedValue) > 1000)
@@ -381,13 +381,13 @@ namespace x360ce.Engine.Input.Processors
 			if (hidData.Length >= 6)
 			{
 				// Try to find axis data (look for changing values)
-				state.Axis[0] = (short)((hidData[2] - 128) * 256); // Approximate left X
-				state.Axis[1] = (short)((hidData[3] - 128) * 256); // Approximate left Y
+				state.Axes[0] = (short)((hidData[2] - 128) * 256); // Approximate left X
+				state.Axes[1] = (short)((hidData[3] - 128) * 256); // Approximate left Y
 				
 				if (hidData.Length >= 8)
 				{
-					state.Axis[2] = (short)((hidData[4] - 128) * 256); // Approximate right X
-					state.Axis[3] = (short)((hidData[5] - 128) * 256); // Approximate right Y
+					state.Axes[2] = (short)((hidData[4] - 128) * 256); // Approximate right X
+					state.Axes[3] = (short)((hidData[5] - 128) * 256); // Approximate right Y
 				}
 			}
 
@@ -415,9 +415,9 @@ namespace x360ce.Engine.Input.Processors
 			// Very conservative generic parsing
 			// Assume first few bytes might be axes
 			int axisCount = Math.Min(4, hidData.Length - 1);
-			for (int i = 0; i < axisCount && i < state.Axis.Length; i++)
+			for (int i = 0; i < axisCount && i < state.Axes.Length; i++)
 			{
-				state.Axis[i] = (short)((hidData[i + 1] - 128) * 256);
+				state.Axes[i] = (short)((hidData[i + 1] - 128) * 256);
 			}
 
 			// Look for button data in later bytes

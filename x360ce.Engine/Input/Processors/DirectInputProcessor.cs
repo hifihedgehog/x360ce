@@ -181,8 +181,8 @@ namespace x360ce.Engine.Input.Processors
 					device.OrgDeviceState = newState;
 					device.OrgDeviceStateTime = currentTicks;
 					// Make sure new states have zero values.
-					for (int a = 0; a < newState.Axis.Length; a++)
-						newState.Axis[a] = -short.MinValue;
+					for (int a = 0; a < newState.Axes.Length; a++)
+						newState.Axes[a] = -short.MinValue;
 					for (int s = 0; s < newState.Sliders.Length; s++)
 						newState.Sliders[s] = -short.MinValue;
 				}
@@ -193,7 +193,7 @@ namespace x360ce.Engine.Input.Processors
 				//--------------------------------------------------------
 				// Map mouse position to axis position. Good for car wheel controls.
 				//--------------------------------------------------------
-				Calc(device.OrgDeviceState.Axis, newState.Axis, mouseState.Axis);
+				Calc(device.OrgDeviceState.Axes, newState.Axes, mouseState.Axes);
 				Calc(device.OrgDeviceState.Sliders, newState.Sliders, mouseState.Sliders);
 				newState = mouseState;
 			}
@@ -855,8 +855,8 @@ namespace x360ce.Engine.Input.Processors
 				device.OrgDeviceStateTime = DateTime.UtcNow.Ticks;
 
 				// Make sure new states have zero values for first reading
-				for (int a = 0; a < newState.Axis.Length; a++)
-					newState.Axis[a] = -short.MinValue;
+				for (int a = 0; a < newState.Axes.Length; a++)
+					newState.Axes[a] = -short.MinValue;
 				for (int s = 0; s < newState.Sliders.Length; s++)
 					newState.Sliders[s] = -short.MinValue;
 			}
@@ -867,7 +867,7 @@ namespace x360ce.Engine.Input.Processors
 			Array.Copy(newState.Buttons, mouseState.Buttons, mouseState.Buttons.Length);
 
 			// Map mouse position to axis position (good for car wheel controls)
-			CalcMouseMovement(device.OrgDeviceState.Axis, newState.Axis, mouseState.Axis);
+			CalcMouseMovement(device.OrgDeviceState.Axes, newState.Axes, mouseState.Axes);
 			CalcMouseMovement(device.OrgDeviceState.Sliders, newState.Sliders, mouseState.Sliders);
 
 			return mouseState;

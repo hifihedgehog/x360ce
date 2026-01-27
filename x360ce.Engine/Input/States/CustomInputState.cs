@@ -1,10 +1,11 @@
-using System;
 using SharpDX.DirectInput;
 using SharpDX.XInput;
-using Windows.Gaming.Input;
-using x360ce.Engine.Input.Devices;
+using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Windows.Gaming.Input;
 using x360ce.Engine;
+using x360ce.Engine.Input.Devices;
 
 namespace x360ce.Engine.Input.States
 {
@@ -24,8 +25,8 @@ namespace x360ce.Engine.Input.States
 	/// </remarks>
 	public class CustomInputState
 	{
-		public const int MaxAxes = 24;
-		public const int MaxSliders = 8;
+		public const int MaxAxes = 24; // (3 x 8)
+		public const int MaxSliders = 8; // (2 x 4).
 		public const int MaxPOVs = 4;
 		public const int MaxButtons = 256;
 
@@ -62,6 +63,34 @@ namespace x360ce.Engine.Input.States
 			{
 				POVs[i] = -1;
 			}
+		}
+
+
+		public CustomInputState(MouseState state)
+		{
+			Copy(state.Buttons, Buttons);
+			CopyAxis(state, Axes);
+		}
+
+		public CustomInputState(KeyboardState state)
+		{
+			foreach (var key in state.PressedKeys)
+				Buttons[(int)key] = 1;
+		}
+
+		public CustomInputState(JoystickState state)
+		{
+			CopyAxis(state, Axes);
+			CopySliders(state, Sliders);
+			Copy(state.PointOfViewControllers, POVs);
+			Copy(state.Buttons, Buttons);
+		}
+
+		static void Copy(Array source, Array destination)
+		{
+			Array.Clear(destination, 0, destination.Length);
+			var length = Math.Min(source.Length, destination.Length);
+			Array.Copy(source, destination, length);
 		}
 
 		#region Conversion Methods
@@ -432,30 +461,7 @@ namespace x360ce.Engine.Input.States
 			{
 				// Fallback to legacy fixed 24-axis array if no available axes info
 				// Use ClampAxisValue directly since DirectInput is normalized to 0-65535
-				axes[0] = ClampAxisValue(state.X);
-				axes[1] = ClampAxisValue(state.Y);
-				axes[2] = ClampAxisValue(state.Z);
-				axes[3] = ClampAxisValue(state.RotationX);
-				axes[4] = ClampAxisValue(state.RotationY);
-				axes[5] = ClampAxisValue(state.RotationZ);
-				axes[6] = ClampAxisValue(state.AccelerationX);
-				axes[7] = ClampAxisValue(state.AccelerationY);
-				axes[8] = ClampAxisValue(state.AccelerationZ);
-				axes[9] = ClampAxisValue(state.AngularAccelerationX);
-				axes[10] = ClampAxisValue(state.AngularAccelerationY);
-				axes[11] = ClampAxisValue(state.AngularAccelerationZ);
-				axes[12] = ClampAxisValue(state.ForceX);
-				axes[13] = ClampAxisValue(state.ForceY);
-				axes[14] = ClampAxisValue(state.ForceZ);
-				axes[15] = ClampAxisValue(state.TorqueX);
-				axes[16] = ClampAxisValue(state.TorqueY);
-				axes[17] = ClampAxisValue(state.TorqueZ);
-				axes[18] = ClampAxisValue(state.VelocityX);
-				axes[19] = ClampAxisValue(state.VelocityY);
-				axes[20] = ClampAxisValue(state.VelocityZ);
-				axes[21] = ClampAxisValue(state.AngularVelocityX);
-				axes[22] = ClampAxisValue(state.AngularVelocityY);
-				axes[23] = ClampAxisValue(state.AngularVelocityZ);
+				CopyAxis(state, axes);
 			}
 
 			// Convert sliders
@@ -473,14 +479,7 @@ namespace x360ce.Engine.Input.States
 			else
 			{
 				// Fallback to legacy 8 sliders
-				sliders[0] = ClampAxisValue(state.Sliders[0]);
-				sliders[1] = ClampAxisValue(state.Sliders[1]);
-				sliders[2] = ClampAxisValue(state.AccelerationSliders[0]);
-				sliders[3] = ClampAxisValue(state.AccelerationSliders[1]);
-				sliders[4] = ClampAxisValue(state.ForceSliders[0]);
-				sliders[5] = ClampAxisValue(state.ForceSliders[1]);
-				sliders[6] = ClampAxisValue(state.VelocitySliders[0]);
-				sliders[7] = ClampAxisValue(state.VelocitySliders[1]);
+				CopySliders(state, sliders);
 			}
 
 			// Convert buttons (DirectInput reports as bool array) - pre-allocate capacity
@@ -496,6 +495,112 @@ namespace x360ce.Engine.Input.States
 				povs[i] = ConvertToPOVRange(statePovs[i], PovFormat.DirectInput);
 
 			return result;
+		}
+
+
+		static void CopyAxis(MouseState state, int[] axis)
+		{
+			axis[0] = state.X;
+			axis[1] = state.Y;
+			axis[2] = state.Z;
+		}
+
+		public static void CopyAxis(int[] axis, MouseState state)
+		{
+			state.X = axis[0];
+			state.Y = axis[1];
+			state.Z = axis[2];
+		}
+
+		/// <summary>
+		/// Legacy method to copy all 24 standard DirectInput axes from JoystickState to fixed array.
+		/// </summary>
+		/// <param name="state"></param>
+		/// <param name="axes"></param>
+		public static void CopyAxis(JoystickState state, int[] axes)
+		{
+			// Use ClampAxisValue directly since DirectInput is normalized to 0-65535
+			axes[0] = ClampAxisValue(state.X);
+			axes[1] = ClampAxisValue(state.Y);
+			axes[2] = ClampAxisValue(state.Z);
+			axes[3] = ClampAxisValue(state.RotationX);
+			axes[4] = ClampAxisValue(state.RotationY);
+			axes[5] = ClampAxisValue(state.RotationZ);
+			axes[6] = ClampAxisValue(state.AccelerationX);
+			axes[7] = ClampAxisValue(state.AccelerationY);
+			axes[8] = ClampAxisValue(state.AccelerationZ);
+			axes[9] = ClampAxisValue(state.AngularAccelerationX);
+			axes[10] = ClampAxisValue(state.AngularAccelerationY);
+			axes[11] = ClampAxisValue(state.AngularAccelerationZ);
+			axes[12] = ClampAxisValue(state.ForceX);
+			axes[13] = ClampAxisValue(state.ForceY);
+			axes[14] = ClampAxisValue(state.ForceZ);
+			axes[15] = ClampAxisValue(state.TorqueX);
+			axes[16] = ClampAxisValue(state.TorqueY);
+			axes[17] = ClampAxisValue(state.TorqueZ);
+			axes[18] = ClampAxisValue(state.VelocityX);
+			axes[19] = ClampAxisValue(state.VelocityY);
+			axes[20] = ClampAxisValue(state.VelocityZ);
+			axes[21] = ClampAxisValue(state.AngularVelocityX);
+			axes[22] = ClampAxisValue(state.AngularVelocityY);
+			axes[23] = ClampAxisValue(state.AngularVelocityZ);
+		}
+
+		/// <summary>
+		/// Legacy method to copy all 24 standard DirectInput axes from fixed array to JoystickState.
+		/// </summary>
+		/// <param name="axes"></param>
+		/// <param name="state"></param>
+		public static void CopyAxis(int[] axes, JoystickState state)
+		{
+			state.X = axes[0];
+			state.Y = axes[1];
+			state.Z = axes[2];
+			state.RotationX = axes[3];
+			state.RotationY = axes[4];
+			state.RotationZ = axes[5];
+			state.AccelerationX = axes[6];
+			state.AccelerationY = axes[7];
+			state.AccelerationZ = axes[8];
+			state.AngularAccelerationX = axes[9];
+			state.AngularAccelerationY = axes[10];
+			state.AngularAccelerationZ = axes[11];
+			state.ForceX = axes[12];
+			state.ForceY = axes[13];
+			state.ForceZ = axes[14];
+			state.TorqueX = axes[15];
+			state.TorqueY = axes[16];
+			state.TorqueZ = axes[17];
+			state.VelocityX = axes[18];
+			state.VelocityY = axes[19];
+			state.VelocityZ = axes[20];
+			state.AngularVelocityX = axes[21];
+			state.AngularVelocityY = axes[22];
+			state.AngularVelocityZ = axes[23];
+		}
+
+		public static void CopySliders(JoystickState state, int[] sliders)
+		{
+			sliders[0] = ClampAxisValue(state.Sliders[0]);
+			sliders[1] = ClampAxisValue(state.Sliders[1]);
+			sliders[2] = ClampAxisValue(state.AccelerationSliders[0]);
+			sliders[3] = ClampAxisValue(state.AccelerationSliders[1]);
+			sliders[4] = ClampAxisValue(state.ForceSliders[0]);
+			sliders[5] = ClampAxisValue(state.ForceSliders[1]);
+			sliders[6] = ClampAxisValue(state.VelocitySliders[0]);
+			sliders[7] = ClampAxisValue(state.VelocitySliders[1]);
+		}
+
+		public static void CopySliders(int[] sliders, JoystickState state)
+		{
+			state.Sliders[0] = sliders[0];
+			state.Sliders[1] = sliders[1];
+			state.AccelerationSliders[0] = sliders[2];
+			state.AccelerationSliders[1] = sliders[3];
+			state.ForceSliders[0] = sliders[4];
+			state.ForceSliders[1] = sliders[5];
+			state.VelocitySliders[0] = sliders[6];
+			state.VelocitySliders[1] = sliders[7];
 		}
 
 		private static CustomInputState ConvertMouseState(MouseState state, DirectInputDeviceInfo deviceInfo)
@@ -771,6 +876,61 @@ namespace x360ce.Engine.Input.States
 
 			// Neutral (no direction or invalid combination)
 			return -1;
+		}
+
+		#endregion
+
+		#region Compare Differences
+
+		/// <summary>
+		/// Compare states and return differences
+		/// </summary>
+		public static CustomDeviceUpdate[] CompareTo(CustomDeviceState oldState, CustomDeviceState newState)
+		{
+			if (oldState == null)
+				throw new ArgumentNullException(nameof(oldState));
+			if (newState == null)
+				throw new ArgumentNullException(nameof(newState));
+			var list = new List<CustomDeviceUpdate>();
+			list.AddRange(CompareRange(oldState.Axes, newState.Axes, MapType.Axis));
+			list.AddRange(CompareRange(oldState.Sliders, newState.Sliders, MapType.Slider));
+			list.AddRange(CompareValue(oldState.POVs, newState.POVs, MapType.POV));
+			list.AddRange(CompareValue(oldState.Buttons, newState.Buttons, MapType.Button));
+			// Return results.
+			return list.ToArray();
+		}
+
+		static CustomDeviceUpdate[] CompareValue(bool[] oldValues, bool[] newValues, MapType mapType)
+		{
+			var list = new List<CustomDeviceUpdate>();
+			for (int i = 0; i < oldValues.Length; i++)
+				// If differ then...
+				if (newValues[i] != oldValues[i])
+					list.Add(new CustomDeviceUpdate(mapType, i, newValues[i] ? 1 : 0));
+			// Return results.
+			return list.ToArray();
+		}
+
+		static CustomDeviceUpdate[] CompareValue(int[] oldValues, int[] newValues, MapType mapType)
+		{
+			var list = new List<CustomDeviceUpdate>();
+			for (int i = 0; i < oldValues.Length; i++)
+				// If differ then...
+				if (newValues[i] != oldValues[i])
+					list.Add(new CustomDeviceUpdate(mapType, i, newValues[i]));
+			// Return results.
+			return list.ToArray();
+		}
+
+		static CustomDeviceUpdate[] CompareRange(int[] oldValues, int[] newValues, MapType mapType)
+		{
+			var list = new List<CustomDeviceUpdate>();
+			for (int i = 0; i < oldValues.Length; i++)
+				// If differ by more than 20% then...
+				if (Math.Abs(newValues[i] - oldValues[i]) > (ushort.MaxValue * 30 / 100))
+					list.Add(new CustomDeviceUpdate(mapType, i, newValues[i]));
+			// Return results.
+			return list.ToArray();
 		}
 
 		#endregion

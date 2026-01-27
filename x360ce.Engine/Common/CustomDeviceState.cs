@@ -17,7 +17,7 @@ namespace x360ce.Engine
 		public CustomDeviceState(MouseState state)
 		{
 			Copy(state.Buttons, Buttons);
-			CopyAxis(state, Axis);
+			CopyAxis(state, Axes);
 		}
 
 		public CustomDeviceState(KeyboardState state)
@@ -28,7 +28,7 @@ namespace x360ce.Engine
 
 		public CustomDeviceState(JoystickState state)
 		{
-			CopyAxis(state, Axis);
+			CopyAxis(state, Axes);
 			CopySliders(state, Sliders);
 			Copy(state.PointOfViewControllers, POVs);
 			Copy(state.Buttons, Buttons);
@@ -39,7 +39,7 @@ namespace x360ce.Engine
 		public const int MaxPOVs = 4;
 		public const int MaxButtons = 256;
 
-		public int[] Axis = new int[MaxAxis];
+		public int[] Axes = new int[MaxAxis];
 		public int[] Sliders = new int[MaxSliders];
 		public int[] POVs = new int[MaxPOVs];
 		public bool[] Buttons = new bool[MaxButtons];
@@ -163,7 +163,7 @@ namespace x360ce.Engine
 			if (newState == null)
 				throw new ArgumentNullException(nameof(newState));
 			var list = new List<CustomDeviceUpdate>();
-			list.AddRange(CompareRange(oldState.Axis, newState.Axis, MapType.Axis));
+			list.AddRange(CompareRange(oldState.Axes, newState.Axes, MapType.Axis));
 			list.AddRange(CompareRange(oldState.Sliders, newState.Sliders, MapType.Slider));
 			list.AddRange(CompareValue(oldState.POVs, newState.POVs, MapType.POV));
 			list.AddRange(CompareValue(oldState.Buttons, newState.Buttons, MapType.Button));

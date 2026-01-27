@@ -188,7 +188,7 @@ namespace x360ce.App.Input.Orchestration
 			if (newState == null)
 				throw new ArgumentNullException(nameof(newState));
 			var list = new List<string>();
-			list.AddRange(CompareAxisAndSliders(oldState.Axis, newState.Axis, "Axis", mappingTo));
+			list.AddRange(CompareAxisAndSliders(oldState.Axes, newState.Axes, "Axis", mappingTo));
 			list.AddRange(CompareAxisAndSliders(oldState.Sliders, newState.Sliders, "Slider", mappingTo));
 			// Compare Buttons
 			if (oldState.Buttons.Length == newState.Buttons.Length)

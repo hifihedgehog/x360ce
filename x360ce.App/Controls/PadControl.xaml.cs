@@ -221,7 +221,7 @@ namespace x360ce.App.Controls
 			if (CurrentUserDevice?.DeviceState != null && CurrentPadSetting != null)
 			{
 				// Update graphs.
-				var axis = CurrentUserDevice.DeviceState.Axis;
+				var axis = CurrentUserDevice.DeviceState.Axes;
 				UpdateGraph(TargetType.LeftThumbX, LeftThumbXPanel, newState.Gamepad.LeftThumbX, axis);
 				UpdateGraph(TargetType.LeftThumbY, LeftThumbYPanel, newState.Gamepad.LeftThumbY, axis);
 				UpdateGraph(TargetType.RightThumbX, RightThumbXPanel, newState.Gamepad.RightThumbX, axis);

@@ -435,15 +435,15 @@ namespace x360ce.Engine.Input.Processors
 
 			// Convert analog sticks - Gaming.Input uses -1.0 to 1.0, CustomDeviceState uses 0-65535
 			// CRITICAL: These indices MUST match DirectInput and XInput implementations
-			diState.Axis[0] = ConvertAnalogToAxis(reading.LeftThumbstickX);   // Left stick X
-			diState.Axis[1] = ConvertAnalogToAxis(-reading.LeftThumbstickY);  // Left stick Y (invert for DirectInput compatibility)
-			diState.Axis[2] = ConvertAnalogToAxis(reading.RightThumbstickX);  // Right stick X  
-			diState.Axis[3] = ConvertAnalogToAxis(-reading.RightThumbstickY); // Right stick Y (invert for DirectInput compatibility)
+			diState.Axes[0] = ConvertAnalogToAxis(reading.LeftThumbstickX);   // Left stick X
+			diState.Axes[1] = ConvertAnalogToAxis(-reading.LeftThumbstickY);  // Left stick Y (invert for DirectInput compatibility)
+			diState.Axes[2] = ConvertAnalogToAxis(reading.RightThumbstickX);  // Right stick X  
+			diState.Axes[3] = ConvertAnalogToAxis(-reading.RightThumbstickY); // Right stick Y (invert for DirectInput compatibility)
 
 			// Convert triggers - Gaming.Input uses 0.0 to 1.0, CustomDeviceState uses 0-65535
 			// ADVANTAGE: Gaming.Input provides separate trigger axes (unlike DirectInput)
-			diState.Axis[4] = ConvertTriggerToAxis(reading.LeftTrigger);  // Left trigger
-			diState.Axis[5] = ConvertTriggerToAxis(reading.RightTrigger); // Right trigger
+			diState.Axes[4] = ConvertTriggerToAxis(reading.LeftTrigger);  // Left trigger
+			diState.Axes[5] = ConvertTriggerToAxis(reading.RightTrigger); // Right trigger
 
 			// Convert D-Pad to POV format for compatibility
 			diState.POVs[0] = ConvertDPadToPOV(reading.Buttons);
