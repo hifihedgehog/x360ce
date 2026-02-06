@@ -74,7 +74,7 @@ namespace JocysCom.WebSites.Engine
 
 		public override bool Equals(object o)
 		{
-			if (o == null)
+			if (o is null)
 				return false;
 			return this == o as LinkItem;
 		}
@@ -83,6 +83,9 @@ namespace JocysCom.WebSites.Engine
 
 		#region INotifyPropertyChanged
 
+		// SUPPRESS: CWE-502: Deserialization of Untrusted Data
+		// Fix: Apply [field: NonSerialized] attribute to an event inside class with [Serializable] attribute.
+		[field: NonSerialized]
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)

@@ -12,12 +12,16 @@ using x360ce.Engine.Data;
 using SharpDX.XInput;
 using JocysCom.ClassLibrary.Win32;
 using x360ce.App.ViGEm;
+// using System.Diagnostics;
+//using System.CodeDom;
+//using System.Windows.Controls;
+//using System.Windows.Data;
 
 namespace x360ce.App
 {
 	public static class AppHelper
 	{
-		#region DLL Functions
+		#region ■ DLL Functions
 
 		static void Elevate()
 		{
@@ -30,7 +34,7 @@ namespace x360ce.App
 		{
 			var assembly = Assembly.GetExecutingAssembly();
 			var sr = assembly.GetManifestResourceStream(resourceName);
-			FileStream sw = null;
+			FileStream sw;
 			try
 			{
 				sw = new FileStream(destinationFileName, FileMode.Create, FileAccess.Write);
@@ -67,34 +71,54 @@ namespace x360ce.App
 			return true;
 		}
 
-		public static DeviceObjectItem[] GetDeviceObjects(Joystick device)
+		public static DeviceObjectItem[] GetDeviceObjects(UserDevice ud, Device device)
 		{
 			var items = new List<DeviceObjectItem>();
 			if (device == null)
+			{
+				ud.DeviceObjects = items.ToArray();
 				return items.ToArray();
-			var og = typeof(SharpDX.DirectInput.ObjectGuid);
-			var guidFileds = og.GetFields().Where(x => x.FieldType == typeof(Guid));
-			List<Guid> typeGuids = guidFileds.Select(x => (Guid)x.GetValue(og)).ToList();
-			List<string> typeName = guidFileds.Select(x => x.Name).ToList();
+			}
+
+			// UserDevice force feedback actuators.
+			ud.DiAxeMask = 0;
+			ud.DiActuatorMask = 0;
+			ud.DiActuatorCount = 0;
+
+			// var og = typeof(ObjectGuid);
+			// var guidFileds = og.GetFields().Where(x => x.FieldType == typeof(Guid));
+			// List<Guid> typeGuids = guidFileds.Select(x => (Guid)x.GetValue(og)).ToList();
+			// List<string> typeName = guidFileds.Select(x => x.Name).ToList();
 			var objects = device.GetObjects(DeviceObjectTypeFlags.All).OrderBy(x => x.ObjectId.Flags).ThenBy(x => x.ObjectId.InstanceNumber).ToArray();
+
 			foreach (var o in objects)
 			{
-				var item = new DeviceObjectItem()
-				{
-					Name = o.Name,
-					Offset = o.Offset,
-					Aspect = o.Aspect,
-					Flags = o.ObjectId.Flags,
-					ObjectId = (int)o.ObjectId,
-					Instance = o.ObjectId.InstanceNumber,
-					Type = o.ObjectType,
-					DiIndex = o.ObjectId.InstanceNumber - 1,
-				};
-				var isAxis = o.ObjectId.Flags.HasFlag(DeviceObjectTypeFlags.Axis);
-				isAxis |= o.ObjectId.Flags.HasFlag(DeviceObjectTypeFlags.AbsoluteAxis);
-				isAxis |= o.ObjectId.Flags.HasFlag(DeviceObjectTypeFlags.RelativeAxis);
+				var item = new DeviceObjectItem();
+
+				item.Name = o.Name;
+				item.Offset = o.Offset;
+				item.Aspect = o.Aspect;
+				item.Flags = o.ObjectId.Flags;
+				item.ObjectId = (int)o.ObjectId;
+				item.Instance = o.ObjectId.InstanceNumber;
+				item.Type = o.ObjectType;
+				item.DiIndex = o.ObjectId.InstanceNumber;
+
+				// Axes.
+				var isAxis = o.ObjectId.Flags.HasFlag(DeviceObjectTypeFlags.Axis)
+				|| o.ObjectId.Flags.HasFlag(DeviceObjectTypeFlags.AbsoluteAxis)
+				|| o.ObjectId.Flags.HasFlag(DeviceObjectTypeFlags.RelativeAxis);
+
 				if (isAxis)
 				{
+					ud.DiAxeMask |= (int)Math.Pow(2, item.Instance);
+					if ((device is Joystick || device is Mouse) && o.ObjectId.Flags.HasFlag(DeviceObjectTypeFlags.ForceFeedbackActuator))
+					{
+						ud.DiActuatorMask |= (int)Math.Pow(2, item.Instance);
+						ud.DiActuatorCount = ud.DiActuatorCount++;
+					}
+
+					// Axis properties.
 					try
 					{
 						var p = device.GetObjectPropertiesById(o.ObjectId);
@@ -110,7 +134,6 @@ namespace x360ce.App
 							item.RangeMax = p.Range.Maximum;
 							item.Saturation = p.Saturation;
 						}
-
 					}
 					catch (Exception ex)
 					{
@@ -120,11 +143,12 @@ namespace x360ce.App
 				items.Add(item);
 			}
 			// Update Button DIndexes.
-			var buttons = items.Where(x => x.Type == ObjectGuid.Button || x.Type == ObjectGuid.Key).OrderBy(x => x.Instance).ToArray();
-			for (int i = 0; i < buttons.Length; i++)
-			{
-				buttons[i].DiIndex = i;
-			}
+			//var buttons = items.Where(x => x.Type == ObjectGuid.Button || x.Type == ObjectGuid.Key).OrderBy(x => x.Instance).ToArray();
+			//for (int i = 0; i < buttons.Length; i++)
+			//{
+			//	buttons[i].DiIndex = i;
+			//}
+			ud.DeviceObjects = items.ToArray();
 			return items.ToArray();
 		}
 
@@ -132,7 +156,7 @@ namespace x360ce.App
 		/// <summary>
 		/// Device must be acquired in exclusive mode to get effects.
 		/// </summary>
-		public static DeviceEffectItem[] GetDeviceEffects(Joystick device)
+		public static DeviceEffectItem[] GetDeviceEffects(Device device)
 		{
 			var items = new List<DeviceEffectItem>();
 			if (device == null)
@@ -181,25 +205,25 @@ namespace x360ce.App
 
 		// Use cache so same image won't processed multiple times.
 		public static Dictionary<Bitmap, Bitmap> DisabledImageCache = new Dictionary<Bitmap, Bitmap>();
-		static object DisabledImageLock = new object();
+		//static object DisabledImageLock = new object();
 
 		/// <summary>
 		/// Generates disabled Image. Images are cached so do not use method for random images.
 		/// </summary>
-		public static Bitmap GetDisabledImage(Bitmap image)
-		{
-			lock (DisabledImageLock)
-			{
-				if (!DisabledImageCache.ContainsKey(image))
-				{
-					var newImage = (Bitmap)image.Clone();
-					JocysCom.ClassLibrary.Drawing.Effects.GrayScale(newImage);
-					JocysCom.ClassLibrary.Drawing.Effects.Transparent(newImage, 50);
-					DisabledImageCache.Add(image, newImage);
-				}
-				return DisabledImageCache[image];
-			}
-		}
+		//public static Bitmap GetDisabledImage(Bitmap image)
+		//{
+		//	lock (DisabledImageLock)
+		//	{
+		//		if (!DisabledImageCache.ContainsKey(image))
+		//		{
+		//			var newImage = (Bitmap)image.Clone();
+		//			JocysCom.ClassLibrary.Drawing.Effects.GrayScale(newImage);
+		//			JocysCom.ClassLibrary.Drawing.Effects.Transparent(newImage, 50);
+		//			DisabledImageCache.Add(image, newImage);
+		//		}
+		//		return DisabledImageCache[image];
+		//	}
+		//}
 
 		/// <summary>
 		/// Remove explicit file rules and leave inherited rules only.
@@ -320,7 +344,7 @@ namespace x360ce.App
 			}
 		}
 
-		#region HID Guardian
+		#region ■ HID Guardian
 
 		public static void InitializeHidGuardian()
 		{
@@ -350,7 +374,7 @@ namespace x360ce.App
 			var affected = ViGEm.HidGuardianHelper.GetAffected();
 			// Clear list of hidden devices.
 			ViGEm.HidGuardianHelper.ClearAffected();
-			var devices = SettingsManager.UserDevices.ItemsToArraySyncronized();
+			var devices = SettingsManager.UserDevices.ItemsToArraySynchronized();
 			// Unhide all devices.
 			for (int i = 0; i < devices.Length; i++)
 				devices[i].IsHidden = false;
@@ -391,7 +415,7 @@ namespace x360ce.App
 				// If must hide and device is not keyboard or mouse.
 				if (ud.IsHidden && !ud.IsKeyboard && !ud.IsMouse)
 					idsToHide.Add(hardwareId);
-				else if(!ud.IsHidden)
+				else if (!ud.IsHidden)
 					idsToShow.Add(hardwareId);
 			}
 			var canModify = ViGEm.HidGuardianHelper.CanModifyParameters(true);

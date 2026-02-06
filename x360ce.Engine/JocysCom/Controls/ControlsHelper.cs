@@ -1,4 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Data;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,8 +12,6 @@ namespace JocysCom.ClassLibrary.Controls
 {
 	public static partial class ControlsHelper
 	{
-		private const int WM_SETREDRAW = 0x000B;
-
 		#region Invoke and BeginInvoke
 
 		/// <summary>
@@ -17,7 +21,7 @@ namespace JocysCom.ClassLibrary.Controls
 		{
 			if (MainTaskScheduler != null)
 				return;
-			MainThreadId = Thread.CurrentThread.ManagedThreadId;
+			_MainThreadId = Thread.CurrentThread.ManagedThreadId;
 			// Create a TaskScheduler that wraps the SynchronizationContext returned from
 			// System.Threading.SynchronizationContext.Current
 			MainTaskScheduler = TaskScheduler.FromCurrentSynchronizationContext();
@@ -28,12 +32,11 @@ namespace JocysCom.ClassLibrary.Controls
 		/// </summary>
 		public static TaskScheduler MainTaskScheduler { get; private set; }
 
-		private static int MainThreadId;
+		public static int MainThreadId => _MainThreadId;
+		private static int _MainThreadId;
 
-		public static bool InvokeRequired()
-		{
-			return MainThreadId != Thread.CurrentThread.ManagedThreadId;
-		}
+		public static bool InvokeRequired
+			=> _MainThreadId != Thread.CurrentThread.ManagedThreadId;
 
 		/*
 
@@ -101,7 +104,8 @@ namespace JocysCom.ClassLibrary.Controls
 			{
 				return Task.Run(async () =>
 				{
-					// Wait 1 second, which will allow to relase the button.
+					// Wait 1 second, which will allow to release the button.
+					// Logical delay without blocking the current hardware thread.
 					await Task.Delay(millisecondsDelay.Value).ConfigureAwait(true);
 					await BeginInvoke(action);
 				});
@@ -125,10 +129,10 @@ namespace JocysCom.ClassLibrary.Controls
 		/// <param name="action">The action delegate to execute synchronously.</param>
 		public static void Invoke(Action action)
 		{
-			if (action == null)
+			if (action is null)
 				throw new ArgumentNullException(nameof(action));
 			InitInvokeContext();
-			if (InvokeRequired())
+			if (InvokeRequired)
 			{
 				var t = new Task(action);
 				t.RunSynchronously(MainTaskScheduler);
@@ -143,10 +147,10 @@ namespace JocysCom.ClassLibrary.Controls
 		/// <param name="action">The delegate to execute synchronously.</param>
 		public static object Invoke(Delegate method, params object[] args)
 		{
-			if (method == null)
+			if (method is null)
 				throw new ArgumentNullException(nameof(method));
 			// Run method on main Graphical User Interface thread.
-			if (InvokeRequired())
+			if (InvokeRequired)
 			{
 				var t = new Task<object>(() => method.DynamicInvoke(args));
 				t.RunSynchronously(MainTaskScheduler);
@@ -155,6 +159,181 @@ namespace JocysCom.ClassLibrary.Controls
 			else
 			{
 				return method.DynamicInvoke(args);
+			}
+		}
+
+		#endregion
+
+		#region Open Path or URL
+
+		public static void OpenUrl(string url)
+		{
+			try
+			{
+				if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+					Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+				else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+					Process.Start("xdg-open", url);
+				else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+					Process.Start("open", url);
+			}
+			catch (System.ComponentModel.Win32Exception winEx)
+			{
+				if (winEx.ErrorCode == -2147467259)
+					MessageBoxShow(winEx.Message);
+			}
+			catch (System.Exception ex)
+			{
+				MessageBoxShow(ex.Message);
+			}
+		}
+
+		private static void MessageBoxShow(string message)
+		{
+#if NETCOREAPP // .NET Core
+			System.Windows.MessageBox.Show(message);
+#elif NETSTANDARD // .NET Standard
+#elif NETFRAMEWORK // .NET Framework
+			// Requires: PresentationFramework.dll
+			System.Windows.MessageBox.Show(message);
+#else
+			throw new NotImplementedException("MessageBox not available for this .NET type");
+#endif
+		}
+
+		/// <summary>
+		/// Open file with associated program.
+		/// </summary>
+		/// <param name="path">file to open.</param>
+		public static void OpenPath(string path, string arguments = null)
+		{
+			try
+			{
+
+				var psi = new System.Diagnostics.ProcessStartInfo();
+				if (Uri.TryCreate(path, UriKind.Absolute, out Uri uri) && uri.Scheme != Uri.UriSchemeFile)
+				{
+					// Open URL
+					psi.UseShellExecute = true;
+					psi.FileName = uri.AbsoluteUri;
+					if (arguments != null)
+						psi.Arguments = arguments;
+					psi.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+				}
+				else
+				{
+					// Open file/directory
+					psi.FileName = path;
+					if (arguments != null)
+						psi.Arguments = arguments;
+					var fi = new System.IO.FileInfo(path);
+					psi.UseShellExecute = true;
+					psi.ErrorDialog = true;
+					psi.WorkingDirectory = fi.Directory?.FullName ?? Environment.CurrentDirectory;
+				}
+				System.Diagnostics.Process.Start(psi);
+			}
+			catch { }
+		}
+
+		#endregion
+
+		public static PropertyInfo GetPrimaryKeyPropertyInfo(object item)
+		{
+			if (item is null)
+				return null;
+			var t = item.GetType();
+			PropertyInfo pi = null;
+#if NETCOREAPP // .NET Core
+			// Try to find property by KeyAttribute.
+			pi = t.GetProperties()
+				.Where(x => Attribute.IsDefined(x, typeof(System.ComponentModel.DataAnnotations.KeyAttribute), true))
+				.FirstOrDefault();
+			if (pi != null)
+				return pi;
+#else
+			// Try to find property by EntityFramework EdmScalarPropertyAttribute (System.Data.Entity.dll).
+			pi = t.GetProperties()
+				.Where(x =>
+					x.GetCustomAttributes(typeof(System.Data.Objects.DataClasses.EdmScalarPropertyAttribute), true)
+					.Cast<System.Data.Objects.DataClasses.EdmScalarPropertyAttribute>()
+					.Any(a => a.EntityKeyProperty))
+				.FirstOrDefault();
+			if (pi != null)
+				return pi;
+
+#endif
+			return null;
+		}
+
+		/// <summary>
+		/// Get DataViewRow, DataRow or item property value.
+		/// </summary>
+		/// <typeparam name="T">Return value type.</typeparam>
+		/// <param name="item">DataViewRow, DataRow or another type.</param>
+		/// <param name="keyPropertyName">Data property or column name.</param>
+		/// <param name="pi">Optional property info cache.</param>
+		/// <returns></returns>
+		private static T GetValue<T>(object item, string keyPropertyName, PropertyInfo pi = null)
+		{
+			// Return object value if property info supplied.
+			if (pi != null)
+				return (T)pi.GetValue(item, null);
+			// Get DataRow.
+			var row = item is System.Data.DataRowView rowView
+				? rowView.Row
+				: (System.Data.DataRow)item;
+			// Return DataRow value.
+			return row.IsNull(keyPropertyName)
+					? default
+					: (T)row[keyPropertyName];
+		}
+
+		/// <summary>
+		///  Get Property info 
+		/// </summary>
+		/// <param name="keyPropertyName"></param>
+		/// <param name="item"></param>
+		private static PropertyInfo GetPropertyInfo(string keyPropertyName, object item)
+		{
+			// Get property info if not DataRowView or DataRow.
+			PropertyInfo pi = null;
+			if (!(item is DataRowView) && !(item is DataRow))
+				pi = string.IsNullOrEmpty(keyPropertyName)
+					? GetPrimaryKeyPropertyInfo(item)
+					: item.GetType().GetProperty(keyPropertyName);
+			return pi;
+		}
+
+		#region Add cool downs to controls.
+
+		// Default cool-down 1 second.
+		public static TimeSpan ControlCooldown = new TimeSpan(0, 0, 1);
+
+		public static ConcurrentDictionary<int, DateTime> ControlCooldowns { get; } = new ConcurrentDictionary<int, DateTime>();
+
+		/// <summary>
+		/// Returns true if control is on cool-down.
+		/// </summary>
+		/// <param name="control">Control to check.</param>
+		public static bool IsOnCooldown(object control, int? milliseconds = null)
+		{
+			lock (ControlCooldowns)
+			{
+				var now = DateTime.UtcNow;
+				int hashCode = control.GetHashCode();
+				// Cleanup expired cooldowns.
+				var expiredKeys = ControlCooldowns.Where(kv => now > kv.Value).Select(kv => kv.Key).ToList();
+				foreach (var key in expiredKeys)
+					ControlCooldowns.TryRemove(key, out _);
+				// If on cool-down then...
+				if (ControlCooldowns.ContainsKey(hashCode))
+					return true;
+				var newTime = milliseconds.HasValue
+					? now.AddMilliseconds(milliseconds.Value)
+					: now.Add(ControlCooldown);
+				ControlCooldowns.TryAdd(hashCode, newTime);
+				return false;
 			}
 		}
 

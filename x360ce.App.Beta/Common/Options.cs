@@ -13,7 +13,8 @@ namespace x360ce.App
 			// Set default values.
 			AllowOnlyOneCopy = true;
 			MinimizeToTray = true;
-			StartWithWindowsState = FormWindowState.Minimized;
+            MinimizeOnClose = true;
+            StartWithWindowsState = FormWindowState.Minimized;
 			InternetFeatures = true;
 			InternetAutoLoad = true;
 			InternetAutoSave = true;
@@ -21,9 +22,9 @@ namespace x360ce.App
 			EnableShowFormInfo = false;
 		}
 		/// <summary>
-		/// Avoid deserialization duplicates by using separate method.
+		/// Avoid de-serialization duplicates by using separate method.
 		/// </summary>
-		public void InitDefaults()
+		public void InitializeDefaults()
 		{
 			if (string.IsNullOrEmpty(InternetDatabaseUrl))
 				InternetDatabaseUrl = "http://www.x360ce.com/webservices/x360ce.asmx";
@@ -35,7 +36,7 @@ namespace x360ce.App
 				InternetDatabaseUrls.Add("http://localhost:20360/webservices/x360ce.asmx");
 			}
 			if (GameScanLocations == null)
-				GameScanLocations = new BindingList<string>() { };
+				GameScanLocations = new BindingList<string>();
 			if (string.IsNullOrEmpty(ComputerDisk))
 				ComputerDisk = Engine.BoardInfo.GetDiskId();
 			if (ComputerId == Guid.Empty)
@@ -62,15 +63,24 @@ namespace x360ce.App
 		}
 		public string AppVersion { get; set; }
 
+		public string SettingsVersion { get; set; } = "4";
+
+		[DefaultValue(false), Description("Throw or suspend errors.")]
+		public bool DebugMode { get { return _DebugMode; } set { _DebugMode = value; OnPropertyChanged(); } }
+		bool _DebugMode;
+
+
 		[DefaultValue(false), Description("Allow only one instance of the application to run at a time.")]
 		public bool AllowOnlyOneCopy { get { return _AllowOnlyOneCopy; } set { _AllowOnlyOneCopy = value; OnPropertyChanged(); } }
 		bool _AllowOnlyOneCopy;
+
+
 
 		[DefaultValue(false), Description("Make program Top Window")]
 		public bool AlwaysOnTop { get { return _AlwaysOnTop; } set { _AlwaysOnTop = value; OnPropertyChanged(); } }
 		bool _AlwaysOnTop;
 
-		[DefaultValue(false), Description("Start with Windows.")]
+		[DefaultValue(false), Description("StartDInputService with Windows.")]
 		public bool StartWithWindows { get { return _StartWithWindows; } set { _StartWithWindows = value; OnPropertyChanged(); } }
 		bool _StartWithWindows;
 
@@ -174,8 +184,21 @@ namespace x360ce.App
 
 		[DefaultValue(true)]
 		public bool MinimizeToTray { get; set; }
-		public bool ExcludeSupplementalDevices { get; set; }
+
+        public bool MinimizeOnClose { get; set; }
+        public bool ExcludeSupplementalDevices { get; set; }
+
+		#region ■ Direct Input
+
 		public bool ExcludeVirtualDevices { get; set; }
+
+		[DefaultValue(true)]
+		public bool AcquireHiddenDevicesInExclusiveMode { get; set; } = true;
+
+		[DefaultValue(true)]
+		public bool AcquireMappedDevicesInExclusiveMode { get; set; } = true;
+
+		#endregion
 
 		[DefaultValue(true), Description("Auto-detect currently focused game.")]
 		public bool AutoDetectForegroundWindow
@@ -229,7 +252,7 @@ namespace x360ce.App
 		}
 		bool _GetXInputStates;
 
-		#region Get Programs 
+		#region ■ Get Programs 
 
 		[DefaultValue(2)]
 		public int GetProgramsMinInstances { get; set; } = 2;
@@ -239,7 +262,7 @@ namespace x360ce.App
 
 		#endregion
 
-		#region Options: Developing
+		#region ■ Options: Developing
 
 		[DefaultValue(false), Description("Enable Form Info (CTRL+SHIFT+RMB)")]
 		public bool EnableShowFormInfo { get { return _EnableShowFormInfo; } set { _EnableShowFormInfo = value; OnPropertyChanged(); } }
@@ -252,7 +275,7 @@ namespace x360ce.App
 
 		#endregion
 
-		#region INotifyPropertyChanged
+		#region ■ INotifyPropertyChanged
 
 		public event PropertyChangedEventHandler PropertyChanged;
 

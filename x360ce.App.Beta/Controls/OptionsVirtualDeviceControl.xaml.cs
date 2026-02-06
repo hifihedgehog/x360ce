@@ -1,7 +1,9 @@
 ﻿using JocysCom.ClassLibrary.Controls;
 using System;
+//using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+//using System.Windows.Documents;
 using x360ce.Engine;
 
 namespace x360ce.App.Controls
@@ -13,28 +15,17 @@ namespace x360ce.App.Controls
 	{
 		public OptionsVirtualDeviceControl()
 		{
-			InitializeComponent();
+			InitHelper.InitTimer(this, InitializeComponent);
 		}
 
-		private void UserControl_Loaded(object sender, RoutedEventArgs e)
+		private void MainTabControl_SelectionChanged(object sender, EventArgs e)
 		{
-			if (ControlsHelper.IsDesignMode(this))
+			var window = Global._MainWindow;
+			if (window == null)
 				return;
-			MainForm.Current.MainTabControl.SelectedIndexChanged += MainTabControl_SelectedIndexChanged;
-			MainForm.Current.OptionsPanel.MainTabControl.SelectedIndexChanged += MainTabControl_SelectedIndexChanged;
-			ControlsHelper.SetTextFromResource(HelpRichTextBox, "Documents.Help_ViGEmBus.rtf");
-			// Bind Controls.
-			var o = SettingsManager.Options;
-			PollingRateComboBox.ItemsSource = Enum.GetValues(typeof(UpdateFrequency));
-			SettingsManager.LoadAndMonitor(o, nameof(o.PollingRate), PollingRateComboBox);
-			RefreshStatus();
-		}
-
-		private void MainTabControl_SelectedIndexChanged(object sender, EventArgs e)
-		{
 			var isSelected =
-				MainForm.Current.MainTabControl.SelectedTab == MainForm.Current.OptionsTabPage &&
-				MainForm.Current.OptionsPanel.MainTabControl.SelectedTab == MainForm.Current.OptionsPanel.RemoteControllerTabPage;
+				window.MainBodyPanel.MainTabControl.SelectedItem == window.MainBodyPanel.OptionsTabPage &&
+				window.OptionsPanel.MainTabControl.SelectedItem == window.OptionsPanel.RemoteControllerTabPage;
 			// If HidGuardian Tab was selected then refresh.
 			if (isSelected)
 				RefreshStatus();
@@ -61,7 +52,7 @@ namespace x360ce.App.Controls
 			{
 				StatusTextBox.Text = "Uninstalling. Please Wait...";
 				// Disable Virtual mode first.
-				MainForm.Current.ChangeCurrentGameEmulationType(EmulationType.None);
+				Global._MainWindow.ChangeCurrentGameEmulationType(EmulationType.None);
 				DInput.DInputHelper.CheckUnInstallVirtualDriver();
 				RefreshStatus();
 			});
@@ -90,5 +81,41 @@ namespace x360ce.App.Controls
 			t.Start();
 		}
 
+		private void UserControl_Loaded(object sender, RoutedEventArgs e)
+		{
+			if (!ControlsHelper.AllowLoad(this))
+				return;
+			Global._MainWindow.MainBodyPanel.MainTabControl.SelectionChanged += MainTabControl_SelectionChanged;
+			Global._MainWindow.OptionsPanel.MainTabControl.SelectionChanged += MainTabControl_SelectionChanged;
+
+			var bytes = JocysCom.ClassLibrary.Helper.FindResource<byte[]>("Documents.Help_ViGEmBus.rtf");
+			ControlsHelper.SetTextFromResource(HelpRichTextBox, bytes);
+
+			// Bind Controls.
+			var o = SettingsManager.Options;
+			PollingRateComboBox.ItemsSource = Enum.GetValues(typeof(UpdateFrequency));
+			SettingsManager.LoadAndMonitor(o, nameof(o.PollingRate), PollingRateComboBox);
+			RefreshStatus();
+		}
+
+		private void UserControl_Unloaded(object sender, RoutedEventArgs e)
+		{
+			if (!ControlsHelper.AllowUnload(this))
+				return; 
+			// Moved to MainBodyControl_Unloaded().
+		}
+
+		public void ParentWindow_Unloaded()
+		{
+			TabControl tc;
+			tc = Global._MainWindow?.MainBodyPanel?.MainTabControl;
+			if (tc != null)
+				tc.SelectionChanged -= MainTabControl_SelectionChanged;
+			tc = Global._MainWindow?.OptionsPanel?.MainTabControl;
+			if (tc != null)
+				tc.SelectionChanged -= MainTabControl_SelectionChanged;
+			SettingsManager.UnLoadMonitor(PollingRateComboBox);
+			PollingRateComboBox.ItemsSource = null;
+		}
 	}
 }

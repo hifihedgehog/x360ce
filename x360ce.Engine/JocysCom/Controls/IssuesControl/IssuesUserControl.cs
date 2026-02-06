@@ -211,15 +211,18 @@ namespace JocysCom.ClassLibrary.Controls.IssuesControl
 				if (TasksTimer != null)
 					TasksTimer.Dispose();
 				// Clear list.
-				var items = IssueList.ToArray();
-				IssueList.Clear();
-				// Remove events.
-				foreach (var item in items)
+				var items = IssueList?.ToArray();
+				if (items != null)
 				{
-					item.Checking -= Item_Checking;
-					item.Checked -= Item_Checked;
-					item.Fixing -= Item_Fixing;
-					item.Fixed -= Item_Fixed;
+					IssueList.Clear();
+					// Remove events.
+					foreach (var item in items)
+					{
+						item.Checking -= Item_Checking;
+						item.Checked -= Item_Checked;
+						item.Fixing -= Item_Fixing;
+						item.Fixed -= Item_Fixed;
+					}
 				}
 				if (components != null)
 					components.Dispose();
@@ -304,7 +307,7 @@ namespace JocysCom.ClassLibrary.Controls.IssuesControl
 			}
 			else if (column == MoreColumn)
 			{
-				e.Value = item.MoreInfo == null ? "" : "More...";
+				e.Value = item.MoreInfo is null ? "" : "More...";
 			}
 		}
 
@@ -315,9 +318,7 @@ namespace JocysCom.ClassLibrary.Controls.IssuesControl
 			var nextRunTime = TasksTimer.NextRunTime;
 			TimeSpan remains = new TimeSpan();
 			if (nextRunTime.Ticks > 0)
-			{
 				remains = nextRunTime.Subtract(DateTime.Now);
-			}
 			var nextRun = string.Format("Next Run: {0:00}:{1:00}", remains.Minutes, remains.Seconds + (remains.Milliseconds / 1000m));
 			ControlsHelper.SetText(NextRunLabel, nextRun);
 			var lrt = TasksTimer.LastActionDoneTime;

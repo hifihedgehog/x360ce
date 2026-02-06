@@ -1,12 +1,11 @@
-﻿using JocysCom.ClassLibrary.Controls;
-using Nefarius.ViGEm.Client;
+﻿using Nefarius.ViGEm.Client;
 using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 using SharpDX.XInput;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
+using System.Windows.Input;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
@@ -28,7 +27,7 @@ namespace x360ce.App.DInput
 			if (!allow)
 				return;
 			// If virtual driver is missing then return.
-			if (!ViGEmClient.isVBusExists(true))
+			if (!ViGEmClient.isVBusExists())
 				return;
 			var isVirtual = game != null && ((EmulationType)game.EmulationType).HasFlag(EmulationType.Virtual);
 			// If game does not use virtual emulation then...
@@ -197,9 +196,9 @@ namespace x360ce.App.DInput
 			}
 		}
 
-		private static Keys[] GetGuideKeys()
+		private static Key[] GetGuideKeys()
 		{
-			var list = new List<Keys>();
+			var list = new List<Key>();
 			var keys = SettingsManager.Options.GuideButtonAction;
 			var matches = rxKeys.Matches(keys);
 			foreach (Match m in matches)
@@ -209,11 +208,11 @@ namespace x360ce.App.DInput
 				// Try parse as byte/number first.
 				if (byte.TryParse(s, out keyCode))
 				{
-					list.Add((Keys)keyCode);
+					list.Add((Key)keyCode);
 					continue;
 				}
 				// Try parse as "Keys" enum (ignore case).
-				Keys keyValue;
+				Key keyValue;
 				if (System.Enum.TryParse(s, true, out keyValue))
 				{
 					list.Add(keyValue);
@@ -228,7 +227,7 @@ namespace x360ce.App.DInput
 		public static VirtualError CheckInstallVirtualDriver()
 		{
 			// If driver is installed already then return.
-			if (ViGEmClient.isVBusExists(false))
+			if (ViGEmClient.isVBusExists())
 				return VirtualError.None;
 			Program.RunElevated(AdminCommand.InstallViGEmBus);
 			return VirtualError.None;
@@ -237,7 +236,7 @@ namespace x360ce.App.DInput
 		public static VirtualError CheckUnInstallVirtualDriver()
 		{
 			// If driver is installed already then return.
-			if (!ViGEmClient.isVBusExists(false))
+			if (!ViGEmClient.isVBusExists())
 				return VirtualError.None;
 			Program.RunElevated(AdminCommand.UninstallViGEmBus);
 			return VirtualError.None;
@@ -247,7 +246,7 @@ namespace x360ce.App.DInput
 		{
 			if (userIndex < 1 || userIndex > 4)
 				return VirtualError.Index;
-			if (!ViGEmClient.isVBusExists(true))
+			if (!ViGEmClient.isVBusExists())
 				return VirtualError.Missing;
 			if (!ViGEmClient.Current.isControllerExists(userIndex))
 				return VirtualError.Other;
@@ -264,7 +263,7 @@ namespace x360ce.App.DInput
 			bool success;
 			if (userIndex < 1 || userIndex > 4)
 				return VirtualError.Index;
-			if (!ViGEmClient.isVBusExists(false))
+			if (!ViGEmClient.isVBusExists())
 				return VirtualError.Missing;
 			if (!ViGEmClient.Current.isControllerExists(userIndex))
 				return VirtualError.None;

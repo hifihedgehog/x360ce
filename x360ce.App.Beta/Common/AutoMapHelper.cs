@@ -20,7 +20,7 @@ namespace x360ce.App
 				return ps;
 			var list = objects.ToList();
 			// Get information about device.
-			var deviceType = (SharpDX.DirectInput.DeviceType)ud.CapType;
+			var deviceType = (DeviceType)ud.CapType;
 			if (deviceType == DeviceType.Mouse)
 			{
 				// Offset  Type    Aspect    Flags         Instance  Name    
@@ -112,7 +112,7 @@ namespace x360ce.App
 					ps.LeftShoulder = GetButtonValue(list, 4, true, "L1");
 					ps.RightShoulder = GetButtonValue(list, 5, true, "R1");
 					ps.ButtonBack = GetButtonValue(list, 8, true, "Select", "Back");
-					ps.ButtonStart = GetButtonValue(list, 9, true, "Start");
+					ps.ButtonStart = GetButtonValue(list, 9, true, "StartDInputService");
 					ps.LeftThumbButton = GetButtonValue(list, 10, true, "Left Paddle");
 					ps.RightThumbButton = GetButtonValue(list, 11, true, "Right Paddle");
 					// Map triggers from two different axis.
@@ -136,7 +136,7 @@ namespace x360ce.App
 					ps.LeftShoulder = GetButtonValue(list, 4, true, "L1");
 					ps.RightShoulder = GetButtonValue(list, 5, true, "R1");
 					ps.ButtonBack = GetButtonValue(list, 6, true, "Select", "Back");
-					ps.ButtonStart = GetButtonValue(list, 7, true, "Start");
+					ps.ButtonStart = GetButtonValue(list, 7, true, "StartDInputService");
 					ps.LeftThumbButton = GetButtonValue(list, 8, true, "Left Paddle");
 					ps.RightThumbButton = GetButtonValue(list, 9, true, "Right Paddle");
 					// Triggers.
@@ -192,7 +192,7 @@ namespace x360ce.App
 			if (o == null && dIndex.HasValue)
 				o = objects.FirstOrDefault(x => (x.Type == ObjectGuid.Button || x.Type == ObjectGuid.Key) && x.DiIndex == dIndex.Value);
 			// Use instance number which is same as X360CE button index.
-			return o == null ? "" : string.Format("{0}{1}", SettingName.SType.Button, o.DiIndex + 1);
+			return o == null ? "" : string.Format($"{SettingName.SType.Button}{o.DiIndex}");
 		}
 
 		/// <summary>Return axis setting value if axis exists.</summary>
@@ -224,7 +224,7 @@ namespace x360ce.App
 					// Set invert.
 					invert ? "-" : "",
 					// Use X360CE axis index.
-					o.DiIndex + 1
+					o.DiIndex
 				);
 		}
 

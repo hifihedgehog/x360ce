@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Security.AccessControl;
 using System.Security.Principal;
-using System.Runtime.InteropServices;
 
 namespace x360ce.App.ViGEm
 {
@@ -19,15 +18,12 @@ namespace x360ce.App.ViGEm
 		static string ParametersRegistry => $"{HidGuardianRegistry}\\Parameters";
 		static string WhitelistRegistry => $"{ParametersRegistry}\\{WhiteList}";
 
-		static readonly IEnumerable<object> ResponseOk = new[] { "OK" };
-		static readonly string[] HardwareIdSplitters = { "\r\n", "\n" };
-
 		static string pattern1 = @"^HID\\VID_[0-9A-F]{4}&PID_[0-9A-F]{4}";
 		//static string pattern2 = @"HID\\[{(]?[0-9A-Fa-z]{8}[-]?([0-9A-Fa-z]{4}[-]?){3}[0-9A-Fa-z]{12}[)}]?";
 
 		public static readonly Regex HardwareIdRegex = new Regex(pattern1);
 
-		#region WhiteList
+		#region ■ WhiteList
 
 
 		/// <summary>
@@ -124,7 +120,7 @@ namespace x360ce.App.ViGEm
 
 		#endregion
 
-		#region Force
+		#region ■ Force
 
 		public static bool GetForce()
 		{
@@ -147,7 +143,7 @@ namespace x360ce.App.ViGEm
 
 		#endregion
 
-		#region Affected
+		#region ■ Affected
 
 		const string registryKeyName = "AffectedDevices";
 
@@ -293,7 +289,7 @@ namespace x360ce.App.ViGEm
 
 		#endregion
 
-		#region Helper
+		#region ■ Helper
 
 		/// <summary>
 		/// Check if Users have right to modify programs white list.
@@ -338,7 +334,7 @@ namespace x360ce.App.ViGEm
 			if (key == null)
 				return;
 			// Create sub key.
-			key.CreateSubKey(WhiteList);
+			_ = key.CreateSubKey(WhiteList);
 			key.Close();
 		}
 

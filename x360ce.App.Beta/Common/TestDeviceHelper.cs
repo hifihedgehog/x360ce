@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using x360ce.Engine;
 using x360ce.Engine.Data;
 
@@ -69,6 +68,7 @@ namespace x360ce.App
 				break;
 			}
 			var ud = new UserDevice();
+			ud.HidManufacturer = "X360CE";
 			ud.DevManufacturer = "X360CE";
 			ud.InstanceGuid = Guid.NewGuid();
 			ud.InstanceName = instanceName;
@@ -132,21 +132,22 @@ namespace x360ce.App
 				{
 					// Shift busy value by half so movement starts from the centre.
 					var value = (time + busy / 2) % busy;
-					if (time <= half)
+					if (value < half)
 					{
 						// Convert [   0-1999] to [0-35999].
-						degree = ConvertHelper.ConvertRange(0, half - 1, 0, 35999, value);
+						degree = ConvertHelper.ConvertRange(value, 0, half - 1, 0, 35999);
 					}
 					else
 					{
 						// Convert [2000-3999] to [35999-0].
-						degree = ConvertHelper.ConvertRange(half, busy - 1, 35999, 0, value);
+						degree = ConvertHelper.ConvertRange(value, half, busy - 1, 35999, 0);
 					}
 				}
 				state.PointOfViewControllers[i] = degree;
 			}
 			// Set Axis.
-			var axis = CustomDiState.GetAxisFromState(state);
+			var axis = new int[CustomDiState.MaxAxis];
+			CustomDiState.CopyAxis(state, axis);
 			// Get information about axis.
 			var axisObjects = ud.DeviceObjects
 				.Where(x => x.Flags.HasFlag(DeviceObjectTypeFlags.AbsoluteAxis) || x.Flags.HasFlag(DeviceObjectTypeFlags.RelativeAxis)).ToArray();
@@ -171,22 +172,23 @@ namespace x360ce.App
 						if (invert && isEven)
 							sine *= -1f;
 						var range = ConvertHelper.ConvertToShort((float)sine);
-						position = ConvertHelper.ConvertRange(short.MinValue, short.MaxValue, ushort.MinValue, ushort.MaxValue, range);
+						position = ConvertHelper.ConvertRange(range, short.MinValue, short.MaxValue, ushort.MinValue, ushort.MaxValue);
 					}
 					else
 					{
 						position = time < half
 							// Move up [0-1999].
-							? ConvertHelper.ConvertRange(0, half - 1, ushort.MinValue, ushort.MaxValue, time)
+							? ConvertHelper.ConvertRange(time, 0, half - 1, ushort.MinValue, ushort.MaxValue)
 							// Move down  [2000-3999].
-							: ConvertHelper.ConvertRange(half, busy - 1, ushort.MaxValue, ushort.MinValue, time);
+							: ConvertHelper.ConvertRange(time, half, busy - 1, ushort.MaxValue, ushort.MinValue);
 					}
 				}
 				axis[i] = position;
 			}
-			CustomDiState.SetStateFromAxis(state, axis);
+			CustomDiState.CopyAxis(axis, state);
 			// Get sliders array.
-			var sliders = CustomDiState.GetSlidersFromState(state);
+			var sliders = new int[CustomDiState.MaxSliders];
+			CustomDiState.CopySliders(state, sliders);
 			// Set sliders.
 			for (int i = 0; i < sliders.Length; i++)
 			{
@@ -207,20 +209,20 @@ namespace x360ce.App
 						if (invert && isEven)
 							sine *= -1f;
 						var range = ConvertHelper.ConvertToShort((float)sine);
-						position = ConvertHelper.ConvertRange(short.MinValue, short.MaxValue, ushort.MinValue, ushort.MaxValue, range);
+						position = ConvertHelper.ConvertRange(range, short.MinValue, short.MaxValue, ushort.MinValue, ushort.MaxValue);
 					}
 					else
 					{
 						position = time < half
 							// Move up.
-							? ConvertHelper.ConvertRange(0, half - 1, ushort.MinValue, ushort.MaxValue, time)
+							? ConvertHelper.ConvertRange(time, 0, half - 1, ushort.MinValue, ushort.MaxValue)
 							// Move down.
-							: ConvertHelper.ConvertRange(half, busy - 1, ushort.MaxValue, ushort.MinValue, time);
+							: ConvertHelper.ConvertRange(time, half, busy - 1, ushort.MaxValue, ushort.MinValue);
 					}
 				}
 				sliders[i] = position;
 			}
-			CustomDiState.SetStateFromSliders(state, sliders);
+			CustomDiState.CopySliders(sliders, state);
 			// Return state.
 			return state;
 		}

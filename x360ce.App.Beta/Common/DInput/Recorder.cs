@@ -15,7 +15,8 @@ namespace x360ce.App
 		{
 			if (horizontalResolution > 0 && verticalResolution > 0)
 			{
-				markR = new Bitmap(EngineHelper.GetResourceStream("Images.bullet_ball_glass_red_16x16.png"));
+				var a = GetType().Assembly;
+				markR = JocysCom.ClassLibrary.Helper.FindResource<Bitmap>("Images.bullet_ball_glass_red_16x16.png", a);
 				markR.SetResolution(horizontalResolution, verticalResolution);
 			}
 		}
@@ -49,7 +50,7 @@ namespace x360ce.App
 				RecordingStarted = DateTime.Now;
 				Recording = true;
 				recordingSnapshot = null;
-				MainForm.Current.StatusTimerLabel.Text = (CurrentMap?.Code == MapCode.DPad)
+				Global._MainWindow.MainPanel.StatusTimerLabel.Content = (CurrentMap?.Code == MapCode.DPad)
 					 ? "Recording - press any D-Pad button on your direct input device. Press ESC to cancel..."
 					 : "Recording - press button, move axis or slider on your direct input device. Press ESC to cancel...";
 			}
@@ -201,14 +202,14 @@ namespace x360ce.App
 				}
 			};
 			// Compare POVs.
-			if (oldState.Povs.Length == newState.Povs.Length)
+			if (oldState.POVs.Length == newState.POVs.Length)
 			{
-				for (int i = 0; i < oldState.Povs.Length; i++)
+				for (int i = 0; i < oldState.POVs.Length; i++)
 				{
-					if (oldState.Povs[i] != newState.Povs[i])
+					if (oldState.POVs[i] != newState.POVs[i])
 					{
 						//list.Add(string.Format("DPad {0}", i + 1));
-						var v = newState.Povs[0];
+						var v = newState.POVs[0];
 						if ((DPadEnum)v == DPadEnum.Up)
 							list.Add(string.Format("POV {0} {1}", i + 1, DPadEnum.Up.ToString()));
 						if ((DPadEnum)v == DPadEnum.Right)
@@ -243,7 +244,7 @@ namespace x360ce.App
 				var oldValue = oldValues[i];
 				var diff = newValues[i] - oldValue;
 				var prefix = "";
-				// If moved more than 10%.
+				// If differ by more than 10%.
 				if (Math.Abs(diff) > (ushort.MaxValue / 10))
 				{
 					// If value is negative then add "I" prefix.
@@ -261,7 +262,7 @@ namespace x360ce.App
 						// If target property is not thumb then...
 						if (!thumb)
 						{
-							// Allow to add add half prefix.
+							// Allow to add half prefix.
 							prefix += "H";
 						}
 					}
@@ -271,7 +272,7 @@ namespace x360ce.App
 			return list.ToArray();
 		}
 
-		#region IDisposable
+		#region ■ IDisposable
 
 		public void Dispose()
 		{

@@ -162,7 +162,7 @@ namespace x360ce.Engine.Data
 
 		/// <summary>DInput Device State.</summary>
 		[XmlIgnore, NonSerialized]
-		public Joystick Device;
+		public Device Device;
 
 		[XmlIgnore, NonSerialized]
 		public DeviceObjectItem[] DeviceObjects;
@@ -172,11 +172,7 @@ namespace x360ce.Engine.Data
 
 		/// <summary>DInput JoystickState State.</summary>
 		[XmlIgnore, NonSerialized]
-		public JoystickState JoState;
-
-		/// <summary>DInput JoystickUpdate States.</summary>
-		[XmlIgnore, NonSerialized]
-		public JoystickUpdate[] JoUpdate;
+		public object DeviceState;
 
 		/// <summary>X360CE custom DirectInput state used for configuration.</summary>
 		[XmlIgnore, NonSerialized]
@@ -246,7 +242,7 @@ namespace x360ce.Engine.Data
 				return
 					!IsKeyboard &&
 					!IsMouse &&
-					ConnectionClass != JocysCom.ClassLibrary.Win32.DEVCLASS.SYSTEM &&
+					//ConnectionClass != JocysCom.ClassLibrary.Win32.DEVCLASS.SYSTEM &&
 					// Device Id must be set.
 					!string.IsNullOrEmpty(HidDeviceId);
 			}

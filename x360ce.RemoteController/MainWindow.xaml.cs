@@ -15,6 +15,7 @@ namespace JocysCom.x360ce.RemoteController
 	/// <summary>
 	/// Interaction logic for MainWindow.xaml
 	/// </summary>
+	/// <remarks>Make sure to set the Owner property to be disposed properly after closing.</remarks>
 	public partial class MainWindow : Window
 	{
 		public MainWindow()
@@ -39,7 +40,7 @@ namespace JocysCom.x360ce.RemoteController
 		}
 
 		JocysCom.ClassLibrary.HiResTimer _timer;
-		JocysCom.ClassLibrary.Data.TlvSerializer _Serializer;
+		JocysCom.ClassLibrary.Runtime.TlvSerializer _Serializer;
 
 		// Control when event can continue.
 		object timerLock = new object();
@@ -123,7 +124,7 @@ namespace JocysCom.x360ce.RemoteController
 			var types = new Dictionary<Type, int>();
 			types.Add(typeof(State), 0);
 			types.Add(typeof(Gamepad), 1);
-			_Serializer = new ClassLibrary.Data.TlvSerializer(types);
+			_Serializer = new ClassLibrary.Runtime.TlvSerializer(types);
 			if (Properties.Settings.Default.AutoConnect && Properties.Settings.Default.Connect)
 				StartServer();
 		}
@@ -242,7 +243,7 @@ namespace JocysCom.x360ce.RemoteController
 			var ms = new MemoryStream();
 			var status = _Serializer.Serialize(ms, state);
 			var bytes = new byte[0];
-			if (status == ClassLibrary.Data.TlvSerializerError.None)
+			if (status == ClassLibrary.Runtime.TlvSerializerError.None)
 			{
 				bytes = ms.ToArray();
 				IPAddress adddress;
