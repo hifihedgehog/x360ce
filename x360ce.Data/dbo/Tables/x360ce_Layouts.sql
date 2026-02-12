@@ -5,6 +5,7 @@
     [ButtonB]          NVARCHAR (32)    CONSTRAINT [DF_x360ce_Layouts_ButtonB] DEFAULT ('') NOT NULL,
     [ButtonBack]       NVARCHAR (32)    CONSTRAINT [DF_x360ce_Layouts_ButtonBack] DEFAULT ('') NOT NULL,
     [ButtonGuide]      NVARCHAR (32)    CONSTRAINT [DF_x360ce_Layouts_ButtonGuide] DEFAULT ('') NOT NULL,
+    [ButtonShare]      NVARCHAR (32)    CONSTRAINT [DF_x360ce_Layouts_ButtonShare] DEFAULT ('') NOT NULL,
     [ButtonStart]      NVARCHAR (32)    CONSTRAINT [DF_x360ce_Layouts_ButtonStart] DEFAULT ('') NOT NULL,
     [ButtonX]          NVARCHAR (32)    CONSTRAINT [DF_x360ce_Layouts_ButtonX] DEFAULT ('') NOT NULL,
     [ButtonY]          NVARCHAR (32)    CONSTRAINT [DF_x360ce_Layouts_ButtonY] DEFAULT ('') NOT NULL,
