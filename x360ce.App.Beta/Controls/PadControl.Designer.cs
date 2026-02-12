@@ -1197,7 +1197,7 @@
 			// 
 			this.RightThumbAxisYLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.RightThumbAxisYLabel.AutoSize = true;
-			this.RightThumbAxisYLabel.Location = new System.Drawing.Point(22, 469);
+			this.RightThumbAxisYLabel.Location = new System.Drawing.Point(22, 475);
 			this.RightThumbAxisYLabel.Margin = new System.Windows.Forms.Padding(6, 0, 6, 0);
 			this.RightThumbAxisYLabel.Name = "RightThumbAxisYLabel";
 			this.RightThumbAxisYLabel.Size = new System.Drawing.Size(127, 25);

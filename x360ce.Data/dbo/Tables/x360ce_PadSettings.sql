@@ -7,6 +7,7 @@
     [ButtonB]                  VARCHAR (16)     CONSTRAINT [DF_x360ce_PadSettings_ButtonB] DEFAULT ('') NOT NULL,
     [ButtonBack]               VARCHAR (16)     CONSTRAINT [DF_x360ce_PadSettings_ButtonBack] DEFAULT ('') NOT NULL,
     [ButtonGuide]              VARCHAR (16)     CONSTRAINT [DF_x360ce_PadSettings_ButtonGuide] DEFAULT ('') NOT NULL,
+	[ButtonShare]              VARCHAR (16)     CONSTRAINT [DF_x360ce_PadSettings_ButtonShare] DEFAULT ('') NOT NULL,
     [ButtonStart]              VARCHAR (16)     CONSTRAINT [DF_x360ce_PadSettings_ButtonStart] DEFAULT ('') NOT NULL,
     [ButtonX]                  VARCHAR (16)     CONSTRAINT [DF_x360ce_PadSettings_ButtonX] DEFAULT ('') NOT NULL,
     [ButtonY]                  VARCHAR (16)     CONSTRAINT [DF_x360ce_PadSettings_ButtonY] DEFAULT ('') NOT NULL,

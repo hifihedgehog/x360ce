@@ -12,6 +12,7 @@ WHERE [ButtonA] = '' AND
       [ButtonB] = '' AND
       [ButtonBack] = '' AND
       [ButtonGuide] = '' AND
+	  [ButtonShare] = '' AND
       [ButtonStart] = '' AND
       [ButtonX] = '' AND
       [ButtonY] = ''
