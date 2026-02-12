@@ -1446,7 +1446,7 @@ namespace x360ce.App.Controls
 			ButtonBLabel.Text = item.ButtonB;
 			ButtonBackLabel.Text = item.ButtonBack;
 			ButtonGuideLabel.Text = item.ButtonGuide;
-			ButtonShareLabel.Text = item.ButtnoShare;
+			ButtonShareLabel.Text = item.ButtonShare;
 			ButtonStartLabel.Text = item.ButtonStart;
 			ButtonXLabel.Text = item.ButtonX;
 			ButtonYLabel.Text = item.ButtonY;
