@@ -11,7 +11,10 @@ namespace x360ce.App.DInput
 {
 	public partial class DInputHelper
 	{
-
+		// ── NEW: Track devices currently using XInput direct FF ──
+		private readonly System.Collections.Generic.HashSet<Guid> _xInputFFActive
+			= new System.Collections.Generic.HashSet<Guid>();
+		// ── END NEW ──
 		void UpdateDiStates(DirectInput manager, UserGame game, DeviceDetector detector)
 		{
 			// Get all mapped user devices.
@@ -55,9 +58,12 @@ namespace x360ce.App.DInput
 								exceptionData.AppendLine("Unacquire (Exclusive)...");
 								device.Unacquire();
 								exceptionData.AppendLine("SetCooperativeLevel (Exclusive)...");
-								device.SetCooperativeLevel(detector.DetectorForm.Handle, flags);
+								// ── CHANGED: Use persistent hidden window instead of DetectorForm ──
+								device.SetCooperativeLevel(FFBackgroundWindow.GetHandle(), flags);
 								exceptionData.AppendLine("Acquire (Exclusive)...");
 								device.Acquire();
+								// ── NEW: Disable auto-centering spring ──
+
 								ud.IsExclusiveMode = true;
 							}
 							// If current mode must be non exclusive and mode is unknown or exclusive then...
@@ -68,8 +74,9 @@ namespace x360ce.App.DInput
 								exceptionData.AppendLine("Unacquire (NonExclusive)...");
 								device.Unacquire();
 								exceptionData.AppendLine("SetCooperativeLevel (Exclusive)...");
-								device.SetCooperativeLevel(detector.DetectorForm.Handle, flags);
-								exceptionData.AppendLine("Acquire (Acquire)...");
+								// ── CHANGED: Use persistent hidden window ──
+								device.SetCooperativeLevel(FFBackgroundWindow.GetHandle(), flags);
+								exceptionData.AppendLine("Acquire (NonExclusive)...");
 								device.Acquire();
 								ud.IsExclusiveMode = false;
 							}
@@ -118,6 +125,47 @@ namespace x360ce.App.DInput
 								ud.DeviceEffects = AppHelper.GetDeviceEffects(device);
 							}
 							// If device support force feedback then...
+							// ════════════════════════════════════════════════════════════
+							// XInput Direct Force Feedback Path
+							// For devices that don't report DirectInput FF capability
+							// (e.g., XInput controllers accessed through Xidi).
+							// Bypasses DirectInput entirely — no cooperative level,
+							// no acquisition, works in background unconditionally.
+							// ════════════════════════════════════════════════════════════
+							if (!hasForceFeedback)
+							{
+								var xiSetting = SettingsManager.UserSettings.ItemsToArraySyncronized()
+									.FirstOrDefault(x => x.InstanceGuid == ud.InstanceGuid);
+								if (xiSetting != null && xiSetting.MapTo > (int)MapTo.None)
+								{
+									var xiPs = SettingsManager.GetPadSetting(xiSetting.PadSettingChecksum);
+									if (xiPs != null && xiPs.ForceFFThroughXInput == "1")
+									{
+										uint xiSlot = 0;
+										if (!string.IsNullOrEmpty(xiPs.PhysicalXInputUserIndex))
+											uint.TryParse(xiPs.PhysicalXInputUserIndex, out xiSlot);
+
+										if (xiPs.ForceEnable == "1")
+										{
+											var force = feedbacks[(int)xiSetting.MapTo - 1];
+											if (force != null)
+											{
+												exceptionData.AppendLine("XInputInterop.SetVibration (no DInput FF)...");
+												XInputInterop.SetVibration(xiSlot, force.LargeMotor, force.SmallMotor);
+												_xInputFFActive.Add(ud.InstanceGuid);
+											}
+										}
+										else if (_xInputFFActive.Contains(ud.InstanceGuid))
+										{
+											// Force was disabled — stop vibration once.
+											exceptionData.AppendLine("XInputInterop.StopVibration (force disabled)...");
+											XInputInterop.StopVibration(xiSlot);
+											_xInputFFActive.Remove(ud.InstanceGuid);
+										}
+									}
+								}
+							}
+							// If device supports DirectInput force feedback then...
 							if (hasForceFeedback)
 							{
 								// Get setting related to user device.
@@ -133,29 +181,59 @@ namespace x360ce.App.DInput
 										// If force is enabled then...
 										if (ps.ForceEnable == "1")
 										{
-											if (ud.FFState == null)
-												ud.FFState = new Engine.ForceFeedbackState();
-											// If force update supplied then...
-											var force = feedbacks[(int)setting.MapTo - 1];
-											if (force != null || ud.FFState.Changed(ps))
+											// ── NEW: Check for XInput FF override ──
+											// Handles XInput devices exposed through DirectInput
+											// (Microsoft's shim) or when user explicitly enables routing.
+											bool useXInputFF = ps.ForceFFThroughXInput == "1"
+												|| XInputInterop.IsXInputDeviceViaProductGuid(ud.ProductGuid);
+
+											if (useXInputFF)
 											{
-												var v = new Vibration();
-												if (force == null)
+												uint xiSlot = 0;
+												if (!string.IsNullOrEmpty(ps.PhysicalXInputUserIndex))
+													uint.TryParse(ps.PhysicalXInputUserIndex, out xiSlot);
+												var force = feedbacks[(int)setting.MapTo - 1];
+												if (force != null)
 												{
-													v.LeftMotorSpeed = short.MinValue;
-													v.RightMotorSpeed = short.MinValue;
+													exceptionData.AppendLine("XInputInterop.SetVibration (XInput override)...");
+													XInputInterop.SetVibration(xiSlot, force.LargeMotor, force.SmallMotor);
+													_xInputFFActive.Add(ud.InstanceGuid);
 												}
-												else
+												// Clean up any existing DirectInput FF effects
+												if (ud.FFState != null)
 												{
-													v.LeftMotorSpeed = (short)ConvertHelper.ConvertRange(byte.MinValue, byte.MaxValue, short.MinValue, short.MaxValue, force.LargeMotor);
-													v.RightMotorSpeed = (short)ConvertHelper.ConvertRange(byte.MinValue, byte.MaxValue, short.MinValue, short.MaxValue, force.SmallMotor);
+													exceptionData.AppendLine("Cleaning up DInput FF state (switching to XInput)...");
+													ud.FFState.StopDeviceForces(device);
+													ud.FFState = null;
 												}
-												// For the future: Investigate device states if force feedback is not working. 
-												// var st = ud.Device.GetForceFeedbackState();
-												//st == SharpDX.DirectInput.ForceFeedbackState
-												// ud.Device.SendForceFeedbackCommand(ForceFeedbackCommand.SetActuatorsOn);
-												exceptionData.AppendFormat("ud.FFState.SetDeviceForces(device) // ud.IsExclusiveMode = {0}", ud.IsExclusiveMode).AppendLine();
-												ud.FFState.SetDeviceForces(ud, device, ps, v);
+											}
+											// ── END NEW — existing DirectInput FF path below ──
+											else
+											{
+												if (ud.FFState == null)
+													ud.FFState = new Engine.ForceFeedbackState();
+												// If force update supplied then...
+												var force = feedbacks[(int)setting.MapTo - 1];
+												if (force != null || ud.FFState.Changed(ps))
+												{
+													var v = new Vibration();
+													if (force == null)
+													{
+														v.LeftMotorSpeed = short.MinValue;
+														v.RightMotorSpeed = short.MinValue;
+													}
+													else
+													{
+														v.LeftMotorSpeed = (short)ConvertHelper.ConvertRange(byte.MinValue, byte.MaxValue, short.MinValue, short.MaxValue, force.LargeMotor);
+														v.RightMotorSpeed = (short)ConvertHelper.ConvertRange(byte.MinValue, byte.MaxValue, short.MinValue, short.MaxValue, force.SmallMotor);
+													}
+													// For the future: Investigate device states if force feedback is not working. 
+													// var st = ud.Device.GetForceFeedbackState();
+													//st == SharpDX.DirectInput.ForceFeedbackState
+													// ud.Device.SendForceFeedbackCommand(ForceFeedbackCommand.SetActuatorsOn);
+													exceptionData.AppendFormat("ud.FFState.SetDeviceForces(device) // ud.IsExclusiveMode = {0}", ud.IsExclusiveMode).AppendLine();
+													ud.FFState.SetDeviceForces(ud, device, ps, v);
+												}
 											}
 										}
 										// If force state was created then...
@@ -166,6 +244,22 @@ namespace x360ce.App.DInput
 											ud.FFState.StopDeviceForces(device);
 											ud.FFState = null;
 										}
+										// ── NEW: Stop XInput FF if force was disabled ──
+										else if (_xInputFFActive.Contains(ud.InstanceGuid))
+										{
+											bool useXInputFF = ps.ForceFFThroughXInput == "1"
+												|| XInputInterop.IsXInputDeviceViaProductGuid(ud.ProductGuid);
+											if (useXInputFF)
+											{
+												uint xiSlot = 0;
+												if (!string.IsNullOrEmpty(ps.PhysicalXInputUserIndex))
+													uint.TryParse(ps.PhysicalXInputUserIndex, out xiSlot);
+												exceptionData.AppendLine("XInputInterop.StopVibration (force disabled, DInput FF device)...");
+												XInputInterop.StopVibration(xiSlot);
+											}
+											_xInputFFActive.Remove(ud.InstanceGuid);
+										}
+										// ── END NEW ──
 									}
 								}
 							}

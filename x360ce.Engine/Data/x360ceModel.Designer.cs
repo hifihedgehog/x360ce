@@ -1285,91 +1285,93 @@ namespace x360ce.Engine.Data
     [DataContractAttribute(IsReference=true)]
     public partial class PadSetting : EntityObject
     {
-        #region Factory Method
-    
-        /// <summary>
-        /// Create a new PadSetting object.
-        /// </summary>
-        /// <param name="padSettingChecksum">Initial value of the PadSettingChecksum property.</param>
-        /// <param name="axisToDPadDeadZone">Initial value of the AxisToDPadDeadZone property.</param>
-        /// <param name="axisToDPadEnabled">Initial value of the AxisToDPadEnabled property.</param>
-        /// <param name="axisToDPadOffset">Initial value of the AxisToDPadOffset property.</param>
-        /// <param name="buttonA">Initial value of the ButtonA property.</param>
-        /// <param name="buttonB">Initial value of the ButtonB property.</param>
-        /// <param name="buttonBack">Initial value of the ButtonBack property.</param>
-        /// <param name="buttonGuide">Initial value of the ButtonGuide property.</param>
-        /// <param name="buttonShare">Initial value of the ButtonShare property.</param>
-        /// <param name="buttonStart">Initial value of the ButtonStart property.</param>
-        /// <param name="buttonX">Initial value of the ButtonX property.</param>
-        /// <param name="buttonY">Initial value of the ButtonY property.</param>
-        /// <param name="dPad">Initial value of the DPad property.</param>
-        /// <param name="dPadDown">Initial value of the DPadDown property.</param>
-        /// <param name="dPadLeft">Initial value of the DPadLeft property.</param>
-        /// <param name="dPadRight">Initial value of the DPadRight property.</param>
-        /// <param name="dPadUp">Initial value of the DPadUp property.</param>
-        /// <param name="forceEnable">Initial value of the ForceEnable property.</param>
-        /// <param name="forceOverall">Initial value of the ForceOverall property.</param>
-        /// <param name="forceSwapMotor">Initial value of the ForceSwapMotor property.</param>
-        /// <param name="forceType">Initial value of the ForceType property.</param>
-        /// <param name="gamePadType">Initial value of the GamePadType property.</param>
-        /// <param name="leftMotorPeriod">Initial value of the LeftMotorPeriod property.</param>
-        /// <param name="leftShoulder">Initial value of the LeftShoulder property.</param>
-        /// <param name="leftThumbAntiDeadZoneX">Initial value of the LeftThumbAntiDeadZoneX property.</param>
-        /// <param name="leftThumbAntiDeadZoneY">Initial value of the LeftThumbAntiDeadZoneY property.</param>
-        /// <param name="leftThumbAxisX">Initial value of the LeftThumbAxisX property.</param>
-        /// <param name="leftThumbAxisY">Initial value of the LeftThumbAxisY property.</param>
-        /// <param name="leftThumbButton">Initial value of the LeftThumbButton property.</param>
-        /// <param name="leftThumbDeadZoneX">Initial value of the LeftThumbDeadZoneX property.</param>
-        /// <param name="leftThumbDeadZoneY">Initial value of the LeftThumbDeadZoneY property.</param>
-        /// <param name="leftThumbDown">Initial value of the LeftThumbDown property.</param>
-        /// <param name="leftThumbLeft">Initial value of the LeftThumbLeft property.</param>
-        /// <param name="leftThumbRight">Initial value of the LeftThumbRight property.</param>
-        /// <param name="leftThumbUp">Initial value of the LeftThumbUp property.</param>
-        /// <param name="leftTrigger">Initial value of the LeftTrigger property.</param>
-        /// <param name="leftTriggerDeadZone">Initial value of the LeftTriggerDeadZone property.</param>
-        /// <param name="passThrough">Initial value of the PassThrough property.</param>
-        /// <param name="rightMotorPeriod">Initial value of the RightMotorPeriod property.</param>
-        /// <param name="rightShoulder">Initial value of the RightShoulder property.</param>
-        /// <param name="rightThumbAntiDeadZoneX">Initial value of the RightThumbAntiDeadZoneX property.</param>
-        /// <param name="rightThumbAntiDeadZoneY">Initial value of the RightThumbAntiDeadZoneY property.</param>
-        /// <param name="rightThumbAxisX">Initial value of the RightThumbAxisX property.</param>
-        /// <param name="rightThumbAxisY">Initial value of the RightThumbAxisY property.</param>
-        /// <param name="rightThumbButton">Initial value of the RightThumbButton property.</param>
-        /// <param name="rightThumbDeadZoneX">Initial value of the RightThumbDeadZoneX property.</param>
-        /// <param name="rightThumbDeadZoneY">Initial value of the RightThumbDeadZoneY property.</param>
-        /// <param name="rightThumbDown">Initial value of the RightThumbDown property.</param>
-        /// <param name="rightThumbLeft">Initial value of the RightThumbLeft property.</param>
-        /// <param name="rightThumbRight">Initial value of the RightThumbRight property.</param>
-        /// <param name="rightThumbUp">Initial value of the RightThumbUp property.</param>
-        /// <param name="rightTrigger">Initial value of the RightTrigger property.</param>
-        /// <param name="rightTriggerDeadZone">Initial value of the RightTriggerDeadZone property.</param>
-        /// <param name="leftThumbLinearX">Initial value of the LeftThumbLinearX property.</param>
-        /// <param name="leftThumbLinearY">Initial value of the LeftThumbLinearY property.</param>
-        /// <param name="rightThumbLinearX">Initial value of the RightThumbLinearX property.</param>
-        /// <param name="rightThumbLinearY">Initial value of the RightThumbLinearY property.</param>
-        /// <param name="leftMotorStrength">Initial value of the LeftMotorStrength property.</param>
-        /// <param name="rightMotorStrength">Initial value of the RightMotorStrength property.</param>
-        /// <param name="leftMotorDirection">Initial value of the LeftMotorDirection property.</param>
-        /// <param name="rightMotorDirection">Initial value of the RightMotorDirection property.</param>
-        /// <param name="buttonADeadZone">Initial value of the ButtonADeadZone property.</param>
-        /// <param name="buttonBDeadZone">Initial value of the ButtonBDeadZone property.</param>
-        /// <param name="buttonBackDeadZone">Initial value of the ButtonBackDeadZone property.</param>
-        /// <param name="buttonStartDeadZone">Initial value of the ButtonStartDeadZone property.</param>
-        /// <param name="buttonXDeadZone">Initial value of the ButtonXDeadZone property.</param>
-        /// <param name="buttonYDeadZone">Initial value of the ButtonYDeadZone property.</param>
-        /// <param name="leftThumbButtonDeadZone">Initial value of the LeftThumbButtonDeadZone property.</param>
-        /// <param name="rightThumbButtonDeadZone">Initial value of the RightThumbButtonDeadZone property.</param>
-        /// <param name="leftShoulderDeadZone">Initial value of the LeftShoulderDeadZone property.</param>
-        /// <param name="rightShoulderDeadZone">Initial value of the RightShoulderDeadZone property.</param>
-        /// <param name="dPadDownDeadZone">Initial value of the DPadDownDeadZone property.</param>
-        /// <param name="dPadLeftDeadZone">Initial value of the DPadLeftDeadZone property.</param>
-        /// <param name="dPadRightDeadZone">Initial value of the DPadRightDeadZone property.</param>
-        /// <param name="dPadUpDeadZone">Initial value of the DPadUpDeadZone property.</param>
-        /// <param name="leftTriggerAntiDeadZone">Initial value of the LeftTriggerAntiDeadZone property.</param>
-        /// <param name="leftTriggerLinear">Initial value of the LeftTriggerLinear property.</param>
-        /// <param name="rightTriggerAntiDeadZone">Initial value of the RightTriggerAntiDeadZone property.</param>
-        /// <param name="rightTriggerLinear">Initial value of the RightTriggerLinear property.</param>
-        public static PadSetting CreatePadSetting(global::System.Guid padSettingChecksum, global::System.String axisToDPadDeadZone, global::System.String axisToDPadEnabled, global::System.String axisToDPadOffset, global::System.String buttonA, global::System.String buttonB, global::System.String buttonBack, global::System.String buttonGuide, global::System.String buttonShare, global::System.String buttonStart, global::System.String buttonX, global::System.String buttonY, global::System.String dPad, global::System.String dPadDown, global::System.String dPadLeft, global::System.String dPadRight, global::System.String dPadUp, global::System.String forceEnable, global::System.String forceOverall, global::System.String forceSwapMotor, global::System.String forceType, global::System.String gamePadType, global::System.String leftMotorPeriod, global::System.String leftShoulder, global::System.String leftThumbAntiDeadZoneX, global::System.String leftThumbAntiDeadZoneY, global::System.String leftThumbAxisX, global::System.String leftThumbAxisY, global::System.String leftThumbButton, global::System.String leftThumbDeadZoneX, global::System.String leftThumbDeadZoneY, global::System.String leftThumbDown, global::System.String leftThumbLeft, global::System.String leftThumbRight, global::System.String leftThumbUp, global::System.String leftTrigger, global::System.String leftTriggerDeadZone, global::System.String passThrough, global::System.String rightMotorPeriod, global::System.String rightShoulder, global::System.String rightThumbAntiDeadZoneX, global::System.String rightThumbAntiDeadZoneY, global::System.String rightThumbAxisX, global::System.String rightThumbAxisY, global::System.String rightThumbButton, global::System.String rightThumbDeadZoneX, global::System.String rightThumbDeadZoneY, global::System.String rightThumbDown, global::System.String rightThumbLeft, global::System.String rightThumbRight, global::System.String rightThumbUp, global::System.String rightTrigger, global::System.String rightTriggerDeadZone, global::System.String leftThumbLinearX, global::System.String leftThumbLinearY, global::System.String rightThumbLinearX, global::System.String rightThumbLinearY, global::System.String leftMotorStrength, global::System.String rightMotorStrength, global::System.String leftMotorDirection, global::System.String rightMotorDirection, global::System.String buttonADeadZone, global::System.String buttonBDeadZone, global::System.String buttonBackDeadZone, global::System.String buttonStartDeadZone, global::System.String buttonXDeadZone, global::System.String buttonYDeadZone, global::System.String leftThumbButtonDeadZone, global::System.String rightThumbButtonDeadZone, global::System.String leftShoulderDeadZone, global::System.String rightShoulderDeadZone, global::System.String dPadDownDeadZone, global::System.String dPadLeftDeadZone, global::System.String dPadRightDeadZone, global::System.String dPadUpDeadZone, global::System.String leftTriggerAntiDeadZone, global::System.String leftTriggerLinear, global::System.String rightTriggerAntiDeadZone, global::System.String rightTriggerLinear)
+		#region Factory Method
+
+		/// <summary>
+		/// Create a new PadSetting object.
+		/// </summary>
+		/// <param name="padSettingChecksum">Initial value of the PadSettingChecksum property.</param>
+		/// <param name="axisToDPadDeadZone">Initial value of the AxisToDPadDeadZone property.</param>
+		/// <param name="axisToDPadEnabled">Initial value of the AxisToDPadEnabled property.</param>
+		/// <param name="axisToDPadOffset">Initial value of the AxisToDPadOffset property.</param>
+		/// <param name="buttonA">Initial value of the ButtonA property.</param>
+		/// <param name="buttonB">Initial value of the ButtonB property.</param>
+		/// <param name="buttonBack">Initial value of the ButtonBack property.</param>
+		/// <param name="buttonGuide">Initial value of the ButtonGuide property.</param>
+		/// <param name="buttonShare">Initial value of the ButtonShare property.</param>
+		/// <param name="buttonStart">Initial value of the ButtonStart property.</param>
+		/// <param name="buttonX">Initial value of the ButtonX property.</param>
+		/// <param name="buttonY">Initial value of the ButtonY property.</param>
+		/// <param name="dPad">Initial value of the DPad property.</param>
+		/// <param name="dPadDown">Initial value of the DPadDown property.</param>
+		/// <param name="dPadLeft">Initial value of the DPadLeft property.</param>
+		/// <param name="dPadRight">Initial value of the DPadRight property.</param>
+		/// <param name="dPadUp">Initial value of the DPadUp property.</param>
+		/// <param name="forceEnable">Initial value of the ForceEnable property.</param>
+		/// <param name="forceOverall">Initial value of the ForceOverall property.</param>
+		/// <param name="ForceFFThroughXInput">Initial value of the ForceFFThroughXInput property.</param>
+		/// <param name="PhysicalXInputUserIndex">Initial value of the ForceFFThroughXInput property.</param>
+		/// <param name="forceSwapMotor">Initial value of the ForceSwapMotor property.</param>
+		/// <param name="forceType">Initial value of the ForceType property.</param>
+		/// <param name="gamePadType">Initial value of the GamePadType property.</param>
+		/// <param name="leftMotorPeriod">Initial value of the LeftMotorPeriod property.</param>
+		/// <param name="leftShoulder">Initial value of the LeftShoulder property.</param>
+		/// <param name="leftThumbAntiDeadZoneX">Initial value of the LeftThumbAntiDeadZoneX property.</param>
+		/// <param name="leftThumbAntiDeadZoneY">Initial value of the LeftThumbAntiDeadZoneY property.</param>
+		/// <param name="leftThumbAxisX">Initial value of the LeftThumbAxisX property.</param>
+		/// <param name="leftThumbAxisY">Initial value of the LeftThumbAxisY property.</param>
+		/// <param name="leftThumbButton">Initial value of the LeftThumbButton property.</param>
+		/// <param name="leftThumbDeadZoneX">Initial value of the LeftThumbDeadZoneX property.</param>
+		/// <param name="leftThumbDeadZoneY">Initial value of the LeftThumbDeadZoneY property.</param>
+		/// <param name="leftThumbDown">Initial value of the LeftThumbDown property.</param>
+		/// <param name="leftThumbLeft">Initial value of the LeftThumbLeft property.</param>
+		/// <param name="leftThumbRight">Initial value of the LeftThumbRight property.</param>
+		/// <param name="leftThumbUp">Initial value of the LeftThumbUp property.</param>
+		/// <param name="leftTrigger">Initial value of the LeftTrigger property.</param>
+		/// <param name="leftTriggerDeadZone">Initial value of the LeftTriggerDeadZone property.</param>
+		/// <param name="passThrough">Initial value of the PassThrough property.</param>
+		/// <param name="rightMotorPeriod">Initial value of the RightMotorPeriod property.</param>
+		/// <param name="rightShoulder">Initial value of the RightShoulder property.</param>
+		/// <param name="rightThumbAntiDeadZoneX">Initial value of the RightThumbAntiDeadZoneX property.</param>
+		/// <param name="rightThumbAntiDeadZoneY">Initial value of the RightThumbAntiDeadZoneY property.</param>
+		/// <param name="rightThumbAxisX">Initial value of the RightThumbAxisX property.</param>
+		/// <param name="rightThumbAxisY">Initial value of the RightThumbAxisY property.</param>
+		/// <param name="rightThumbButton">Initial value of the RightThumbButton property.</param>
+		/// <param name="rightThumbDeadZoneX">Initial value of the RightThumbDeadZoneX property.</param>
+		/// <param name="rightThumbDeadZoneY">Initial value of the RightThumbDeadZoneY property.</param>
+		/// <param name="rightThumbDown">Initial value of the RightThumbDown property.</param>
+		/// <param name="rightThumbLeft">Initial value of the RightThumbLeft property.</param>
+		/// <param name="rightThumbRight">Initial value of the RightThumbRight property.</param>
+		/// <param name="rightThumbUp">Initial value of the RightThumbUp property.</param>
+		/// <param name="rightTrigger">Initial value of the RightTrigger property.</param>
+		/// <param name="rightTriggerDeadZone">Initial value of the RightTriggerDeadZone property.</param>
+		/// <param name="leftThumbLinearX">Initial value of the LeftThumbLinearX property.</param>
+		/// <param name="leftThumbLinearY">Initial value of the LeftThumbLinearY property.</param>
+		/// <param name="rightThumbLinearX">Initial value of the RightThumbLinearX property.</param>
+		/// <param name="rightThumbLinearY">Initial value of the RightThumbLinearY property.</param>
+		/// <param name="leftMotorStrength">Initial value of the LeftMotorStrength property.</param>
+		/// <param name="rightMotorStrength">Initial value of the RightMotorStrength property.</param>
+		/// <param name="leftMotorDirection">Initial value of the LeftMotorDirection property.</param>
+		/// <param name="rightMotorDirection">Initial value of the RightMotorDirection property.</param>
+		/// <param name="buttonADeadZone">Initial value of the ButtonADeadZone property.</param>
+		/// <param name="buttonBDeadZone">Initial value of the ButtonBDeadZone property.</param>
+		/// <param name="buttonBackDeadZone">Initial value of the ButtonBackDeadZone property.</param>
+		/// <param name="buttonStartDeadZone">Initial value of the ButtonStartDeadZone property.</param>
+		/// <param name="buttonXDeadZone">Initial value of the ButtonXDeadZone property.</param>
+		/// <param name="buttonYDeadZone">Initial value of the ButtonYDeadZone property.</param>
+		/// <param name="leftThumbButtonDeadZone">Initial value of the LeftThumbButtonDeadZone property.</param>
+		/// <param name="rightThumbButtonDeadZone">Initial value of the RightThumbButtonDeadZone property.</param>
+		/// <param name="leftShoulderDeadZone">Initial value of the LeftShoulderDeadZone property.</param>
+		/// <param name="rightShoulderDeadZone">Initial value of the RightShoulderDeadZone property.</param>
+		/// <param name="dPadDownDeadZone">Initial value of the DPadDownDeadZone property.</param>
+		/// <param name="dPadLeftDeadZone">Initial value of the DPadLeftDeadZone property.</param>
+		/// <param name="dPadRightDeadZone">Initial value of the DPadRightDeadZone property.</param>
+		/// <param name="dPadUpDeadZone">Initial value of the DPadUpDeadZone property.</param>
+		/// <param name="leftTriggerAntiDeadZone">Initial value of the LeftTriggerAntiDeadZone property.</param>
+		/// <param name="leftTriggerLinear">Initial value of the LeftTriggerLinear property.</param>
+		/// <param name="rightTriggerAntiDeadZone">Initial value of the RightTriggerAntiDeadZone property.</param>
+		/// <param name="rightTriggerLinear">Initial value of the RightTriggerLinear property.</param>
+		public static PadSetting CreatePadSetting(global::System.Guid padSettingChecksum, global::System.String axisToDPadDeadZone, global::System.String axisToDPadEnabled, global::System.String axisToDPadOffset, global::System.String buttonA, global::System.String buttonB, global::System.String buttonBack, global::System.String buttonGuide, global::System.String buttonShare, global::System.String buttonStart, global::System.String buttonX, global::System.String buttonY, global::System.String dPad, global::System.String dPadDown, global::System.String dPadLeft, global::System.String dPadRight, global::System.String dPadUp, global::System.String forceEnable, global::System.String forceOverall,  global::System.String ForceFFThroughXInput, global::System.String PhysicalXInputUserIndex, global::System.String forceSwapMotor, global::System.String forceType, global::System.String gamePadType, global::System.String leftMotorPeriod, global::System.String leftShoulder, global::System.String leftThumbAntiDeadZoneX, global::System.String leftThumbAntiDeadZoneY, global::System.String leftThumbAxisX, global::System.String leftThumbAxisY, global::System.String leftThumbButton, global::System.String leftThumbDeadZoneX, global::System.String leftThumbDeadZoneY, global::System.String leftThumbDown, global::System.String leftThumbLeft, global::System.String leftThumbRight, global::System.String leftThumbUp, global::System.String leftTrigger, global::System.String leftTriggerDeadZone, global::System.String passThrough, global::System.String rightMotorPeriod, global::System.String rightShoulder, global::System.String rightThumbAntiDeadZoneX, global::System.String rightThumbAntiDeadZoneY, global::System.String rightThumbAxisX, global::System.String rightThumbAxisY, global::System.String rightThumbButton, global::System.String rightThumbDeadZoneX, global::System.String rightThumbDeadZoneY, global::System.String rightThumbDown, global::System.String rightThumbLeft, global::System.String rightThumbRight, global::System.String rightThumbUp, global::System.String rightTrigger, global::System.String rightTriggerDeadZone, global::System.String leftThumbLinearX, global::System.String leftThumbLinearY, global::System.String rightThumbLinearX, global::System.String rightThumbLinearY, global::System.String leftMotorStrength, global::System.String rightMotorStrength, global::System.String leftMotorDirection, global::System.String rightMotorDirection, global::System.String buttonADeadZone, global::System.String buttonBDeadZone, global::System.String buttonBackDeadZone, global::System.String buttonStartDeadZone, global::System.String buttonXDeadZone, global::System.String buttonYDeadZone, global::System.String leftThumbButtonDeadZone, global::System.String rightThumbButtonDeadZone, global::System.String leftShoulderDeadZone, global::System.String rightShoulderDeadZone, global::System.String dPadDownDeadZone, global::System.String dPadLeftDeadZone, global::System.String dPadRightDeadZone, global::System.String dPadUpDeadZone, global::System.String leftTriggerAntiDeadZone, global::System.String leftTriggerLinear, global::System.String rightTriggerAntiDeadZone, global::System.String rightTriggerLinear)
         {
             PadSetting padSetting = new PadSetting();
             padSetting.PadSettingChecksum = padSettingChecksum;
@@ -1391,7 +1393,9 @@ namespace x360ce.Engine.Data
             padSetting.DPadUp = dPadUp;
             padSetting.ForceEnable = forceEnable;
             padSetting.ForceOverall = forceOverall;
-            padSetting.ForceSwapMotor = forceSwapMotor;
+			padSetting.ForceFFThroughXInput = ForceFFThroughXInput;
+			padSetting.PhysicalXInputUserIndex = PhysicalXInputUserIndex;
+			padSetting.ForceSwapMotor = forceSwapMotor;
             padSetting.ForceType = forceType;
             padSetting.GamePadType = gamePadType;
             padSetting.LeftMotorPeriod = leftMotorPeriod;
@@ -1916,11 +1920,53 @@ namespace x360ce.Engine.Data
         private global::System.String _ForceOverall;
         partial void OnForceOverallChanging(global::System.String value);
         partial void OnForceOverallChanged();
-    
-        /// <summary>
-        /// No Metadata Documentation available.
-        /// </summary>
-        [EdmScalarPropertyAttribute(EntityKeyProperty=false, IsNullable=false)]
+
+		[EdmScalarPropertyAttribute(EntityKeyProperty = false, IsNullable = false)]
+		[DataMemberAttribute()]
+		public global::System.String ForceFFThroughXInput
+		{
+			get
+			{
+				return _ForceFFThroughXInput;
+			}
+			set
+			{
+				OnForceFFThroughXInputChanging(value);
+				ReportPropertyChanging("ForceFFThroughXInput");
+				_ForceFFThroughXInput = StructuralObject.SetValidValue(value, false, "ForceFFThroughXInput");
+				ReportPropertyChanged("ForceFFThroughXInput");
+				OnForceFFThroughXInputChanged();
+			}
+		}
+		private global::System.String _ForceFFThroughXInput;
+		partial void OnForceFFThroughXInputChanging(global::System.String value);
+		partial void OnForceFFThroughXInputChanged();
+
+		[EdmScalarPropertyAttribute(EntityKeyProperty = false, IsNullable = false)]
+		[DataMemberAttribute()]
+		public global::System.String PhysicalXInputUserIndex
+		{
+			get
+			{
+				return _PhysicalXInputUserIndex;
+			}
+			set
+			{
+				OnPhysicalXInputUserIndexChanging(value);
+				ReportPropertyChanging("PhysicalXInputUserIndex");
+				_PhysicalXInputUserIndex = StructuralObject.SetValidValue(value, false, "PhysicalXInputUserIndex");
+				ReportPropertyChanged("PhysicalXInputUserIndex");
+				OnPhysicalXInputUserIndexChanged();
+			}
+		}
+		private global::System.String _PhysicalXInputUserIndex;
+		partial void OnPhysicalXInputUserIndexChanging(global::System.String value);
+		partial void OnPhysicalXInputUserIndexChanged();
+
+		/// <summary>
+		/// No Metadata Documentation available.
+		/// </summary>
+		[EdmScalarPropertyAttribute(EntityKeyProperty=false, IsNullable=false)]
         [DataMemberAttribute()]
         public global::System.String ForceSwapMotor
         {

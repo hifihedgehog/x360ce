@@ -356,6 +356,12 @@ namespace x360ce.Engine
 		[DefaultValue("100"), Description("Strength of force feedback. Range is 0 to 100. Default is 100.")]
 		static public string ForceOverall { get { return "ForcePercent"; } }
 
+		[DefaultValue("0"), Description("Route force feedback through XInput API directly, bypassing DirectInput. Required for XInput controllers including those accessed via Xidi. 0 = disabled, 1 = enabled. Default is 0.")]
+		public static string ForceFFThroughXInput { get { return "ForceFFThroughXInput"; } }
+
+		[DefaultValue("0"), Description("Physical XInput user index (0-3) of the real controller. Only used when ForceFFThroughXInput is enabled. Default is 0.")]
+		public static string PhysicalXInputUserIndex { get { return "PhysicalXInputUserIndex"; } }
+
 		[DefaultValue("60"), Description("Left motor period. Range is 0 to 500. Default is 60.")]
 		static public string LeftMotorPeriod { get { return "LeftMotorPeriod"; } }
 

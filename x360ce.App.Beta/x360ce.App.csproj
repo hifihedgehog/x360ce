@@ -213,6 +213,7 @@
     <Compile Include="Common\DownloaderEventArgs.cs" />
     <Compile Include="Common\DownloaderParams.cs" />
     <Compile Include="Common\Extensions.cs" />
+    <Compile Include="Common\FFBackgroundWindow.cs" />
     <Compile Include="Common\ImageInfo.cs" />
     <Compile Include="Common\ImageInfos.cs" />
     <Compile Include="Common\NavImageType.cs" />
@@ -232,6 +233,7 @@
     <Compile Include="Common\Vendor.cs" />
     <Compile Include="Common\ControlHelper.cs" />
     <Compile Include="Common\WinVerify.cs" />
+    <Compile Include="Common\XInputInterop.cs" />
     <Compile Include="Controls\LogUserControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
