@@ -272,8 +272,6 @@
 			// DirectInputTabPage
 			// 
 			this.DirectInputTabPage.Controls.Add(this.DirectInputPanel);
-			this.DirectInputTabPage.Location = new System.Drawing.Point(8, 70);
-			this.DirectInputTabPage.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
 			this.DirectInputTabPage.Location = new System.Drawing.Point(10, 48);
 			this.DirectInputTabPage.Margin = new System.Windows.Forms.Padding(8, 7, 8, 7);
 			this.DirectInputTabPage.Name = "DirectInputTabPage";
@@ -1545,6 +1543,7 @@
 			this.AxisToButtonGroupBox.Controls.Add(this.AxisToButtonBDeadZonePanel);
 			this.AxisToButtonGroupBox.Location = new System.Drawing.Point(6, 6);
 			this.AxisToButtonGroupBox.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+			this.AxisToButtonGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.AxisToButtonGroupBox.Location = new System.Drawing.Point(8, 7);
 			this.AxisToButtonGroupBox.Margin = new System.Windows.Forms.Padding(8, 7, 8, 7);
@@ -1752,7 +1751,6 @@
 			// 
 			this.LeftThumbTabPage.BackColor = System.Drawing.SystemColors.Control;
 			this.LeftThumbTabPage.Controls.Add(this.LeftThumbPanel);
-			this.LeftThumbTabPage.Location = new System.Drawing.Point(8, 70);
 			this.LeftThumbTabPage.Location = new System.Drawing.Point(10, 48);
 			this.LeftThumbTabPage.Margin = new System.Windows.Forms.Padding(8, 7, 8, 7);
 			this.LeftThumbTabPage.Name = "LeftThumbTabPage";
