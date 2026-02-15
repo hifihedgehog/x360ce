@@ -21,7 +21,6 @@ namespace x360ce.App.Controls
 {
 	public partial class PadControl : UserControl, IPadControl
 	{
-
 		public PadControl(MapTo controllerIndex)
 		{
 			InitializeComponent();
@@ -75,7 +74,6 @@ namespace x360ce.App.Controls
 			SettingsManager.OptionsData.Items.ListChanged += Items_ListChanged;
 			// Monitor setting changes.
 			SettingsManager.Current.SettingChanged += Current_SettingChanged;
-
 		}
 		private void Global_UpdateControlFromStates(object sender, EventArgs e)
 		{
@@ -280,6 +278,8 @@ namespace x360ce.App.Controls
 					RightMotorDirectionComboBox,
 					RightMotorPeriodTrackBar,
 					RightMotorStrengthTrackBar,
+					ForceFFThroughXInputCheckBox,
+					PhysicalXInputSlotComboBox,
 				};
 				if (controls.Contains(e.Item.Control))
 					send = true;
@@ -364,6 +364,15 @@ namespace x360ce.App.Controls
 				LeftMotorDirectionComboBox.Items.Add(item);
 			foreach (var item in effectDirections)
 				RightMotorDirectionComboBox.Items.Add(item);
+
+			// ── NEW: XInput FF routing controls ──
+			PhysicalXInputSlotComboBox.Items.Clear();
+			PhysicalXInputSlotComboBox.Items.AddRange(new object[] { "0", "1", "2", "3" });
+			PhysicalXInputSlotComboBox.SelectedIndex = 0;
+			PhysicalXInputSlotComboBox.Enabled = false;
+			PhysicalXInputSlotLabel.Enabled = false;
+			ForceFFThroughXInputCheckBox.CheckedChanged += ForceFFThroughXInputCheckBox_CheckedChanged;
+			// ── END NEW ──
 
 			// Add player index to combo boxes
 			var playerOptions = new List<KeyValuePair>();
@@ -734,6 +743,8 @@ namespace x360ce.App.Controls
 			AddMap(() => SettingName.ForceType, ForceTypeComboBox);
 			AddMap(() => SettingName.ForceSwapMotor, ForceSwapMotorCheckBox);
 			AddMap(() => SettingName.ForceOverall, ForceOverallTrackBar);
+			AddMap(() => SettingName.ForceFFThroughXInput, ForceFFThroughXInputCheckBox);
+			AddMap(() => SettingName.PhysicalXInputUserIndex, PhysicalXInputSlotComboBox);
 			AddMap(() => SettingName.LeftMotorDirection, LeftMotorDirectionComboBox);
 			AddMap(() => SettingName.LeftMotorStrength, LeftMotorStrengthTrackBar);
 			AddMap(() => SettingName.LeftMotorPeriod, LeftMotorPeriodTrackBar);
@@ -1488,6 +1499,12 @@ namespace x360ce.App.Controls
 			if (type.HasFlag(ForceEffectType._Type2))
 				list.Add("Alternative implementation - two motors / actuators per effect.");
 			EffectDescriptionLabel.Text = string.Format("{0} ({1}) - {2}", type, (int)type, string.Join(" ", list));
+		}
+
+		private void ForceFFThroughXInputCheckBox_CheckedChanged(object sender, EventArgs e)
+		{
+			PhysicalXInputSlotComboBox.Enabled = ForceFFThroughXInputCheckBox.Checked;
+			PhysicalXInputSlotLabel.Enabled = ForceFFThroughXInputCheckBox.Checked;
 		}
 
 		private void CalibrateButton_Click(object sender, EventArgs e)
