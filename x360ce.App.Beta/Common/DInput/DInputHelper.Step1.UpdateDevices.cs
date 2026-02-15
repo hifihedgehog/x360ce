@@ -47,6 +47,25 @@ namespace x360ce.App.DInput
 				return;
 			// List of connected devices.
 			var deviceInstanceGuid = devices.Select(x => x.InstanceGuid).ToList();
+			// ══════════════════════════════════════════════════════════
+			// Native XInput enumeration — probe slots 0-3 directly.
+			// Creates synthetic UserDevice entries for each connected
+			// XInput pad so they appear in the device list and can be
+			// mapped without needing Xidi or Microsoft's DInput shim.
+			// ══════════════════════════════════════════════════════════
+			var nativeXInputGuids = new List<Guid>();
+			for (uint slot = 0; slot < 4; slot++)
+			{
+				var syntheticGuid = XInputInterop.GetSyntheticInstanceGuid(slot);
+				if (XInputInterop.IsConnected(slot))
+				{
+					nativeXInputGuids.Add(syntheticGuid);
+					// Add to the combined connected-device list so they
+					// won't be marked offline in the delete pass below.
+					deviceInstanceGuid.Add(syntheticGuid);
+				}
+			}
+			// ══════════════════════════════════════════════════════════
 			// List of current devices.
 			var uds = SettingsManager.UserDevices.ItemsToArraySyncronized();
 			var currentInstanceGuids = uds.Select(x => x.InstanceGuid).ToArray();
@@ -117,6 +136,48 @@ namespace x360ce.App.DInput
 				lock (SettingsManager.UserDevices.SyncRoot)
 					SettingsManager.UserDevices.Items.Add(ud);
 			}
+			// ══════════════════════════════════════════════════════════
+			// Native XInput: Insert or update synthetic UserDevices.
+			// ══════════════════════════════════════════════════════════
+			foreach (var synGuid in nativeXInputGuids)
+			{
+				var existing = SettingsManager.UserDevices.Items
+					.FirstOrDefault(x => x.InstanceGuid == synGuid);
+				if (existing == null)
+				{
+					// Determine slot from GUID.
+					var slot = XInputInterop.GetSlotFromSyntheticGuid(synGuid);
+					if (slot.HasValue)
+					{
+						var synDevice = XInputInterop.NewSyntheticUserDevice(slot.Value);
+						synDevice.IsOnline = true;
+						lock (SettingsManager.UserDevices.SyncRoot)
+							SettingsManager.UserDevices.Items.Add(synDevice);
+					}
+				}
+				else
+				{
+					// Mark online if not already.
+					if (!existing.IsOnline)
+						lock (SettingsManager.UserDevices.SyncRoot)
+							existing.IsOnline = true;
+				}
+			}
+			// Mark disconnected native XInput devices as offline.
+			for (uint slot = 0; slot < 4; slot++)
+			{
+				var synGuid = XInputInterop.GetSyntheticInstanceGuid(slot);
+				// If this slot is NOT in the connected list...
+				if (!nativeXInputGuids.Contains(synGuid))
+				{
+					var existing = SettingsManager.UserDevices.Items
+						.FirstOrDefault(x => x.InstanceGuid == synGuid);
+					if (existing != null && existing.IsOnline)
+						lock (SettingsManager.UserDevices.SyncRoot)
+							existing.IsOnline = false;
+				}
+			}
+			// ══════════════════════════════════════════════════════════
 			// Enable Test instances.
 			TestDeviceHelper.EnableTestInstances();
 			RefreshDevicesCount++;
@@ -202,4 +263,3 @@ namespace x360ce.App.DInput
 
 	}
 }
-

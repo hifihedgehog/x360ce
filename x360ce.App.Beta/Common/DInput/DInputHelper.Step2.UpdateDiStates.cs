@@ -11,10 +11,10 @@ namespace x360ce.App.DInput
 {
 	public partial class DInputHelper
 	{
-		// ── NEW: Track devices currently using XInput direct FF ──
+		// ── Track devices currently using XInput direct FF ──
 		private readonly System.Collections.Generic.HashSet<Guid> _xInputFFActive
 			= new System.Collections.Generic.HashSet<Guid>();
-		// ── END NEW ──
+
 		void UpdateDiStates(DirectInput manager, UserGame game, DeviceDetector detector)
 		{
 			// Get all mapped user devices.
@@ -31,6 +31,87 @@ namespace x360ce.App.DInput
 				// Allow if not testing or testing with option enabled.
 				var o = SettingsManager.Options;
 				var allow = !o.TestEnabled || o.TestGetDInputStates;
+
+				// ══════════════════════════════════════════════════════════
+				// Native XInput path — synthetic device created in Step1.
+				// Reads state via XInputGetStateEx (ordinal #100) which
+				// includes the Guide button (bit 0x0400).
+				// Bypasses all DirectInput code entirely.
+				// ══════════════════════════════════════════════════════════
+				if (XInputInterop.IsSyntheticXInputDevice(ud.ProductGuid))
+				{
+					var slot = XInputInterop.GetSlotFromSyntheticGuid(ud.InstanceGuid);
+					if (slot.HasValue && ud.IsOnline && allow)
+					{
+						XInputInterop.XINPUT_STATE xiState;
+						if (XInputInterop.GetStateEx(slot.Value, out xiState))
+						{
+							// Convert XInput state to JoystickState for pipeline compatibility.
+							state = XInputInterop.ConvertToJoystickState(xiState);
+
+							// Fill device objects on first read (for UI labels).
+							if (ud.DeviceObjects == null)
+							{
+								ud.DeviceObjects = XInputInterop.GetNativeXInputDeviceObjects();
+								ud.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // 6 axes
+								ud.DiActuatorMask = 0;
+								ud.DiActuatorCount = 0;
+								ud.DiSliderMask = 0;
+							}
+							if (ud.DeviceEffects == null)
+								ud.DeviceEffects = new DeviceEffectItem[0];
+
+							// ── XInput force feedback for native devices ──
+							var xiSetting = SettingsManager.UserSettings.ItemsToArraySyncronized()
+								.FirstOrDefault(x => x.InstanceGuid == ud.InstanceGuid);
+							if (xiSetting != null && xiSetting.MapTo > (int)MapTo.None)
+							{
+								var xiPs = SettingsManager.GetPadSetting(xiSetting.PadSettingChecksum);
+								if (xiPs != null && xiPs.ForceEnable == "1")
+								{
+									var force = feedbacks[(int)xiSetting.MapTo - 1];
+									if (force != null)
+									{
+										XInputInterop.SetVibration(slot.Value, force.LargeMotor, force.SmallMotor);
+										_xInputFFActive.Add(ud.InstanceGuid);
+									}
+								}
+								else if (_xInputFFActive.Contains(ud.InstanceGuid))
+								{
+									XInputInterop.StopVibration(slot.Value);
+									_xInputFFActive.Remove(ud.InstanceGuid);
+								}
+							}
+						}
+						else
+						{
+							// Controller disconnected mid-poll — mark offline.
+							lock (SettingsManager.UserDevices.SyncRoot)
+								ud.IsOnline = false;
+						}
+					}
+
+					// Apply state to UserDevice and continue to next device.
+					ud.JoState = state;
+					ud.JoUpdate = update;
+					if (state != null)
+					{
+						var newState = new CustomDiState(ud.JoState);
+						var newTime = watch.ElapsedTicks;
+						ud.OldDiState = ud.DiState;
+						ud.OldDiUpdates = ud.DiUpdates;
+						ud.OldDiStateTime = ud.DiStateTime;
+						ud.DiState = newState;
+						ud.DiUpdates = null;
+						ud.DiStateTime = newTime;
+					}
+					// Skip all DInput code below for this device.
+					continue;
+				}
+				// ══════════════════════════════════════════════════════════
+				// Standard DirectInput path (unchanged from original)
+				// ══════════════════════════════════════════════════════════
+
 				// Note: manager.IsDeviceAttached() use a lot of CPU resources.
 				var isAttached = ud != null && ud.IsOnline; // && manager.IsDeviceAttached(ud.InstanceGuid);
 				if (isAttached && allow)
@@ -58,11 +139,9 @@ namespace x360ce.App.DInput
 								exceptionData.AppendLine("Unacquire (Exclusive)...");
 								device.Unacquire();
 								exceptionData.AppendLine("SetCooperativeLevel (Exclusive)...");
-								// ── CHANGED: Use persistent hidden window instead of DetectorForm ──
 								device.SetCooperativeLevel(FFBackgroundWindow.GetHandle(), flags);
 								exceptionData.AppendLine("Acquire (Exclusive)...");
 								device.Acquire();
-								// ── NEW: Disable auto-centering spring ──
 
 								ud.IsExclusiveMode = true;
 							}
@@ -74,7 +153,6 @@ namespace x360ce.App.DInput
 								exceptionData.AppendLine("Unacquire (NonExclusive)...");
 								device.Unacquire();
 								exceptionData.AppendLine("SetCooperativeLevel (Exclusive)...");
-								// ── CHANGED: Use persistent hidden window ──
 								device.SetCooperativeLevel(FFBackgroundWindow.GetHandle(), flags);
 								exceptionData.AppendLine("Acquire (NonExclusive)...");
 								device.Acquire();
@@ -84,7 +162,6 @@ namespace x360ce.App.DInput
 							// Polling - Retrieves data from polled objects on a DirectInput device.
 							// Some devices require pooling (For example original "Xbox Controller S" with XBCD drivers).
 							// If the device does not require polling, calling this method has no effect.
-							// If a device that requires polling is not polled periodically, no new data is received from the device.
 							// Calling this method causes DirectInput to update the device state, generate input
 							// events (if buffered data is enabled), and set notification events (if notification is enabled).
 							device.Poll();
@@ -181,9 +258,7 @@ namespace x360ce.App.DInput
 										// If force is enabled then...
 										if (ps.ForceEnable == "1")
 										{
-											// ── NEW: Check for XInput FF override ──
-											// Handles XInput devices exposed through DirectInput
-											// (Microsoft's shim) or when user explicitly enables routing.
+											// ── Check for XInput FF override ──
 											bool useXInputFF = ps.ForceFFThroughXInput == "1"
 												|| XInputInterop.IsXInputDeviceViaProductGuid(ud.ProductGuid);
 
@@ -207,7 +282,7 @@ namespace x360ce.App.DInput
 													ud.FFState = null;
 												}
 											}
-											// ── END NEW — existing DirectInput FF path below ──
+											// ── Existing DirectInput FF path ──
 											else
 											{
 												if (ud.FFState == null)
@@ -227,10 +302,6 @@ namespace x360ce.App.DInput
 														v.LeftMotorSpeed = (short)ConvertHelper.ConvertRange(byte.MinValue, byte.MaxValue, short.MinValue, short.MaxValue, force.LargeMotor);
 														v.RightMotorSpeed = (short)ConvertHelper.ConvertRange(byte.MinValue, byte.MaxValue, short.MinValue, short.MaxValue, force.SmallMotor);
 													}
-													// For the future: Investigate device states if force feedback is not working. 
-													// var st = ud.Device.GetForceFeedbackState();
-													//st == SharpDX.DirectInput.ForceFeedbackState
-													// ud.Device.SendForceFeedbackCommand(ForceFeedbackCommand.SetActuatorsOn);
 													exceptionData.AppendFormat("ud.FFState.SetDeviceForces(device) // ud.IsExclusiveMode = {0}", ud.IsExclusiveMode).AppendLine();
 													ud.FFState.SetDeviceForces(ud, device, ps, v);
 												}
@@ -244,7 +315,7 @@ namespace x360ce.App.DInput
 											ud.FFState.StopDeviceForces(device);
 											ud.FFState = null;
 										}
-										// ── NEW: Stop XInput FF if force was disabled ──
+										// ── Stop XInput FF if force was disabled ──
 										else if (_xInputFFActive.Contains(ud.InstanceGuid))
 										{
 											bool useXInputFF = ps.ForceFFThroughXInput == "1"
@@ -259,7 +330,6 @@ namespace x360ce.App.DInput
 											}
 											_xInputFFActive.Remove(ud.InstanceGuid);
 										}
-										// ── END NEW ──
 									}
 								}
 							}
@@ -410,4 +480,3 @@ namespace x360ce.App.DInput
 	}
 
 }
-
