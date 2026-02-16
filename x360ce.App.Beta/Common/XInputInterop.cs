@@ -360,6 +360,20 @@ namespace x360ce.App
 				&& b[15] == 0x44;  // D
 		}
 
+		/// <summary>
+		/// Returns a bitmask of connected XInput slots (bit 0 = slot 0, etc.).
+		/// </summary>
+		public static uint GetConnectedSlotMask()
+		{
+			uint mask = 0;
+			for (uint i = 0; i < 4; i++)
+			{
+				if (IsConnected(i))
+					mask |= (1u << (int)i);
+			}
+			return mask;
+		}
+
 		#endregion
 
 		#region State conversion — XINPUT_STATE → JoystickState

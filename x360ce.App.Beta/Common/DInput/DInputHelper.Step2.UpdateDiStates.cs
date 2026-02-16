@@ -24,16 +24,14 @@ namespace x360ce.App.DInput
 			var now = Environment.TickCount;
 			if (!force)
 			{
-				// Handles TickCount wrap safely via unchecked subtraction.
 				if (unchecked(now - _lastXInputMapRefreshTick) < XInputMapRefreshIntervalMs)
 					return;
 			}
 
 			_lastXInputMapRefreshTick = now;
 
-			// Update ViGEm-owned slot set from RawInput (your Step1 helper; works here too since partial class).
-			var vigemSlots = DetectViGEmOwnedXInputSlots_FromRawInput();
-			XInputInterop.SetViGEmOwnedSlots(vigemSlots);
+			// Re-run count + delta ViGEm tracking (same method as Step1; shared via partial class).
+			UpdateViGEmSlotTracking();
 
 			// Rebuild logical -> real slot map from current system state.
 			XInputInterop.RefreshLogicalSlotMapFromSystem();
