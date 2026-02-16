@@ -369,45 +369,27 @@ namespace x360ce.App.DInput
 		private static int CountViGEmXInputDevices()
 		{
 			int count = 0;
-
-			uint num = 0;
-			uint cbSize = (uint)Marshal.SizeOf(typeof(RAWINPUTDEVICELIST));
-
-			if (GetRawInputDeviceList(null, ref num, cbSize) == 0xFFFFFFFF)
-				return 0;
-
-			var list = new RAWINPUTDEVICELIST[num];
-			if (GetRawInputDeviceList(list, ref num, cbSize) == 0xFFFFFFFF)
-				return 0;
-
-			for (int i = 0; i < list.Length; i++)
+			try
 			{
-				if (list[i].dwType != RIM_TYPEHID)
-					continue;
+				using (var key = Registry.LocalMachine.OpenSubKey(
+					@"SYSTEM\CurrentControlSet\Enum\USB\VID_045E&PID_028E", false))
+				{
+					if (key == null) return 0;
 
-				uint nameSize = 0;
-				GetRawInputDeviceInfo(list[i].hDevice, RIDI_DEVICENAME, null, ref nameSize);
-				if (nameSize == 0)
-					continue;
+					foreach (var instanceName in key.GetSubKeyNames())
+					{
+						var instanceId = @"USB\VID_045E&PID_028E\" + instanceName;
 
-				var sb = new StringBuilder((int)nameSize);
-				if (GetRawInputDeviceInfo(list[i].hDevice, RIDI_DEVICENAME, sb, ref nameSize) == 0xFFFFFFFF)
-					continue;
+						// Skip devices that are not currently present (stale registry entries).
+						if (!PnP.IsDevicePresent(instanceId))
+							continue;
 
-				var rawName = sb.ToString();
-
-				// Only count IG_00 (primary gamepad collection) — one per controller.
-				if (rawName.IndexOf("IG_00", StringComparison.OrdinalIgnoreCase) < 0)
-					continue;
-
-				var pnpId = RawInputNameToPnPInstanceId(rawName);
-				if (string.IsNullOrEmpty(pnpId))
-					continue;
-
-				if (PnP.IsUnderViGEmBus_ByServiceOrName(pnpId))
-					count++;
+						if (PnP.IsUnderViGEmBus_ByServiceOrName(instanceId))
+							count++;
+					}
+				}
 			}
-
+			catch { }
 			return count;
 		}
 
@@ -434,6 +416,7 @@ namespace x360ce.App.DInput
 		private static class PnP
 		{
 			private const int CR_SUCCESS = 0;
+			private const uint DN_DEVICE_IS_PRESENT = 0x00000002; // DN_PRESENT
 
 			[DllImport("cfgmgr32.dll", CharSet = CharSet.Unicode)]
 			private static extern int CM_Locate_DevNodeW(out uint pdnDevInst, string pDeviceID, int ulFlags);
@@ -443,6 +426,27 @@ namespace x360ce.App.DInput
 
 			[DllImport("cfgmgr32.dll", CharSet = CharSet.Unicode)]
 			private static extern int CM_Get_Device_IDW(uint dnDevInst, StringBuilder Buffer, int BufferLen, int ulFlags);
+
+			[DllImport("cfgmgr32.dll")]
+			private static extern int CM_Get_DevNode_Status(out uint pulStatus, out uint pulProblemNumber, uint dnDevInst, int ulFlags);
+
+			/// <summary>
+			/// Returns true only if the device node is currently present in the system
+			/// (not a stale/disconnected registry entry).
+			/// </summary>
+			public static bool IsDevicePresent(string deviceInstanceId)
+			{
+				if (string.IsNullOrEmpty(deviceInstanceId))
+					return false;
+
+				if (CM_Locate_DevNodeW(out var devInst, deviceInstanceId, 0) != CR_SUCCESS)
+					return false;
+
+				if (CM_Get_DevNode_Status(out var status, out _, devInst, 0) != CR_SUCCESS)
+					return false;
+
+				return (status & DN_DEVICE_IS_PRESENT) != 0;
+			}
 
 			public static bool IsUnderViGEmBus_ByServiceOrName(string deviceInstanceId)
 			{
