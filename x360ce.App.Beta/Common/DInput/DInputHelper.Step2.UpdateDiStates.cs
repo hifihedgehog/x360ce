@@ -15,13 +15,37 @@ namespace x360ce.App.DInput
 		private readonly System.Collections.Generic.HashSet<Guid> _xInputFFActive
 			= new System.Collections.Generic.HashSet<Guid>();
 
+		// Refresh XInput logical<->real mapping periodically so slot shifts are handled.
+		private int _lastXInputMapRefreshTick;
+		private const int XInputMapRefreshIntervalMs = 500;
+
+		private void RefreshNativeXInputMapsIfNeeded(bool force = false)
+		{
+			var now = Environment.TickCount;
+			if (!force)
+			{
+				// Handles TickCount wrap safely via unchecked subtraction.
+				if (unchecked(now - _lastXInputMapRefreshTick) < XInputMapRefreshIntervalMs)
+					return;
+			}
+
+			_lastXInputMapRefreshTick = now;
+
+			// Update ViGEm-owned slot set from RawInput (your Step1 helper; works here too since partial class).
+			var vigemSlots = DetectViGEmOwnedXInputSlots_FromRawInput();
+			XInputInterop.SetViGEmOwnedSlots(vigemSlots);
+
+			// Rebuild logical -> real slot map from current system state.
+			XInputInterop.RefreshLogicalSlotMapFromSystem();
+		}
+
 		void UpdateDiStates(DirectInput manager, UserGame game, DeviceDetector detector)
 		{
 			// Get all mapped user devices.
 			var userDevices = SettingsManager.GetMappedDevices(game?.FileName);
 			// Acquire copy of feedbacks for processing.
 			var feedbacks = CopyAndClearFeedbacks();
-
+			RefreshNativeXInputMapsIfNeeded();
 			for (int i = 0; i < userDevices.Count(); i++)
 			{
 				// Update direct input form and return actions (pressed Buttons/DPads, turned Axis/Sliders).
@@ -34,63 +58,99 @@ namespace x360ce.App.DInput
 
 				// ══════════════════════════════════════════════════════════
 				// Native XInput path — synthetic device created in Step1.
-				// Reads state via XInputGetStateEx (ordinal #100) which
-				// includes the Guide button (bit 0x0400).
-				// Bypasses all DirectInput code entirely.
+				// IMPORTANT CHANGE:
+				//   Synthetic GUID encodes LOGICAL controller index (0..3),
+				//   not the real XInput slot. We translate logical->real
+				//   at poll time so physical pads always appear starting at 1,
+				//   regardless of virtual pads consuming slots in the background.
 				// ══════════════════════════════════════════════════════════
 				if (XInputInterop.IsSyntheticXInputDevice(ud.ProductGuid))
 				{
-					var slot = XInputInterop.GetSlotFromSyntheticGuid(ud.InstanceGuid);
-					if (slot.HasValue && ud.IsOnline && allow)
+					uint realSlot;
+					if (ud.IsOnline && allow)
 					{
-						XInputInterop.XINPUT_STATE xiState;
-						if (XInputInterop.GetStateEx(slot.Value, out xiState))
+						// Translate logical synthetic device -> current real XInput slot.
+						// If mapping is missing (devices changed), refresh it once.
+						if (!XInputInterop.TryGetRealSlotFromSyntheticGuid(ud.InstanceGuid, out realSlot))
 						{
-							// Convert XInput state to JoystickState for pipeline compatibility.
-							state = XInputInterop.ConvertToJoystickState(xiState);
+							// Force refresh (includes re-detecting ViGEm slots) then try again.
+							RefreshNativeXInputMapsIfNeeded(force: true);
 
-							// Fill device objects on first read (for UI labels).
-							if (ud.DeviceObjects == null)
+							if (!XInputInterop.TryGetRealSlotFromSyntheticGuid(ud.InstanceGuid, out realSlot))
 							{
-								ud.DeviceObjects = XInputInterop.GetNativeXInputDeviceObjects();
-								ud.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // 6 axes
-								ud.DiActuatorMask = 0;
-								ud.DiActuatorCount = 0;
-								ud.DiSliderMask = 0;
-							}
-							if (ud.DeviceEffects == null)
-								ud.DeviceEffects = new DeviceEffectItem[0];
-
-							// ── XInput force feedback for native devices ──
-							var xiSetting = SettingsManager.UserSettings.ItemsToArraySyncronized()
-								.FirstOrDefault(x => x.InstanceGuid == ud.InstanceGuid);
-							if (xiSetting != null && xiSetting.MapTo > (int)MapTo.None)
-							{
-								var xiPs = SettingsManager.GetPadSetting(xiSetting.PadSettingChecksum);
-								if (xiPs != null && xiPs.ForceEnable == "1")
-								{
-									var force = feedbacks[(int)xiSetting.MapTo - 1];
-									if (force != null)
-									{
-										XInputInterop.SetVibration(slot.Value, force.LargeMotor, force.SmallMotor);
-										_xInputFFActive.Add(ud.InstanceGuid);
-									}
-								}
-								else if (_xInputFFActive.Contains(ud.InstanceGuid))
-								{
-									XInputInterop.StopVibration(slot.Value);
-									_xInputFFActive.Remove(ud.InstanceGuid);
-								}
+								lock (SettingsManager.UserDevices.SyncRoot)
+									ud.IsOnline = false;
+								goto ApplySyntheticState;
 							}
 						}
-						else
+
+						// Safety: if the mapped real slot is owned by ViGEm, go offline.
+						if (XInputInterop.IsViGEmOwnedSlot(realSlot))
 						{
-							// Controller disconnected mid-poll — mark offline.
 							lock (SettingsManager.UserDevices.SyncRoot)
 								ud.IsOnline = false;
+							goto ApplySyntheticState;
+						}
+
+						XInputInterop.XINPUT_STATE xiState;
+
+						// Read state from the REAL slot. If it fails, refresh mapping once and retry.
+						if (!XInputInterop.GetStateEx(realSlot, out xiState))
+						{
+							// Force refresh and retry once (slot might have shifted).
+							RefreshNativeXInputMapsIfNeeded(force: true);
+
+							if (!XInputInterop.TryGetRealSlotFromSyntheticGuid(ud.InstanceGuid, out realSlot) ||
+								XInputInterop.IsViGEmOwnedSlot(realSlot) ||
+								!XInputInterop.GetStateEx(realSlot, out xiState))
+							{
+								lock (SettingsManager.UserDevices.SyncRoot)
+									ud.IsOnline = false;
+								goto ApplySyntheticState;
+							}
+						}
+
+						// Convert XInput state to JoystickState for pipeline compatibility.
+						state = XInputInterop.ConvertToJoystickState(xiState);
+
+						// Fill device objects on first read (for UI labels).
+						if (ud.DeviceObjects == null)
+						{
+							ud.DeviceObjects = XInputInterop.GetNativeXInputDeviceObjects();
+							ud.DiAxeMask = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20; // 6 axes
+							ud.DiActuatorMask = 0;
+							ud.DiActuatorCount = 0;
+							ud.DiSliderMask = 0;
+						}
+						if (ud.DeviceEffects == null)
+							ud.DeviceEffects = new DeviceEffectItem[0];
+
+						// ── XInput force feedback for native devices ──
+						var xiSetting = SettingsManager.UserSettings.ItemsToArraySyncronized()
+							.FirstOrDefault(x => x.InstanceGuid == ud.InstanceGuid);
+
+						if (xiSetting != null && xiSetting.MapTo > (int)MapTo.None)
+						{
+							var xiPs = SettingsManager.GetPadSetting(xiSetting.PadSettingChecksum);
+							if (xiPs != null && xiPs.ForceEnable == "1")
+							{
+								var force = feedbacks[(int)xiSetting.MapTo - 1];
+								if (force != null)
+								{
+									// IMPORTANT: vibrate REAL slot, not logical index.
+									XInputInterop.SetVibration(realSlot, force.LargeMotor, force.SmallMotor);
+									_xInputFFActive.Add(ud.InstanceGuid);
+								}
+							}
+							else if (_xInputFFActive.Contains(ud.InstanceGuid))
+							{
+								XInputInterop.StopVibration(realSlot);
+								_xInputFFActive.Remove(ud.InstanceGuid);
+							}
 						}
 					}
 
+				ApplySyntheticState:
 					// Apply state to UserDevice and continue to next device.
 					ud.JoState = state;
 					ud.JoUpdate = update;
@@ -380,9 +440,9 @@ namespace x360ce.App.DInput
 				if (state != null)
 				{
 					var newState = new CustomDiState(ud.JoState);
-					var newUpdates = update?.Select(x=> new CustomDiUpdate(x)).ToArray();
+					var newUpdates = update?.Select(x => new CustomDiUpdate(x)).ToArray();
 					// If updates from buffer supplied and old state is available then...
-					if (newUpdates != null && newUpdates.Count(x=>x.Type == MapType.Button) > 1 && ud.DiState != null)
+					if (newUpdates != null && newUpdates.Count(x => x.Type == MapType.Button) > 1 && ud.DiState != null)
 					{
 						// Analyse if state must be modified.
 						for (int b = 0; b < newState.Buttons.Length; b++)
