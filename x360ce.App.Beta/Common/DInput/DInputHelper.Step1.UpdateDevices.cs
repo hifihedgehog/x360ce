@@ -78,6 +78,9 @@ namespace x360ce.App.DInput
 			// Update logical->real slot map so Step2 can translate correctly.
 			XInputInterop.UpdateLogicalSlotMap(connectedRealSlots);
 
+			// Start HID polling for Share button (runs once, threads are background).
+			XInputInterop.StartShareButtonPolling();
+
 			// Create synthetic devices using LOGICAL indices (0..count-1)
 			var nativeXInputGuids = new List<Guid>();
 			for (uint logical = 0; logical < (uint)connectedRealSlots.Count && logical < 4; logical++)

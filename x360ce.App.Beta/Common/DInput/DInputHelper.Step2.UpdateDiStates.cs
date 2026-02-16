@@ -108,7 +108,13 @@ namespace x360ce.App.DInput
 							}
 						}
 
-						// Convert XInput state to JoystickState for pipeline compatibility.
+						// Merge Share button from HID side-channel before conversion.
+						// Share is NOT available via XInput — it's read from a vendor-specific
+						// HID report on Xbox Series controllers (VID 0x045E).
+						if (XInputInterop.GetShareButtonState(realSlot))
+							xiState.Gamepad.wButtons = (ushort)(xiState.Gamepad.wButtons | XInputInterop.XINPUT_GAMEPAD_SHARE);
+
+						// Convert XInput state (now including Share) to JoystickState for pipeline compatibility.
 						state = XInputInterop.ConvertToJoystickState(xiState);
 
 						// Fill device objects on first read (for UI labels).

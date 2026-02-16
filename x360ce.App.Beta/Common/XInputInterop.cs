@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 using SharpDX.DirectInput;
 
 namespace x360ce.App
@@ -68,6 +69,8 @@ namespace x360ce.App
 		public const ushort XINPUT_GAMEPAD_RIGHT_SHOULDER = 0x0200;
 		// Guide button — only returned by XInputGetStateEx (ordinal #100)
 		public const ushort XINPUT_GAMEPAD_GUIDE = 0x0400;
+		// Share button — NOT returned by XInput; read via HID side-channel
+		public const ushort XINPUT_GAMEPAD_SHARE = 0x0800;
 		public const ushort XINPUT_GAMEPAD_A = 0x1000;
 		public const ushort XINPUT_GAMEPAD_B = 0x2000;
 		public const ushort XINPUT_GAMEPAD_X = 0x4000;
@@ -430,6 +433,7 @@ namespace x360ce.App
 			js.Buttons[8] = (b & XINPUT_GAMEPAD_LEFT_THUMB) != 0;
 			js.Buttons[9] = (b & XINPUT_GAMEPAD_RIGHT_THUMB) != 0;
 			js.Buttons[10] = (b & XINPUT_GAMEPAD_GUIDE) != 0;  // Guide — only from GetStateEx!
+			js.Buttons[11] = (b & XINPUT_GAMEPAD_SHARE) != 0;  // Share — from HID polling
 
 			// ────────────────────────────────────────
 			// D-Pad → POV[0] in centidegrees
@@ -487,6 +491,7 @@ namespace x360ce.App
 			list.Add(new Engine.DeviceObjectItem(64, ObjectGuid.Button, 0, DeviceObjectTypeFlags.PushButton, 8, "Button 8"));
 			list.Add(new Engine.DeviceObjectItem(65, ObjectGuid.Button, 0, DeviceObjectTypeFlags.PushButton, 9, "Button 9"));
 			list.Add(new Engine.DeviceObjectItem(66, ObjectGuid.Button, 0, DeviceObjectTypeFlags.PushButton, 10, "System Main Menu"));
+			list.Add(new Engine.DeviceObjectItem(67, ObjectGuid.Button, 0, DeviceObjectTypeFlags.PushButton, 11, "Share"));
 			// Collections (informational only)
 			list.Add(new Engine.DeviceObjectItem(0, ObjectGuid.Unknown, 0, DeviceObjectTypeFlags.Collection | DeviceObjectTypeFlags.NoData, 0, "Collection 0 - Game Pad"));
 			// Update DIndexes
@@ -515,7 +520,7 @@ namespace x360ce.App
 			ud.CapSubtype = 258;
 			ud.CapFlags = 5;
 			ud.CapAxeCount = 6;
-			ud.CapButtonCount = 11; // A B X Y LB RB Back Start LS RS Guide
+			ud.CapButtonCount = 12; // A B X Y LB RB Back Start LS RS Guide Share
 			ud.CapPovCount = 1;
 			ud.HidClassGuid = new Guid("4d1e55b2-f16f-11cf-88cb-001111000030");
 			ud.IsEnabled = true;
@@ -592,6 +597,350 @@ namespace x360ce.App
 			realSlots.Sort();
 			UpdateLogicalSlotMap(realSlots);
 			return realSlots;
+		}
+
+		#endregion
+
+		#region Share Button HID Polling
+
+		private static readonly bool[] _shareButtonState = new bool[4];
+		private static readonly object _shareStateLock = new object();
+		private static volatile bool _sharePollingRunning;
+		private static readonly HashSet<string> _claimedHidPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		private static readonly object _hidClaimLock = new object();
+
+		// Xbox controller PIDs known to have Share button via HID
+		private static readonly ushort[] ShareButtonPids = { 0x02FD, 0x0B13, 0x02FF };
+
+		/// <summary>
+		/// Get the current Share button state for a given REAL XInput slot (0-3).
+		/// </summary>
+		public static bool GetShareButtonState(uint realSlot)
+		{
+			if (realSlot >= 4) return false;
+			lock (_shareStateLock)
+				return _shareButtonState[realSlot];
+		}
+
+		/// <summary>
+		/// Start background HID polling threads for Share button detection.
+		/// Safe to call multiple times — only starts once.
+		/// </summary>
+		public static void StartShareButtonPolling()
+		{
+			if (_sharePollingRunning) return;
+			_sharePollingRunning = true;
+
+			for (uint i = 0; i < 4; i++)
+			{
+				var slot = i;
+				var t = new Thread(() => PollHidForShareButton(slot))
+				{
+					IsBackground = true,
+					Name = "ShareBtn_Slot" + slot,
+					Priority = ThreadPriority.BelowNormal
+				};
+				t.Start();
+			}
+		}
+
+		/// <summary>
+		/// Signal Share button polling threads to stop.
+		/// </summary>
+		public static void StopShareButtonPolling()
+		{
+			_sharePollingRunning = false;
+		}
+
+		#region HID / SetupAPI P/Invoke
+
+		private static readonly IntPtr INVALID_HANDLE_PTR = new IntPtr(-1);
+		private const uint HID_GENERIC_READ = 0x80000000;
+		private const uint HID_FILE_SHARE_RW = 0x00000003;
+		private const uint HID_OPEN_EXISTING = 3;
+		private const uint DIGCF_PRESENT = 0x00000002;
+		private const uint DIGCF_DEVICEINTERFACE = 0x00000010;
+
+		[StructLayout(LayoutKind.Sequential)]
+		private struct HIDD_ATTRIBUTES
+		{
+			public uint Size;
+			public ushort VendorID;
+			public ushort ProductID;
+			public ushort VersionNumber;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		private struct HIDP_CAPS
+		{
+			public ushort Usage;
+			public ushort UsagePage;
+			public ushort InputReportByteLength;
+			public ushort OutputReportByteLength;
+			public ushort FeatureReportByteLength;
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 17)]
+			public ushort[] Reserved;
+			public ushort NumberLinkCollectionNodes;
+			public ushort NumberInputButtonCaps;
+			public ushort NumberInputValueCaps;
+			public ushort NumberInputDataIndices;
+			public ushort NumberOutputButtonCaps;
+			public ushort NumberOutputValueCaps;
+			public ushort NumberOutputDataIndices;
+			public ushort NumberFeatureButtonCaps;
+			public ushort NumberFeatureValueCaps;
+			public ushort NumberFeatureDataIndices;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		private struct SP_DEVICE_INTERFACE_DATA
+		{
+			public uint cbSize;
+			public Guid InterfaceClassGuid;
+			public uint Flags;
+			public IntPtr Reserved;
+		}
+
+		[DllImport("hid.dll")]
+		private static extern void HidD_GetHidGuid(out Guid hidGuid);
+
+		[DllImport("hid.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool HidD_GetAttributes(IntPtr HidDeviceObject, ref HIDD_ATTRIBUTES Attributes);
+
+		[DllImport("hid.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool HidD_GetPreparsedData(IntPtr HidDeviceObject, out IntPtr PreparsedData);
+
+		[DllImport("hid.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool HidD_FreePreparsedData(IntPtr PreparsedData);
+
+		[DllImport("hid.dll")]
+		private static extern int HidP_GetCaps(IntPtr PreparsedData, out HIDP_CAPS Capabilities);
+
+		[DllImport("setupapi.dll", CharSet = CharSet.Unicode)]
+		private static extern IntPtr SetupDiGetClassDevs(ref Guid ClassGuid, string Enumerator, IntPtr hwndParent, uint Flags);
+
+		[DllImport("setupapi.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool SetupDiEnumDeviceInterfaces(IntPtr DeviceInfoSet, IntPtr DeviceInfoData,
+			ref Guid InterfaceClassGuid, uint MemberIndex, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData);
+
+		[DllImport("setupapi.dll", CharSet = CharSet.Unicode)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool SetupDiGetDeviceInterfaceDetail(IntPtr DeviceInfoSet,
+			ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData, IntPtr DeviceInterfaceDetailData,
+			uint DeviceInterfaceDetailDataSize, out uint RequiredSize, IntPtr DeviceInfoData);
+
+		[DllImport("setupapi.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool SetupDiDestroyDeviceInfoList(IntPtr DeviceInfoSet);
+
+		[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern IntPtr CreateFileW(string lpFileName, uint dwDesiredAccess,
+			uint dwShareMode, IntPtr lpSecurityAttributes, uint dwCreationDisposition,
+			uint dwFlagsAndAttributes, IntPtr hTemplateFile);
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool ReadFile(IntPtr hFile, byte[] lpBuffer,
+			uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
+
+		[DllImport("kernel32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool CloseHandle(IntPtr hObject);
+
+		#endregion
+
+		/// <summary>
+		/// Background thread: poll one HID device for Share button state.
+		/// Each thread (one per XInput slot 0-3) claims exactly one HID device.
+		/// Staggered startup ensures deterministic 1:1 HID-to-XInput mapping.
+		/// Only polls when the slot is connected and NOT ViGEm-owned.
+		/// </summary>
+		private static void PollHidForShareButton(uint controllerIndex)
+		{
+			// Stagger startup so controllers claim HID devices in deterministic order
+			Thread.Sleep((int)(controllerIndex * 500));
+
+			IntPtr hDevice = IntPtr.Zero;
+			string myClaimedPath = null;
+
+			while (_sharePollingRunning)
+			{
+				Thread.Sleep(1); // ~1000 Hz
+
+				if (hDevice == IntPtr.Zero)
+				{
+					// Only search if this real XInput slot is connected and not ViGEm
+					if (!IsConnected(controllerIndex) || IsViGEmOwnedSlot(controllerIndex))
+						continue;
+
+					hDevice = FindAndClaimShareHidDevice(out myClaimedPath);
+					if (hDevice == IntPtr.Zero)
+					{
+						// No device found — back off before retrying
+						Thread.Sleep(500);
+					}
+					continue;
+				}
+
+				// Read HID report
+				var buf = new byte[32];
+				uint bytesRead;
+				if (ReadFile(hDevice, buf, (uint)buf.Length, out bytesRead, IntPtr.Zero))
+				{
+					bool pressed = (buf[0] == 0x00 && (buf[12] & 0x08) != 0);
+					lock (_shareStateLock)
+						_shareButtonState[controllerIndex] = pressed;
+				}
+				else
+				{
+					// Device lost — close, unclaim, backoff
+					CloseHandle(hDevice);
+					hDevice = IntPtr.Zero;
+
+					lock (_shareStateLock)
+						_shareButtonState[controllerIndex] = false;
+
+					if (myClaimedPath != null)
+					{
+						lock (_hidClaimLock)
+							_claimedHidPaths.Remove(myClaimedPath);
+						myClaimedPath = null;
+					}
+
+					// Staggered backoff by controller index
+					Thread.Sleep(200 + (int)(controllerIndex * 200));
+				}
+			}
+
+			// Cleanup on shutdown
+			if (hDevice != IntPtr.Zero)
+			{
+				CloseHandle(hDevice);
+				if (myClaimedPath != null)
+					lock (_hidClaimLock)
+						_claimedHidPaths.Remove(myClaimedPath);
+			}
+
+			lock (_shareStateLock)
+				_shareButtonState[controllerIndex] = false;
+		}
+
+		/// <summary>
+		/// Enumerate HID devices, find an unclaimed Xbox controller with the
+		/// 16-byte Share button report, claim it, and return the handle.
+		/// </summary>
+		private static IntPtr FindAndClaimShareHidDevice(out string claimedPath)
+		{
+			claimedPath = null;
+
+			Guid hidGuid;
+			HidD_GetHidGuid(out hidGuid);
+
+			IntPtr hDevInfo = SetupDiGetClassDevs(ref hidGuid, null, IntPtr.Zero,
+				DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+			if (hDevInfo == IntPtr.Zero || hDevInfo == INVALID_HANDLE_PTR)
+				return IntPtr.Zero;
+
+			try
+			{
+				var ifData = new SP_DEVICE_INTERFACE_DATA();
+				ifData.cbSize = (uint)Marshal.SizeOf(typeof(SP_DEVICE_INTERFACE_DATA));
+
+				for (uint idx = 0; SetupDiEnumDeviceInterfaces(hDevInfo, IntPtr.Zero, ref hidGuid, idx, ref ifData); idx++)
+				{
+					uint reqSize;
+					SetupDiGetDeviceInterfaceDetail(hDevInfo, ref ifData, IntPtr.Zero, 0, out reqSize, IntPtr.Zero);
+					if (reqSize == 0)
+						continue;
+
+					IntPtr detailBuf = Marshal.AllocHGlobal((int)reqSize);
+					try
+					{
+						// cbSize of SP_DEVICE_INTERFACE_DETAIL_DATA
+						int cbSize = IntPtr.Size == 8 ? 8 : (4 + Marshal.SystemDefaultCharSize);
+						Marshal.WriteInt32(detailBuf, cbSize);
+
+						if (!SetupDiGetDeviceInterfaceDetail(hDevInfo, ref ifData, detailBuf, reqSize, out _, IntPtr.Zero))
+							continue;
+
+						string devicePath = Marshal.PtrToStringUni(IntPtr.Add(detailBuf, 4));
+						if (string.IsNullOrEmpty(devicePath))
+							continue;
+
+						// Already claimed by another controller thread?
+						lock (_hidClaimLock)
+						{
+							if (_claimedHidPaths.Contains(devicePath))
+								continue;
+						}
+
+						IntPtr hDev = CreateFileW(devicePath, HID_GENERIC_READ, HID_FILE_SHARE_RW,
+							IntPtr.Zero, HID_OPEN_EXISTING, 0, IntPtr.Zero);
+
+						if (hDev == IntPtr.Zero || hDev == INVALID_HANDLE_PTR)
+							continue;
+
+						bool matched = false;
+						try
+						{
+							// Check VID/PID
+							var attrs = new HIDD_ATTRIBUTES();
+							attrs.Size = (uint)Marshal.SizeOf(typeof(HIDD_ATTRIBUTES));
+
+							if (!HidD_GetAttributes(hDev, ref attrs) ||
+								attrs.VendorID != 0x045E ||
+								Array.IndexOf(ShareButtonPids, attrs.ProductID) < 0)
+								continue;
+
+							// Check HID collection — must be the 16-byte report
+							IntPtr preparsed;
+							if (!HidD_GetPreparsedData(hDev, out preparsed))
+								continue;
+
+							try
+							{
+								HIDP_CAPS caps;
+								bool ok = (HidP_GetCaps(preparsed, out caps) == 0x00110000) // HIDP_STATUS_SUCCESS
+									   && (caps.InputReportByteLength == 16);
+
+								if (!ok)
+									continue;
+							}
+							finally
+							{
+								HidD_FreePreparsedData(preparsed);
+							}
+
+							// Claim and return
+							lock (_hidClaimLock)
+								_claimedHidPaths.Add(devicePath);
+
+							claimedPath = devicePath;
+							matched = true;
+							return hDev;
+						}
+						finally
+						{
+							if (!matched)
+								CloseHandle(hDev);
+						}
+					}
+					finally
+					{
+						Marshal.FreeHGlobal(detailBuf);
+					}
+				}
+			}
+			finally
+			{
+				SetupDiDestroyDeviceInfoList(hDevInfo);
+			}
+
+			return IntPtr.Zero;
 		}
 
 		#endregion
