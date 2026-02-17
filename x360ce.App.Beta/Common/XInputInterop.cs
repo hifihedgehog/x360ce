@@ -607,10 +607,15 @@ namespace x360ce.App
 		private static readonly object _shareStateLock = new object();
 		private static volatile bool _sharePollingRunning;
 		private static readonly HashSet<string> _claimedHidPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		private static readonly HashSet<string> _claimedControllerIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		private static readonly object _hidClaimLock = new object();
 
-		// Xbox controller PIDs known to have Share button via HID
-		private static readonly ushort[] ShareButtonPids = { 0x02FD, 0x0B13, 0x02FF };
+		// Xbox controller PIDs known to have Share button via HID.
+		// 0x02FD = Xbox One S (Bluetooth)
+		// 0x02FF = Xbox One S rev2 (Bluetooth)
+		// 0x0B12 = Xbox Series X|S (USB)
+		// 0x0B13 = Xbox Series X|S (Bluetooth / Xbox Wireless)
+		private static readonly ushort[] ShareButtonPids = { 0x02FD, 0x0B12, 0x0B13, 0x02FF };
 
 		/// <summary>
 		/// Get the current Share button state for a given REAL XInput slot (0-3).
@@ -753,19 +758,148 @@ namespace x360ce.App
 
 		#endregion
 
+		#region Device Tree Helpers (cfgmgr32)
+
+		private const int CM_CR_SUCCESS = 0;
+
+		[DllImport("cfgmgr32.dll", CharSet = CharSet.Unicode)]
+		private static extern int CM_Locate_DevNodeW(
+			out uint pdnDevInst, string pDeviceID, int ulFlags);
+
+		[DllImport("cfgmgr32.dll")]
+		private static extern int CM_Get_Parent(
+			out uint pdnDevInst, uint dnDevInst, int ulFlags);
+
+		[DllImport("cfgmgr32.dll", CharSet = CharSet.Unicode)]
+		private static extern int CM_Get_Device_IDW(
+			uint dnDevInst, System.Text.StringBuilder Buffer, int BufferLen, int ulFlags);
+
+		/// <summary>
+		/// Convert a HID device interface path to a PnP device instance ID.
+		/// Example input:  \\?\HID#VID_045E&amp;PID_0B13&amp;IG_02#7&amp;abc#0000#{guid}
+		/// Example output: HID\VID_045E&amp;PID_0B13&amp;IG_02\7&amp;abc\0000
+		/// </summary>
+		private static string DevicePathToInstanceId(string devicePath)
+		{
+			if (string.IsNullOrEmpty(devicePath))
+				return null;
+
+			var s = devicePath;
+
+			// Remove \\?\ prefix
+			if (s.StartsWith(@"\\?\", StringComparison.OrdinalIgnoreCase))
+				s = s.Substring(4);
+
+			// Remove #{GUID} suffix
+			var guidIdx = s.IndexOf("#{", StringComparison.OrdinalIgnoreCase);
+			if (guidIdx >= 0)
+				s = s.Substring(0, guidIdx);
+
+			// Replace # with backslash
+			s = s.Replace('#', '\\');
+
+			return s;
+		}
+
+		/// <summary>
+		/// Get a stable identity string for the physical controller that owns
+		/// the given HID device interface path.
+		///
+		/// Walks up the device tree to find the nearest ancestor that has a
+		/// vendor ID (VID_ or VID&amp;) but is NOT a USB multi-interface function
+		/// child (MI_).  For USB controllers this yields the USB composite
+		/// device; for Bluetooth it yields the BTHENUM service device.
+		///
+		/// Falls back to the immediate parent if no matching ancestor is found
+		/// (e.g. Xbox Wireless Adapter with a non-standard tree layout).
+		///
+		/// Returns null on failure.
+		/// </summary>
+		private static string GetControllerIdentity(string devicePath)
+		{
+			try
+			{
+				var instanceId = DevicePathToInstanceId(devicePath);
+				if (string.IsNullOrEmpty(instanceId))
+					return null;
+
+				uint devInst;
+				if (CM_Locate_DevNodeW(out devInst, instanceId, 0) != CM_CR_SUCCESS)
+					return null;
+
+				// Walk up looking for the physical device node.
+				// USB composite:  USB\VID_045E&PID_0B12\serial   (has VID_, no MI_)
+				// Bluetooth:      BTHENUM\{uuid}_VID&0002045e_PID&0b13\...  (has VID&, no MI_)
+				uint current = devInst;
+				for (int depth = 0; depth < 8; depth++)
+				{
+					uint parentInst;
+					if (CM_Get_Parent(out parentInst, current, 0) != CM_CR_SUCCESS)
+						break;
+
+					var sb = new System.Text.StringBuilder(1024);
+					if (CM_Get_Device_IDW(parentInst, sb, sb.Capacity, 0) != CM_CR_SUCCESS)
+						break;
+
+					var parentId = sb.ToString();
+
+					bool hasVendor =
+						parentId.IndexOf("VID_", StringComparison.OrdinalIgnoreCase) >= 0 ||
+						parentId.IndexOf("VID&", StringComparison.OrdinalIgnoreCase) >= 0;
+
+					bool isUsbFunction =
+						parentId.IndexOf("MI_", StringComparison.OrdinalIgnoreCase) >= 0;
+
+					if (hasVendor && !isUsbFunction)
+						return parentId;
+
+					current = parentInst;
+				}
+
+				// Fallback: immediate parent (unique per device even when
+				// the tree layout doesn't match the patterns above).
+				uint origInst;
+				if (CM_Locate_DevNodeW(out origInst, instanceId, 0) == CM_CR_SUCCESS)
+				{
+					uint fallbackParent;
+					if (CM_Get_Parent(out fallbackParent, origInst, 0) == CM_CR_SUCCESS)
+					{
+						var sb = new System.Text.StringBuilder(1024);
+						if (CM_Get_Device_IDW(fallbackParent, sb, sb.Capacity, 0) == CM_CR_SUCCESS)
+							return sb.ToString();
+					}
+				}
+			}
+			catch { }
+
+			return null;
+		}
+
+		#endregion
+
 		/// <summary>
 		/// Background thread: poll one HID device for Share button state.
-		/// Each thread (one per XInput slot 0-3) claims exactly one HID device.
-		/// Staggered startup ensures deterministic 1:1 HID-to-XInput mapping.
+		/// Each thread (one per XInput slot 0-3) claims exactly one HID device
+		/// from a unique physical controller.
+		///
+		/// Staggered startup ensures deterministic enumeration order.
+		/// Controller identity tracking prevents two threads from claiming
+		/// different HID interfaces that belong to the same physical controller
+		/// (which would leave the other controller's Share button unread).
+		///
 		/// Only polls when the slot is connected and NOT ViGEm-owned.
 		/// </summary>
 		private static void PollHidForShareButton(uint controllerIndex)
 		{
-			// Stagger startup so controllers claim HID devices in deterministic order
+			// Stagger startup so controllers claim HID devices in deterministic order.
 			Thread.Sleep((int)(controllerIndex * 500));
 
 			IntPtr hDevice = IntPtr.Zero;
 			string myClaimedPath = null;
+			string myClaimedControllerId = null;
+
+			System.Diagnostics.Debug.WriteLine(
+				string.Format("[ShareBtn] Slot {0}: Polling thread started.", controllerIndex));
 
 			while (_sharePollingRunning)
 			{
@@ -773,20 +907,31 @@ namespace x360ce.App
 
 				if (hDevice == IntPtr.Zero)
 				{
-					// Only search if this real XInput slot is connected and not ViGEm
+					// Only search if this real XInput slot is connected and not ViGEm.
 					if (!IsConnected(controllerIndex) || IsViGEmOwnedSlot(controllerIndex))
 						continue;
 
-					hDevice = FindAndClaimShareHidDevice(out myClaimedPath);
+					string controllerId;
+					hDevice = FindAndClaimShareHidDevice(out myClaimedPath, out controllerId);
+					myClaimedControllerId = controllerId;
+
 					if (hDevice == IntPtr.Zero)
 					{
-						// No device found — back off before retrying
+						// No device found — back off before retrying.
 						Thread.Sleep(500);
+					}
+					else
+					{
+						System.Diagnostics.Debug.WriteLine(
+							string.Format("[ShareBtn] Slot {0}: Claimed HID device. Path={1}, Controller={2}",
+								controllerIndex,
+								myClaimedPath ?? "(null)",
+								myClaimedControllerId ?? "(unknown)"));
 					}
 					continue;
 				}
 
-				// Read HID report
+				// Read HID report.
 				var buf = new byte[32];
 				uint bytesRead;
 				if (ReadFile(hDevice, buf, (uint)buf.Length, out bytesRead, IntPtr.Zero))
@@ -797,45 +942,73 @@ namespace x360ce.App
 				}
 				else
 				{
-					// Device lost — close, unclaim, backoff
+					// Device lost — close, unclaim, backoff.
 					CloseHandle(hDevice);
 					hDevice = IntPtr.Zero;
 
 					lock (_shareStateLock)
 						_shareButtonState[controllerIndex] = false;
 
-					if (myClaimedPath != null)
+					if (myClaimedPath != null || myClaimedControllerId != null)
 					{
 						lock (_hidClaimLock)
-							_claimedHidPaths.Remove(myClaimedPath);
+						{
+							if (myClaimedPath != null)
+								_claimedHidPaths.Remove(myClaimedPath);
+							if (myClaimedControllerId != null)
+								_claimedControllerIds.Remove(myClaimedControllerId);
+						}
+
+						System.Diagnostics.Debug.WriteLine(
+							string.Format("[ShareBtn] Slot {0}: HID device lost, will re-enumerate. Path={1}, Controller={2}",
+								controllerIndex,
+								myClaimedPath ?? "(null)",
+								myClaimedControllerId ?? "(unknown)"));
+
 						myClaimedPath = null;
+						myClaimedControllerId = null;
 					}
 
-					// Staggered backoff by controller index
+					// Staggered backoff by controller index.
 					Thread.Sleep(200 + (int)(controllerIndex * 200));
 				}
 			}
 
-			// Cleanup on shutdown
+			// Cleanup on shutdown.
 			if (hDevice != IntPtr.Zero)
 			{
 				CloseHandle(hDevice);
-				if (myClaimedPath != null)
-					lock (_hidClaimLock)
+				lock (_hidClaimLock)
+				{
+					if (myClaimedPath != null)
 						_claimedHidPaths.Remove(myClaimedPath);
+					if (myClaimedControllerId != null)
+						_claimedControllerIds.Remove(myClaimedControllerId);
+				}
 			}
 
 			lock (_shareStateLock)
 				_shareButtonState[controllerIndex] = false;
+
+			System.Diagnostics.Debug.WriteLine(
+				string.Format("[ShareBtn] Slot {0}: Polling thread stopped.", controllerIndex));
 		}
 
 		/// <summary>
 		/// Enumerate HID devices, find an unclaimed Xbox controller with the
 		/// 16-byte Share button report, claim it, and return the handle.
+		///
+		/// Uses controller identity tracking (via device-tree parent walk) to
+		/// ensure each polling thread claims a device from a DIFFERENT physical
+		/// controller.  Without this, two threads could each claim a different
+		/// HID interface from the same physical controller, leaving the second
+		/// controller's Share button completely unread.
 		/// </summary>
-		private static IntPtr FindAndClaimShareHidDevice(out string claimedPath)
+		private static IntPtr FindAndClaimShareHidDevice(
+			out string claimedPath, out string claimedControllerId)
 		{
 			claimedPath = null;
+			claimedControllerId = null;
 
 			Guid hidGuid;
 			HidD_GetHidGuid(out hidGuid);
@@ -850,10 +1023,13 @@ namespace x360ce.App
 				var ifData = new SP_DEVICE_INTERFACE_DATA();
 				ifData.cbSize = (uint)Marshal.SizeOf(typeof(SP_DEVICE_INTERFACE_DATA));
 
-				for (uint idx = 0; SetupDiEnumDeviceInterfaces(hDevInfo, IntPtr.Zero, ref hidGuid, idx, ref ifData); idx++)
+				for (uint idx = 0;
+					SetupDiEnumDeviceInterfaces(hDevInfo, IntPtr.Zero, ref hidGuid, idx, ref ifData);
+					idx++)
 				{
 					uint reqSize;
-					SetupDiGetDeviceInterfaceDetail(hDevInfo, ref ifData, IntPtr.Zero, 0, out reqSize, IntPtr.Zero);
+					SetupDiGetDeviceInterfaceDetail(hDevInfo, ref ifData,
+						IntPtr.Zero, 0, out reqSize, IntPtr.Zero);
 					if (reqSize == 0)
 						continue;
 
@@ -864,22 +1040,47 @@ namespace x360ce.App
 						int cbSize = IntPtr.Size == 8 ? 8 : (4 + Marshal.SystemDefaultCharSize);
 						Marshal.WriteInt32(detailBuf, cbSize);
 
-						if (!SetupDiGetDeviceInterfaceDetail(hDevInfo, ref ifData, detailBuf, reqSize, out _, IntPtr.Zero))
+						if (!SetupDiGetDeviceInterfaceDetail(hDevInfo, ref ifData,
+							detailBuf, reqSize, out _, IntPtr.Zero))
 							continue;
 
 						string devicePath = Marshal.PtrToStringUni(IntPtr.Add(detailBuf, 4));
 						if (string.IsNullOrEmpty(devicePath))
 							continue;
 
-						// Already claimed by another controller thread?
+						// ── Pre-open checks (no file handle needed yet) ──
+
+						// Already claimed path?
 						lock (_hidClaimLock)
 						{
 							if (_claimedHidPaths.Contains(devicePath))
 								continue;
 						}
 
-						IntPtr hDev = CreateFileW(devicePath, HID_GENERIC_READ, HID_FILE_SHARE_RW,
-							IntPtr.Zero, HID_OPEN_EXISTING, 0, IntPtr.Zero);
+						// Resolve physical controller identity from device tree.
+						string controllerId = GetControllerIdentity(devicePath);
+
+						// If this physical controller is already claimed by another
+						// thread, skip ALL its remaining HID interfaces.
+						if (controllerId != null)
+						{
+							lock (_hidClaimLock)
+							{
+								if (_claimedControllerIds.Contains(controllerId))
+								{
+									System.Diagnostics.Debug.WriteLine(
+										string.Format("[ShareBtn] Skipping (controller already claimed): Path={0}, Controller={1}",
+											devicePath, controllerId));
+									continue;
+								}
+							}
+						}
+
+						// ── Open and validate ──
+
+						IntPtr hDev = CreateFileW(devicePath, HID_GENERIC_READ,
+							HID_FILE_SHARE_RW, IntPtr.Zero, HID_OPEN_EXISTING,
+							0, IntPtr.Zero);
 
 						if (hDev == IntPtr.Zero || hDev == INVALID_HANDLE_PTR)
 							continue;
@@ -887,7 +1088,7 @@ namespace x360ce.App
 						bool matched = false;
 						try
 						{
-							// Check VID/PID
+							// Check VID / PID.
 							var attrs = new HIDD_ATTRIBUTES();
 							attrs.Size = (uint)Marshal.SizeOf(typeof(HIDD_ATTRIBUTES));
 
@@ -896,7 +1097,7 @@ namespace x360ce.App
 								Array.IndexOf(ShareButtonPids, attrs.ProductID) < 0)
 								continue;
 
-							// Check HID collection — must be the 16-byte report
+							// Check HID collection — must be the 16-byte report.
 							IntPtr preparsed;
 							if (!HidD_GetPreparsedData(hDev, out preparsed))
 								continue;
@@ -915,12 +1116,29 @@ namespace x360ce.App
 								HidD_FreePreparsedData(preparsed);
 							}
 
-							// Claim and return
+							// ── Claim path + controller identity (double-check under lock) ──
 							lock (_hidClaimLock)
+							{
+								// Another thread may have claimed between our earlier
+								// check and now — verify again inside the lock.
+								if (_claimedHidPaths.Contains(devicePath))
+									continue;
+								if (controllerId != null && _claimedControllerIds.Contains(controllerId))
+									continue;
+
 								_claimedHidPaths.Add(devicePath);
+								if (controllerId != null)
+									_claimedControllerIds.Add(controllerId);
+							}
 
 							claimedPath = devicePath;
+							claimedControllerId = controllerId;
 							matched = true;
+
+							System.Diagnostics.Debug.WriteLine(
+								string.Format("[ShareBtn] Claimed Share HID: PID=0x{0:X4}, ReportLen=16, Path={1}, Controller={2}",
+									attrs.ProductID, devicePath, controllerId ?? "(unknown)"));
+
 							return hDev;
 						}
 						finally
