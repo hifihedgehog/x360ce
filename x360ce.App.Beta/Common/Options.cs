@@ -132,16 +132,6 @@ namespace x360ce.App
 		}
 		bool _UseDeviceBufferedData;
 
-
-		[DefaultValue(false), Description("Configure Hid Guardian Automatically.")]
-		public bool HidGuardianConfigureAutomatically
-		{
-			get { return _HidGuardianConfigureAutomatically; }
-			set { _HidGuardianConfigureAutomatically = value; OnPropertyChanged(); }
-		}
-		bool _HidGuardianConfigureAutomatically = false;
-
-
         [DefaultValue("{LWin}{LShiftKey}{S}")]
         public string ShareButtonAction
         {

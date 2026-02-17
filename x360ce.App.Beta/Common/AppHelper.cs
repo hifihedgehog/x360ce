@@ -11,7 +11,6 @@ using System.Security.Principal;
 using x360ce.Engine.Data;
 using SharpDX.XInput;
 using JocysCom.ClassLibrary.Win32;
-using x360ce.App.ViGEm;
 
 namespace x360ce.App
 {
@@ -183,10 +182,6 @@ namespace x360ce.App
 		{
 			var stream = EngineHelper.GetResourceStream(resourceName);
 			var sr = new StreamReader(stream);
-			//NameValueCollection list = new NameValueCollection();
-			//list.Add("font-name-default", "'Microsoft Sans Serif'");
-			//list.Add("font-size-default", "16");
-			//HelpRichTextBox.Rtf = Html2Rtf.Converter.Html2Rtf(sr.ReadToEnd(), list);
 			box.Rtf = sr.ReadToEnd();
 			box.SelectAll();
 			box.SelectionIndent = 8;
@@ -198,7 +193,7 @@ namespace x360ce.App
 			};
 		}
 
-	
+
 		// Use cache so same image won't processed multiple times.
 		public static Dictionary<Bitmap, Bitmap> DisabledImageCache = new Dictionary<Bitmap, Bitmap>();
 		static object DisabledImageLock = new object();
@@ -340,90 +335,12 @@ namespace x360ce.App
 			}
 		}
 
-		#region HID Guardian
+		#region HID Hide
 
-		public static void InitializeHidGuardian()
-		{
-			// If can't fix and modify registry then return.
-			if (!ViGEm.HidGuardianHelper.CanModifyParameters(true))
-				return;
-			ViGEm.HidGuardianHelper.InsertCurrentProcessToWhiteList();
-			ViGEm.HidGuardianHelper.ClearWhiteList(true, true);
-		}
-
-		public static void UnInitializeHidGuardian()
-		{
-			// If can't modify registry then return.
-			if (!ViGEm.HidGuardianHelper.CanModifyParameters())
-				return;
-			if (SettingsManager.Options.HidGuardianConfigureAutomatically)
-				UnhideAllDevices();
-			ViGEm.HidGuardianHelper.RemoveCurrentProcessFromWhiteList();
-		}
-
-		/// <summary>
-		/// Must be executed before program close.
-		/// </summary>
-		/// <returns></returns>
-		public static bool UnhideAllDevices()
-		{
-			var affected = ViGEm.HidGuardianHelper.GetAffected();
-			// Clear list of hidden devices.
-			ViGEm.HidGuardianHelper.ClearAffected();
-			var devices = SettingsManager.UserDevices.ItemsToArraySyncronized();
-			// Unhide all devices.
-			for (int i = 0; i < devices.Length; i++)
-				devices[i].IsHidden = false;
-			HidGuardianHelper.ResetDevices(affected);
-			return true;
-		}
-
-		public static bool SynchronizeToHidGuardian(params Guid[] instanceGuids)
-		{
-			var game = SettingsManager.CurrentGame;
-			// Affected devices.
-			UserDevice[] devices;
-			lock (SettingsManager.UserDevices.SyncRoot)
-			{
-				devices = instanceGuids == null || instanceGuids.Length == 0
-					? SettingsManager.UserDevices.Items.ToArray()
-					: SettingsManager.UserDevices.Items.Where(x => instanceGuids.Contains(x.InstanceGuid)).ToArray();
-			}
-			// Get all Ids.
-			var idsToHide = new List<string>();
-			var idsToShow = new List<string>();
-			foreach (var ud in devices)
-			{
-				var hardwareId = (ud.HidHardwareIds ?? "")
-					// Split lines into arraty and exclude empty ones.
-					.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-					// Get all Hardware IDs with vendor code and product code.
-					.Where(x => HidGuardianHelper.HardwareIdRegex.IsMatch(x)).ToList()
-					// Put longest ID on top.
-					.OrderByDescending(x => x)
-					// Take most detail Hardware ID.
-					.FirstOrDefault();
-				// If hardware is not available then create from device id.
-				if (string.IsNullOrEmpty(hardwareId) && !string.IsNullOrEmpty(ud.DevDeviceId))
-					hardwareId = HidGuardianHelper.ConvertToHidVidPid(ud.DevDeviceId).FirstOrDefault();
-				if (string.IsNullOrEmpty(hardwareId))
-					continue;
-				// If must hide and device is not keyboard or mouse.
-				if (ud.IsHidden && !ud.IsKeyboard && !ud.IsMouse)
-					idsToHide.Add(hardwareId);
-				else if(!ud.IsHidden)
-					idsToShow.Add(hardwareId);
-			}
-			var canModify = ViGEm.HidGuardianHelper.CanModifyParameters(true);
-			if (canModify)
-			{
-				var idsToHide2 = idsToHide.Distinct().ToArray();
-				var idsToShow2 = idsToShow.Distinct().ToArray();
-				ViGEm.HidGuardianHelper.RemoveFromAffected(idsToShow2);
-				ViGEm.HidGuardianHelper.InsertToAffected(idsToHide2);
-			}
-			return canModify;
-		}
+		// HID Hide is configured externally using the HID Hide Configuration
+		// Client application. x360ce does not need to manage whitelists or
+		// device hiding — it only needs to detect whether HidHide is installed
+		// so the UI can show the correct status.
 
 		#endregion
 

@@ -33,7 +33,6 @@
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle6 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
-			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(UserDevicesUserControl));
 			this.DevicesDataGridView = new System.Windows.Forms.DataGridView();
 			this.IsOnlineColumn = new System.Windows.Forms.DataGridViewImageColumn();
@@ -43,17 +42,11 @@
 			this.MyDeviceColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
 			this.MyFileColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
 			this.DeviceIdColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-			this.IsHiddenColumn = new System.Windows.Forms.DataGridViewCheckBoxColumn();
 			this.ControllersToolStrip = new System.Windows.Forms.ToolStrip();
 			this.RefreshButton = new System.Windows.Forms.ToolStripButton();
 			this.ControllerDeleteButton = new System.Windows.Forms.ToolStripButton();
 			this.HardwareButton = new System.Windows.Forms.ToolStripButton();
 			this.AddDemoDevice = new System.Windows.Forms.ToolStripButton();
-			this.toolStripDropDownButton1 = new System.Windows.Forms.ToolStripDropDownButton();
-			this.EnumeratedDevicesButton = new System.Windows.Forms.ToolStripMenuItem();
-			this.HiddenDevicesMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			this.UnhideAllDevicesMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			this.synchronizeToHidGuardianToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			((System.ComponentModel.ISupportInitialize)(this.DevicesDataGridView)).BeginInit();
 			this.ControllersToolStrip.SuspendLayout();
 			this.SuspendLayout();
@@ -75,14 +68,13 @@
 			this.DevicesDataGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
 			this.DevicesDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			this.DevicesDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.IsOnlineColumn,
-            this.ConnectionClassColumn,
-            this.IsEnabledColumn,
-            this.MySidColumn,
-            this.MyDeviceColumn,
-            this.MyFileColumn,
-            this.DeviceIdColumn,
-            this.IsHiddenColumn});
+			this.IsOnlineColumn,
+			this.ConnectionClassColumn,
+			this.IsEnabledColumn,
+			this.MySidColumn,
+			this.MyDeviceColumn,
+			this.MyFileColumn,
+			this.DeviceIdColumn});
 			dataGridViewCellStyle5.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
 			dataGridViewCellStyle5.BackColor = System.Drawing.SystemColors.Window;
 			dataGridViewCellStyle5.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -149,8 +141,6 @@
 			// 
 			this.MySidColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
 			this.MySidColumn.DataPropertyName = "InstanceId";
-			dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
-			this.MySidColumn.DefaultCellStyle = dataGridViewCellStyle4;
 			this.MySidColumn.HeaderText = "Instance ID";
 			this.MySidColumn.Name = "MySidColumn";
 			this.MySidColumn.ReadOnly = true;
@@ -177,28 +167,18 @@
 			// 
 			this.DeviceIdColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
 			this.DeviceIdColumn.DataPropertyName = "HidDeviceId";
-			this.DeviceIdColumn.HeaderText = "HID Device ID (HID Guardian)";
+			this.DeviceIdColumn.HeaderText = "HID Device ID";
 			this.DeviceIdColumn.Name = "DeviceIdColumn";
 			this.DeviceIdColumn.ReadOnly = true;
-			// 
-			// IsHiddenColumn
-			// 
-			this.IsHiddenColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-			this.IsHiddenColumn.DataPropertyName = "IsHidden";
-			this.IsHiddenColumn.HeaderText = "Hide";
-			this.IsHiddenColumn.Name = "IsHiddenColumn";
-			this.IsHiddenColumn.ReadOnly = true;
-			this.IsHiddenColumn.Width = 35;
 			// 
 			// ControllersToolStrip
 			// 
 			this.ControllersToolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
 			this.ControllersToolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.RefreshButton,
-            this.ControllerDeleteButton,
-            this.HardwareButton,
-            this.AddDemoDevice,
-            this.toolStripDropDownButton1});
+			this.RefreshButton,
+			this.ControllerDeleteButton,
+			this.HardwareButton,
+			this.AddDemoDevice});
 			this.ControllersToolStrip.Location = new System.Drawing.Point(0, 0);
 			this.ControllersToolStrip.Name = "ControllersToolStrip";
 			this.ControllersToolStrip.Size = new System.Drawing.Size(717, 25);
@@ -244,48 +224,6 @@
 			this.AddDemoDevice.Text = "Add Demo Device";
 			this.AddDemoDevice.Click += new System.EventHandler(this.AddDemoDevice_Click);
 			// 
-			// toolStripDropDownButton1
-			// 
-			this.toolStripDropDownButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-			this.toolStripDropDownButton1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.EnumeratedDevicesButton,
-            this.HiddenDevicesMenuItem,
-            this.UnhideAllDevicesMenuItem,
-            this.synchronizeToHidGuardianToolStripMenuItem});
-			this.toolStripDropDownButton1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripDropDownButton1.Image")));
-			this.toolStripDropDownButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.toolStripDropDownButton1.Name = "toolStripDropDownButton1";
-			this.toolStripDropDownButton1.Size = new System.Drawing.Size(100, 22);
-			this.toolStripDropDownButton1.Text = "HID Guardian...";
-			// 
-			// EnumeratedDevicesButton
-			// 
-			this.EnumeratedDevicesButton.Name = "EnumeratedDevicesButton";
-			this.EnumeratedDevicesButton.Size = new System.Drawing.Size(227, 22);
-			this.EnumeratedDevicesButton.Text = "Show Enumerated Devices";
-			this.EnumeratedDevicesButton.Click += new System.EventHandler(this.ShowEnumeratedDevicesMenuItem_Click);
-			// 
-			// HiddenDevicesMenuItem
-			// 
-			this.HiddenDevicesMenuItem.Name = "HiddenDevicesMenuItem";
-			this.HiddenDevicesMenuItem.Size = new System.Drawing.Size(227, 22);
-			this.HiddenDevicesMenuItem.Text = "Show Hidden Devices";
-			this.HiddenDevicesMenuItem.Click += new System.EventHandler(this.ShowHiddenDevicesMenuItem_Click);
-			// 
-			// UnhideAllDevicesMenuItem
-			// 
-			this.UnhideAllDevicesMenuItem.Name = "UnhideAllDevicesMenuItem";
-			this.UnhideAllDevicesMenuItem.Size = new System.Drawing.Size(227, 22);
-			this.UnhideAllDevicesMenuItem.Text = "Unhide All Devices";
-			this.UnhideAllDevicesMenuItem.Click += new System.EventHandler(this.UnhideAllDevicesMenuItem_Click);
-			// 
-			// synchronizeToHidGuardianToolStripMenuItem
-			// 
-			this.synchronizeToHidGuardianToolStripMenuItem.Name = "synchronizeToHidGuardianToolStripMenuItem";
-			this.synchronizeToHidGuardianToolStripMenuItem.Size = new System.Drawing.Size(227, 22);
-			this.synchronizeToHidGuardianToolStripMenuItem.Text = "Synchronize To HID Guardian";
-			this.synchronizeToHidGuardianToolStripMenuItem.Click += new System.EventHandler(this.synchronizeToHidGuardianToolStripMenuItem_Click);
-			// 
 			// UserDevicesUserControl
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -310,11 +248,6 @@
 		private System.Windows.Forms.ToolStripButton RefreshButton;
 		private System.Windows.Forms.ToolStripButton HardwareButton;
 		private System.Windows.Forms.ToolStripButton AddDemoDevice;
-        private System.Windows.Forms.ToolStripDropDownButton toolStripDropDownButton1;
-        private System.Windows.Forms.ToolStripMenuItem EnumeratedDevicesButton;
-        private System.Windows.Forms.ToolStripMenuItem HiddenDevicesMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem UnhideAllDevicesMenuItem;
-		private System.Windows.Forms.ToolStripMenuItem synchronizeToHidGuardianToolStripMenuItem;
 		private System.Windows.Forms.DataGridViewImageColumn IsOnlineColumn;
 		private System.Windows.Forms.DataGridViewImageColumn ConnectionClassColumn;
 		private System.Windows.Forms.DataGridViewCheckBoxColumn IsEnabledColumn;
@@ -322,6 +255,5 @@
 		private System.Windows.Forms.DataGridViewTextBoxColumn MyDeviceColumn;
 		private System.Windows.Forms.DataGridViewTextBoxColumn MyFileColumn;
 		private System.Windows.Forms.DataGridViewTextBoxColumn DeviceIdColumn;
-		private System.Windows.Forms.DataGridViewCheckBoxColumn IsHiddenColumn;
 	}
 }

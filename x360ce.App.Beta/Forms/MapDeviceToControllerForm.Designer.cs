@@ -51,7 +51,6 @@
 			// ControllersPanel
 			// 
 			this.ControllersPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.ControllersPanel.IsVisibleIsHiddenColumn = false;
 			this.ControllersPanel.Location = new System.Drawing.Point(0, 0);
 			this.ControllersPanel.Margin = new System.Windows.Forms.Padding(0);
 			this.ControllersPanel.Name = "ControllersPanel";

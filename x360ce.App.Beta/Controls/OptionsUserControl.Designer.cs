@@ -1,33 +1,33 @@
 ﻿namespace x360ce.App.Controls
 {
-    partial class OptionsUserControl
-    {
-        /// <summary> 
-        /// Required designer variable.
-        /// </summary>
-        private System.ComponentModel.IContainer components = null;
+	partial class OptionsUserControl
+	{
+		/// <summary> 
+		/// Required designer variable.
+		/// </summary>
+		private System.ComponentModel.IContainer components = null;
 
-        /// <summary> 
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+		/// <summary> 
+		/// Clean up any resources being used.
+		/// </summary>
+		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing && (components != null))
+			{
+				components.Dispose();
+			}
+			base.Dispose(disposing);
+		}
 
-        #region Component Designer generated code
+		#region Component Designer generated code
 
-        /// <summary> 
-        /// Required method for Designer support - do not modify 
-        /// the contents of this method with the code editor.
-        /// </summary>
-        private void InitializeComponent()
-        {
+		/// <summary> 
+		/// Required method for Designer support - do not modify 
+		/// the contents of this method with the code editor.
+		/// </summary>
+		private void InitializeComponent()
+		{
 			this.TestingAndLoggingGroupBox = new System.Windows.Forms.GroupBox();
 			this.ShowSettingsTabCheckBox = new System.Windows.Forms.CheckBox();
 			this.ShowDevicesTabCheckBox = new System.Windows.Forms.CheckBox();
@@ -88,23 +88,22 @@
 			this.DevelopingGroupBox = new System.Windows.Forms.GroupBox();
 			this.ShowTestButtonCheckBox = new System.Windows.Forms.CheckBox();
 			this.ShowFormInfoCheckBox = new System.Windows.Forms.CheckBox();
-            this.ShareButtonGroupBox = new System.Windows.Forms.GroupBox();
-            this.ShareButtonActionLabel = new System.Windows.Forms.Label();
-            this.ShareButtonActionTextBox = new System.Windows.Forms.TextBox();
-            this.InternetOptionsTabPage = new System.Windows.Forms.TabPage();
+			this.ShareButtonGroupBox = new System.Windows.Forms.GroupBox();
+			this.ShareButtonActionLabel = new System.Windows.Forms.Label();
+			this.ShareButtonActionTextBox = new System.Windows.Forms.TextBox();
+			this.InternetOptionsTabPage = new System.Windows.Forms.TabPage();
 			this.InternetPanel = new x360ce.App.Controls.OptionsInternetUserControl();
 			this.VirtualDeviceTabPage = new System.Windows.Forms.TabPage();
 			this.VirtualDevicePanel = new System.Windows.Forms.Panel();
-			this.HidGuardianTabPage = new System.Windows.Forms.TabPage();
-			this.HidGuardianPanel = new System.Windows.Forms.Panel();
+			this.HidHideTabPage = new System.Windows.Forms.TabPage();
+			this.HidHidePanel = new System.Windows.Forms.Panel();
 			this.HelpRichTextBox = new System.Windows.Forms.RichTextBox();
-			this.groupBox1 = new System.Windows.Forms.GroupBox();
-			this.HidGuardianRefreshButton = new System.Windows.Forms.Button();
-			this.HidGuardianConfigureAutomaticallyCheckBox = new System.Windows.Forms.CheckBox();
-			this.HidGuardianLabel = new System.Windows.Forms.Label();
-			this.HidGuardianUninstallButton = new System.Windows.Forms.Button();
-			this.HidGuardianInstallButton = new System.Windows.Forms.Button();
-			this.HidGuardianTextBox = new System.Windows.Forms.TextBox();
+			this.HidHideGroupBox = new System.Windows.Forms.GroupBox();
+			this.HidHideRefreshButton = new System.Windows.Forms.Button();
+			this.HidHideLabel = new System.Windows.Forms.Label();
+			this.HidHideUninstallButton = new System.Windows.Forms.Button();
+			this.HidHideInstallButton = new System.Windows.Forms.Button();
+			this.HidHideTextBox = new System.Windows.Forms.TextBox();
 			this.TestingAndLoggingGroupBox.SuspendLayout();
 			this.OperationGroupBox.SuspendLayout();
 			this.ProgramScanLocationsTabControl.SuspendLayout();
@@ -119,13 +118,13 @@
 			this.GeneralTabPage.SuspendLayout();
 			this.GeneralPanel.SuspendLayout();
 			this.DevelopingGroupBox.SuspendLayout();
-            this.ShareButtonGroupBox.SuspendLayout();
-            this.InternetOptionsTabPage.SuspendLayout();
+			this.ShareButtonGroupBox.SuspendLayout();
+			this.InternetOptionsTabPage.SuspendLayout();
 			this.VirtualDeviceTabPage.SuspendLayout();
 			this.VirtualDevicePanel.SuspendLayout();
-			this.HidGuardianTabPage.SuspendLayout();
-			this.HidGuardianPanel.SuspendLayout();
-			this.groupBox1.SuspendLayout();
+			this.HidHideTabPage.SuspendLayout();
+			this.HidHidePanel.SuspendLayout();
+			this.HidHideGroupBox.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// TestingAndLoggingGroupBox
@@ -241,9 +240,9 @@
 			this.StartWithWindowsStateComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 			this.StartWithWindowsStateComboBox.FormattingEnabled = true;
 			this.StartWithWindowsStateComboBox.Items.AddRange(new object[] {
-            "Maximized",
-            "Normal",
-            "Minimized"});
+			"Maximized",
+			"Normal",
+			"Minimized"});
 			this.StartWithWindowsStateComboBox.Location = new System.Drawing.Point(124, 75);
 			this.StartWithWindowsStateComboBox.Name = "StartWithWindowsStateComboBox";
 			this.StartWithWindowsStateComboBox.Size = new System.Drawing.Size(90, 21);
@@ -297,8 +296,8 @@
 			// 
 			// ProgramScanLocationsTabControl
 			// 
-			this.ProgramScanLocationsTabControl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.ProgramScanLocationsTabControl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.ProgramScanLocationsTabControl.Controls.Add(this.GameScanLocationsTabPage);
 			this.ProgramScanLocationsTabControl.Location = new System.Drawing.Point(263, 9);
 			this.ProgramScanLocationsTabControl.Name = "ProgramScanLocationsTabControl";
@@ -334,9 +333,9 @@
 			this.LocationsToolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
 			this.LocationsToolStrip.ImageScalingSize = new System.Drawing.Size(20, 20);
 			this.LocationsToolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.RefreshLocationsButton,
-            this.RemoveLocationButton,
-            this.AddLocationButton});
+			this.RefreshLocationsButton,
+			this.RemoveLocationButton,
+			this.AddLocationButton});
 			this.LocationsToolStrip.Location = new System.Drawing.Point(0, 0);
 			this.LocationsToolStrip.Name = "LocationsToolStrip";
 			this.LocationsToolStrip.Size = new System.Drawing.Size(370, 27);
@@ -467,8 +466,8 @@
 			// 
 			// VirtualDeviceGroupBox
 			// 
-			this.VirtualDeviceGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.VirtualDeviceGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.VirtualDeviceGroupBox.Controls.Add(this.AboutViGEmLinkLabel);
 			this.VirtualDeviceGroupBox.Controls.Add(this.ViGEmBusLabel);
 			this.VirtualDeviceGroupBox.Controls.Add(this.VigemLabel);
@@ -573,8 +572,8 @@
 			// 
 			// ViGEmBusTextBox
 			// 
-			this.ViGEmBusTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.ViGEmBusTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.ViGEmBusTextBox.BackColor = System.Drawing.SystemColors.Control;
 			this.ViGEmBusTextBox.Location = new System.Drawing.Point(87, 50);
 			this.ViGEmBusTextBox.Name = "ViGEmBusTextBox";
@@ -677,24 +676,24 @@
 			// 
 			this.RemotePortNumericUpDown.Location = new System.Drawing.Point(104, 156);
 			this.RemotePortNumericUpDown.Maximum = new decimal(new int[] {
-            49151,
-            0,
-            0,
-            0});
+			49151,
+			0,
+			0,
+			0});
 			this.RemotePortNumericUpDown.Minimum = new decimal(new int[] {
-            1024,
-            0,
-            0,
-            0});
+			1024,
+			0,
+			0,
+			0});
 			this.RemotePortNumericUpDown.Name = "RemotePortNumericUpDown";
 			this.RemotePortNumericUpDown.Size = new System.Drawing.Size(59, 20);
 			this.RemotePortNumericUpDown.TabIndex = 31;
 			this.RemotePortNumericUpDown.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
 			this.RemotePortNumericUpDown.Value = new decimal(new int[] {
-            26010,
-            0,
-            0,
-            0});
+			26010,
+			0,
+			0,
+			0});
 			// 
 			// RemotePasswordTextBox
 			// 
@@ -729,7 +728,7 @@
 			this.MainTabControl.Controls.Add(this.GeneralTabPage);
 			this.MainTabControl.Controls.Add(this.InternetOptionsTabPage);
 			this.MainTabControl.Controls.Add(this.VirtualDeviceTabPage);
-			this.MainTabControl.Controls.Add(this.HidGuardianTabPage);
+			this.MainTabControl.Controls.Add(this.HidHideTabPage);
 			this.MainTabControl.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.MainTabControl.Location = new System.Drawing.Point(0, 0);
 			this.MainTabControl.Name = "MainTabControl";
@@ -755,8 +754,8 @@
 			this.GeneralPanel.Controls.Add(this.TestingAndLoggingGroupBox);
 			this.GeneralPanel.Controls.Add(this.DevelopingGroupBox);
 			this.GeneralPanel.Controls.Add(this.DirectInputDevicesGroupBox);
-            this.GeneralPanel.Controls.Add(this.ShareButtonGroupBox);
-            this.GeneralPanel.Controls.Add(this.ConfigurationGroupBox);
+			this.GeneralPanel.Controls.Add(this.ShareButtonGroupBox);
+			this.GeneralPanel.Controls.Add(this.ConfigurationGroupBox);
 			this.GeneralPanel.Controls.Add(this.ProgramScanLocationsTabControl);
 			this.GeneralPanel.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.GeneralPanel.Location = new System.Drawing.Point(3, 3);
@@ -766,8 +765,8 @@
 			// 
 			// DevelopingGroupBox
 			// 
-			this.DevelopingGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.DevelopingGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.DevelopingGroupBox.Controls.Add(this.ShowTestButtonCheckBox);
 			this.DevelopingGroupBox.Controls.Add(this.ShowFormInfoCheckBox);
 			this.DevelopingGroupBox.Location = new System.Drawing.Point(263, 238);
@@ -797,37 +796,37 @@
 			this.ShowFormInfoCheckBox.Text = "Show Form Info on CTRL+SHIFT+RButton";
 			this.ShowFormInfoCheckBox.UseVisualStyleBackColor = true;
 			this.ShowFormInfoCheckBox.CheckedChanged += new System.EventHandler(this.ShowSettingsTabCheckBox_CheckedChanged);
-            // 
-            // ShareButtonGroupBox
-            // 
-            this.ShareButtonGroupBox.Controls.Add(this.ShareButtonActionLabel);
-            this.ShareButtonGroupBox.Controls.Add(this.ShareButtonActionTextBox);
-            this.ShareButtonGroupBox.Location = new System.Drawing.Point(3, 357);
-            this.ShareButtonGroupBox.Name = "ShareButtonGroupBox";
-            this.ShareButtonGroupBox.Size = new System.Drawing.Size(254, 47);
-            this.ShareButtonGroupBox.TabIndex = 31;
-            this.ShareButtonGroupBox.TabStop = false;
-            this.ShareButtonGroupBox.Text = "Share Button";
-            // 
-            // ShareButtonActionLabel
-            // 
-            this.ShareButtonActionLabel.AutoSize = true;
-            this.ShareButtonActionLabel.Location = new System.Drawing.Point(4, 22);
-            this.ShareButtonActionLabel.Name = "ShareButtonActionLabel";
-            this.ShareButtonActionLabel.Size = new System.Drawing.Size(40, 13);
-            this.ShareButtonActionLabel.TabIndex = 0;
-            this.ShareButtonActionLabel.Text = "Action:";
-            // 
-            // ShareButtonActionTextBox
-            // 
-            this.ShareButtonActionTextBox.Location = new System.Drawing.Point(50, 19);
-            this.ShareButtonActionTextBox.Name = "ShareButtonActionTextBox";
-            this.ShareButtonActionTextBox.Size = new System.Drawing.Size(129, 20);
-            this.ShareButtonActionTextBox.TabIndex = 0;
-            // 
-            // InternetOptionsTabPage
-            // 
-            this.InternetOptionsTabPage.BackColor = System.Drawing.SystemColors.Control;
+			// 
+			// ShareButtonGroupBox
+			// 
+			this.ShareButtonGroupBox.Controls.Add(this.ShareButtonActionLabel);
+			this.ShareButtonGroupBox.Controls.Add(this.ShareButtonActionTextBox);
+			this.ShareButtonGroupBox.Location = new System.Drawing.Point(3, 357);
+			this.ShareButtonGroupBox.Name = "ShareButtonGroupBox";
+			this.ShareButtonGroupBox.Size = new System.Drawing.Size(254, 47);
+			this.ShareButtonGroupBox.TabIndex = 31;
+			this.ShareButtonGroupBox.TabStop = false;
+			this.ShareButtonGroupBox.Text = "Share Button";
+			// 
+			// ShareButtonActionLabel
+			// 
+			this.ShareButtonActionLabel.AutoSize = true;
+			this.ShareButtonActionLabel.Location = new System.Drawing.Point(4, 22);
+			this.ShareButtonActionLabel.Name = "ShareButtonActionLabel";
+			this.ShareButtonActionLabel.Size = new System.Drawing.Size(40, 13);
+			this.ShareButtonActionLabel.TabIndex = 0;
+			this.ShareButtonActionLabel.Text = "Action:";
+			// 
+			// ShareButtonActionTextBox
+			// 
+			this.ShareButtonActionTextBox.Location = new System.Drawing.Point(50, 19);
+			this.ShareButtonActionTextBox.Name = "ShareButtonActionTextBox";
+			this.ShareButtonActionTextBox.Size = new System.Drawing.Size(129, 20);
+			this.ShareButtonActionTextBox.TabIndex = 0;
+			// 
+			// InternetOptionsTabPage
+			// 
+			this.InternetOptionsTabPage.BackColor = System.Drawing.SystemColors.Control;
 			this.InternetOptionsTabPage.Controls.Add(this.InternetPanel);
 			this.InternetOptionsTabPage.Location = new System.Drawing.Point(4, 22);
 			this.InternetOptionsTabPage.Name = "InternetOptionsTabPage";
@@ -864,121 +863,110 @@
 			this.VirtualDevicePanel.Size = new System.Drawing.Size(650, 470);
 			this.VirtualDevicePanel.TabIndex = 72;
 			// 
-			// HidGuardianTabPage
+			// HidHideTabPage
 			// 
-			this.HidGuardianTabPage.BackColor = System.Drawing.SystemColors.Control;
-			this.HidGuardianTabPage.Controls.Add(this.HidGuardianPanel);
-			this.HidGuardianTabPage.Location = new System.Drawing.Point(4, 22);
-			this.HidGuardianTabPage.Name = "HidGuardianTabPage";
-			this.HidGuardianTabPage.Size = new System.Drawing.Size(650, 470);
-			this.HidGuardianTabPage.TabIndex = 3;
-			this.HidGuardianTabPage.Text = "HID Guardian";
+			this.HidHideTabPage.BackColor = System.Drawing.SystemColors.Control;
+			this.HidHideTabPage.Controls.Add(this.HidHidePanel);
+			this.HidHideTabPage.Location = new System.Drawing.Point(4, 22);
+			this.HidHideTabPage.Name = "HidHideTabPage";
+			this.HidHideTabPage.Size = new System.Drawing.Size(650, 470);
+			this.HidHideTabPage.TabIndex = 3;
+			this.HidHideTabPage.Text = "HID Hide";
 			// 
-			// HidGuardianPanel
+			// HidHidePanel
 			// 
-			this.HidGuardianPanel.Controls.Add(this.HelpRichTextBox);
-			this.HidGuardianPanel.Controls.Add(this.groupBox1);
-			this.HidGuardianPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.HidGuardianPanel.Location = new System.Drawing.Point(0, 0);
-			this.HidGuardianPanel.Name = "HidGuardianPanel";
-			this.HidGuardianPanel.Size = new System.Drawing.Size(650, 470);
-			this.HidGuardianPanel.TabIndex = 72;
+			this.HidHidePanel.Controls.Add(this.HelpRichTextBox);
+			this.HidHidePanel.Controls.Add(this.HidHideGroupBox);
+			this.HidHidePanel.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.HidHidePanel.Location = new System.Drawing.Point(0, 0);
+			this.HidHidePanel.Name = "HidHidePanel";
+			this.HidHidePanel.Size = new System.Drawing.Size(650, 470);
+			this.HidHidePanel.TabIndex = 72;
 			// 
 			// HelpRichTextBox
 			// 
-			this.HelpRichTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.HelpRichTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+			| System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.HelpRichTextBox.BackColor = System.Drawing.Color.White;
 			this.HelpRichTextBox.BorderStyle = System.Windows.Forms.BorderStyle.None;
-			this.HelpRichTextBox.Location = new System.Drawing.Point(3, 86);
+			this.HelpRichTextBox.Location = new System.Drawing.Point(3, 62);
 			this.HelpRichTextBox.Margin = new System.Windows.Forms.Padding(0, 0, 0, 3);
 			this.HelpRichTextBox.Name = "HelpRichTextBox";
 			this.HelpRichTextBox.ReadOnly = true;
-			this.HelpRichTextBox.Size = new System.Drawing.Size(644, 396);
+			this.HelpRichTextBox.Size = new System.Drawing.Size(644, 420);
 			this.HelpRichTextBox.TabIndex = 72;
 			this.HelpRichTextBox.Text = "";
 			// 
-			// groupBox1
+			// HidHideGroupBox
 			// 
-			this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.groupBox1.Controls.Add(this.HidGuardianRefreshButton);
-			this.groupBox1.Controls.Add(this.HidGuardianConfigureAutomaticallyCheckBox);
-			this.groupBox1.Controls.Add(this.HidGuardianLabel);
-			this.groupBox1.Controls.Add(this.HidGuardianUninstallButton);
-			this.groupBox1.Controls.Add(this.HidGuardianInstallButton);
-			this.groupBox1.Controls.Add(this.HidGuardianTextBox);
-			this.groupBox1.Location = new System.Drawing.Point(3, 3);
-			this.groupBox1.Name = "groupBox1";
-			this.groupBox1.Size = new System.Drawing.Size(644, 80);
-			this.groupBox1.TabIndex = 71;
-			this.groupBox1.TabStop = false;
-			this.groupBox1.Text = "HID Guardian by Nefarius";
+			this.HidHideGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
+			this.HidHideGroupBox.Controls.Add(this.HidHideRefreshButton);
+			this.HidHideGroupBox.Controls.Add(this.HidHideLabel);
+			this.HidHideGroupBox.Controls.Add(this.HidHideUninstallButton);
+			this.HidHideGroupBox.Controls.Add(this.HidHideInstallButton);
+			this.HidHideGroupBox.Controls.Add(this.HidHideTextBox);
+			this.HidHideGroupBox.Location = new System.Drawing.Point(3, 3);
+			this.HidHideGroupBox.Name = "HidHideGroupBox";
+			this.HidHideGroupBox.Size = new System.Drawing.Size(644, 56);
+			this.HidHideGroupBox.TabIndex = 71;
+			this.HidHideGroupBox.TabStop = false;
+			this.HidHideGroupBox.Text = "HID Hide by Nefarius";
 			// 
-			// HidGuardianRefreshButton
+			// HidHideRefreshButton
 			// 
-			this.HidGuardianRefreshButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.HidGuardianRefreshButton.Location = new System.Drawing.Point(563, 19);
-			this.HidGuardianRefreshButton.Name = "HidGuardianRefreshButton";
-			this.HidGuardianRefreshButton.Size = new System.Drawing.Size(75, 23);
-			this.HidGuardianRefreshButton.TabIndex = 46;
-			this.HidGuardianRefreshButton.Text = "Refresh";
-			this.HidGuardianRefreshButton.UseVisualStyleBackColor = true;
-			this.HidGuardianRefreshButton.Click += new System.EventHandler(this.HidGuardianRefreshButton_Click);
+			this.HidHideRefreshButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.HidHideRefreshButton.Location = new System.Drawing.Point(563, 19);
+			this.HidHideRefreshButton.Name = "HidHideRefreshButton";
+			this.HidHideRefreshButton.Size = new System.Drawing.Size(75, 23);
+			this.HidHideRefreshButton.TabIndex = 46;
+			this.HidHideRefreshButton.Text = "Refresh";
+			this.HidHideRefreshButton.UseVisualStyleBackColor = true;
+			this.HidHideRefreshButton.Click += new System.EventHandler(this.HidHideRefreshButton_Click);
 			// 
-			// HidGuardianConfigureAutomaticallyCheckBox
+			// HidHideLabel
 			// 
-			this.HidGuardianConfigureAutomaticallyCheckBox.AutoSize = true;
-			this.HidGuardianConfigureAutomaticallyCheckBox.Location = new System.Drawing.Point(87, 23);
-			this.HidGuardianConfigureAutomaticallyCheckBox.Name = "HidGuardianConfigureAutomaticallyCheckBox";
-			this.HidGuardianConfigureAutomaticallyCheckBox.Size = new System.Drawing.Size(359, 17);
-			this.HidGuardianConfigureAutomaticallyCheckBox.TabIndex = 45;
-			this.HidGuardianConfigureAutomaticallyCheckBox.Text = "Configure automatically - auto-hide Direct Input device when emulated.";
-			this.HidGuardianConfigureAutomaticallyCheckBox.UseVisualStyleBackColor = true;
+			this.HidHideLabel.AutoSize = true;
+			this.HidHideLabel.Location = new System.Drawing.Point(6, 24);
+			this.HidHideLabel.Name = "HidHideLabel";
+			this.HidHideLabel.Size = new System.Drawing.Size(52, 13);
+			this.HidHideLabel.TabIndex = 29;
+			this.HidHideLabel.Text = "HID Hide";
 			// 
-			// HidGuardianLabel
+			// HidHideUninstallButton
 			// 
-			this.HidGuardianLabel.AutoSize = true;
-			this.HidGuardianLabel.Location = new System.Drawing.Point(6, 53);
-			this.HidGuardianLabel.Name = "HidGuardianLabel";
-			this.HidGuardianLabel.Size = new System.Drawing.Size(72, 13);
-			this.HidGuardianLabel.TabIndex = 29;
-			this.HidGuardianLabel.Text = "HID Guardian";
+			this.HidHideUninstallButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.HidHideUninstallButton.Enabled = false;
+			this.HidHideUninstallButton.Location = new System.Drawing.Point(482, 19);
+			this.HidHideUninstallButton.Name = "HidHideUninstallButton";
+			this.HidHideUninstallButton.Size = new System.Drawing.Size(75, 23);
+			this.HidHideUninstallButton.TabIndex = 44;
+			this.HidHideUninstallButton.Text = "Uninstall";
+			this.HidHideUninstallButton.UseVisualStyleBackColor = true;
+			this.HidHideUninstallButton.Click += new System.EventHandler(this.HidHideUninstallButton_Click);
 			// 
-			// HidGuardianUninstallButton
+			// HidHideInstallButton
 			// 
-			this.HidGuardianUninstallButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.HidGuardianUninstallButton.Enabled = false;
-			this.HidGuardianUninstallButton.Location = new System.Drawing.Point(563, 48);
-			this.HidGuardianUninstallButton.Name = "HidGuardianUninstallButton";
-			this.HidGuardianUninstallButton.Size = new System.Drawing.Size(75, 23);
-			this.HidGuardianUninstallButton.TabIndex = 44;
-			this.HidGuardianUninstallButton.Text = "Uninstall";
-			this.HidGuardianUninstallButton.UseVisualStyleBackColor = true;
-			this.HidGuardianUninstallButton.Click += new System.EventHandler(this.HidGuardianUninstallButton_Click);
+			this.HidHideInstallButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.HidHideInstallButton.Enabled = false;
+			this.HidHideInstallButton.Location = new System.Drawing.Point(401, 19);
+			this.HidHideInstallButton.Name = "HidHideInstallButton";
+			this.HidHideInstallButton.Size = new System.Drawing.Size(75, 23);
+			this.HidHideInstallButton.TabIndex = 44;
+			this.HidHideInstallButton.Text = "Install";
+			this.HidHideInstallButton.UseVisualStyleBackColor = true;
+			this.HidHideInstallButton.Click += new System.EventHandler(this.HidHideInstallButton_Click);
 			// 
-			// HidGuardianInstallButton
+			// HidHideTextBox
 			// 
-			this.HidGuardianInstallButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.HidGuardianInstallButton.Enabled = false;
-			this.HidGuardianInstallButton.Location = new System.Drawing.Point(482, 48);
-			this.HidGuardianInstallButton.Name = "HidGuardianInstallButton";
-			this.HidGuardianInstallButton.Size = new System.Drawing.Size(75, 23);
-			this.HidGuardianInstallButton.TabIndex = 44;
-			this.HidGuardianInstallButton.Text = "Install";
-			this.HidGuardianInstallButton.UseVisualStyleBackColor = true;
-			this.HidGuardianInstallButton.Click += new System.EventHandler(this.HidGuardianInstallButton_Click);
-			// 
-			// HidGuardianTextBox
-			// 
-			this.HidGuardianTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.HidGuardianTextBox.BackColor = System.Drawing.SystemColors.Control;
-			this.HidGuardianTextBox.Location = new System.Drawing.Point(87, 50);
-			this.HidGuardianTextBox.Name = "HidGuardianTextBox";
-			this.HidGuardianTextBox.Size = new System.Drawing.Size(458, 20);
-			this.HidGuardianTextBox.TabIndex = 41;
+			this.HidHideTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
+			this.HidHideTextBox.BackColor = System.Drawing.SystemColors.Control;
+			this.HidHideTextBox.Location = new System.Drawing.Point(64, 21);
+			this.HidHideTextBox.Name = "HidHideTextBox";
+			this.HidHideTextBox.Size = new System.Drawing.Size(331, 20);
+			this.HidHideTextBox.TabIndex = 41;
 			// 
 			// OptionsUserControl
 			// 
@@ -1010,39 +998,39 @@
 			this.GeneralPanel.ResumeLayout(false);
 			this.DevelopingGroupBox.ResumeLayout(false);
 			this.DevelopingGroupBox.PerformLayout();
-            this.ShareButtonGroupBox.ResumeLayout(false);
-            this.ShareButtonGroupBox.PerformLayout();
-            this.InternetOptionsTabPage.ResumeLayout(false);
+			this.ShareButtonGroupBox.ResumeLayout(false);
+			this.ShareButtonGroupBox.PerformLayout();
+			this.InternetOptionsTabPage.ResumeLayout(false);
 			this.VirtualDeviceTabPage.ResumeLayout(false);
 			this.VirtualDevicePanel.ResumeLayout(false);
-			this.HidGuardianTabPage.ResumeLayout(false);
-			this.HidGuardianPanel.ResumeLayout(false);
-			this.groupBox1.ResumeLayout(false);
-			this.groupBox1.PerformLayout();
+			this.HidHideTabPage.ResumeLayout(false);
+			this.HidHidePanel.ResumeLayout(false);
+			this.HidHideGroupBox.ResumeLayout(false);
+			this.HidHideGroupBox.PerformLayout();
 			this.ResumeLayout(false);
 
-        }
+		}
 
-        #endregion
+		#endregion
 
-        private System.Windows.Forms.GroupBox TestingAndLoggingGroupBox;
-        private System.Windows.Forms.CheckBox XInputEnableCheckBox;
-        private System.Windows.Forms.CheckBox ConsoleCheckBox;
-        private System.Windows.Forms.CheckBox DebugModeCheckBox;
-        private System.Windows.Forms.CheckBox EnableLoggingCheckBox;
-        private System.Windows.Forms.GroupBox OperationGroupBox;
-        public System.Windows.Forms.CheckBox AllowOnlyOneCopyCheckBox;
-        private System.Windows.Forms.TabControl ProgramScanLocationsTabControl;
+		private System.Windows.Forms.GroupBox TestingAndLoggingGroupBox;
+		private System.Windows.Forms.CheckBox XInputEnableCheckBox;
+		private System.Windows.Forms.CheckBox ConsoleCheckBox;
+		private System.Windows.Forms.CheckBox DebugModeCheckBox;
+		private System.Windows.Forms.CheckBox EnableLoggingCheckBox;
+		private System.Windows.Forms.GroupBox OperationGroupBox;
+		public System.Windows.Forms.CheckBox AllowOnlyOneCopyCheckBox;
+		private System.Windows.Forms.TabControl ProgramScanLocationsTabControl;
 		private System.Windows.Forms.TabPage GameScanLocationsTabPage;
 		private System.Windows.Forms.FolderBrowserDialog LocationFolderBrowserDialog;
-        public System.Windows.Forms.ListBox GameScanLocationsListBox;
-        private System.Windows.Forms.GroupBox ConfigurationGroupBox;
-        private System.Windows.Forms.Label ConfigurationVersionLabel;
-        private System.Windows.Forms.TextBox ConfigurationVersionTextBox;
-        private System.Windows.Forms.ToolStrip LocationsToolStrip;
-        private System.Windows.Forms.ToolStripButton RefreshLocationsButton;
-        private System.Windows.Forms.ToolStripButton AddLocationButton;
-        private System.Windows.Forms.ToolStripButton RemoveLocationButton;
+		public System.Windows.Forms.ListBox GameScanLocationsListBox;
+		private System.Windows.Forms.GroupBox ConfigurationGroupBox;
+		private System.Windows.Forms.Label ConfigurationVersionLabel;
+		private System.Windows.Forms.TextBox ConfigurationVersionTextBox;
+		private System.Windows.Forms.ToolStrip LocationsToolStrip;
+		private System.Windows.Forms.ToolStripButton RefreshLocationsButton;
+		private System.Windows.Forms.ToolStripButton AddLocationButton;
+		private System.Windows.Forms.ToolStripButton RemoveLocationButton;
 		private System.Windows.Forms.GroupBox DirectInputDevicesGroupBox;
 		private System.Windows.Forms.CheckBox ExcludeSupplementalDevicesCheckBox;
 		private System.Windows.Forms.CheckBox ExcludeVirtualDevicesCheckBox;
@@ -1055,9 +1043,9 @@
 		private System.Windows.Forms.Label PollingRateLabel;
 		private System.Windows.Forms.ComboBox PollingRateComboBox;
 		private System.Windows.Forms.Button DeveloperToolsButton;
-        private System.Windows.Forms.Label ViGEmBusLabel;
-        private System.Windows.Forms.TextBox ViGEmBusTextBox;
-        public System.Windows.Forms.Button ViGEmBusRefreshButton;
+		private System.Windows.Forms.Label ViGEmBusLabel;
+		private System.Windows.Forms.TextBox ViGEmBusTextBox;
+		public System.Windows.Forms.Button ViGEmBusRefreshButton;
 		private System.Windows.Forms.Button ViGEmBusInstallButton;
 		internal System.Windows.Forms.CheckBox AlwaysOnTopCheckBox;
 		public System.Windows.Forms.ComboBox StartWithWindowsStateComboBox;
@@ -1087,20 +1075,19 @@
 		private System.Windows.Forms.CheckBox UseDeviceBufferedDataCheckBox;
 		public System.Windows.Forms.TabControl MainTabControl;
 		public System.Windows.Forms.TabPage VirtualDeviceTabPage;
-		private System.Windows.Forms.GroupBox groupBox1;
-		private System.Windows.Forms.CheckBox HidGuardianConfigureAutomaticallyCheckBox;
-		private System.Windows.Forms.Label HidGuardianLabel;
-		private System.Windows.Forms.Button HidGuardianUninstallButton;
-		private System.Windows.Forms.Button HidGuardianInstallButton;
-		private System.Windows.Forms.TextBox HidGuardianTextBox;
-		public System.Windows.Forms.TabPage HidGuardianTabPage;
-		private System.Windows.Forms.Panel HidGuardianPanel;
-		public System.Windows.Forms.Button HidGuardianRefreshButton;
+		private System.Windows.Forms.GroupBox HidHideGroupBox;
+		private System.Windows.Forms.Label HidHideLabel;
+		private System.Windows.Forms.Button HidHideUninstallButton;
+		private System.Windows.Forms.Button HidHideInstallButton;
+		private System.Windows.Forms.TextBox HidHideTextBox;
+		public System.Windows.Forms.TabPage HidHideTabPage;
+		private System.Windows.Forms.Panel HidHidePanel;
+		public System.Windows.Forms.Button HidHideRefreshButton;
 		private System.Windows.Forms.RichTextBox HelpRichTextBox;
-        	private System.Windows.Forms.GroupBox ShareButtonGroupBox;
-        	private System.Windows.Forms.Label ShareButtonActionLabel;
-        	private System.Windows.Forms.TextBox ShareButtonActionTextBox;
-        	public System.Windows.Forms.CheckBox AutoDetectForegroundWindowCheckBox;
+		private System.Windows.Forms.GroupBox ShareButtonGroupBox;
+		private System.Windows.Forms.Label ShareButtonActionLabel;
+		private System.Windows.Forms.TextBox ShareButtonActionTextBox;
+		public System.Windows.Forms.CheckBox AutoDetectForegroundWindowCheckBox;
 		public System.Windows.Forms.CheckBox IsProcessDPIAwareCheckBox;
 	}
 }

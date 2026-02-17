@@ -175,7 +175,6 @@ namespace x360ce.App
 		{
 			if (IsDesignMode)
 				return;
-			AppHelper.InitializeHidGuardian();
 			System.Threading.Thread.CurrentThread.Name = "MainFormThread";
 			// Initialize Debug panel.
 			DebugPanel = new Forms.DebugForm();
@@ -233,14 +232,6 @@ namespace x360ce.App
 			}
 			MonitorErrors(true);
 			var game = SettingsManager.CurrentGame;
-			if (SettingsManager.Options.HidGuardianConfigureAutomatically)
-			{
-				// Enable Reconfigure HID Guardian.
-				var changed = SettingsManager.AutoHideShowMappedDevices(game);
-				var mappedInstanceGuids = SettingsManager.GetMappedDevices(game?.FileName, true)
-					.Select(x => x.InstanceGuid).ToArray();
-				AppHelper.SynchronizeToHidGuardian(mappedInstanceGuids);
-			}
 		}
 
 		private void DHelper_XInputReloaded(object sender, DInput.DInputEventArgs e)
@@ -296,9 +287,6 @@ namespace x360ce.App
 				// Update Timer will be started inside Settings timer.
 				UpdateTimer.Stop();
 				SettingsTimer.Stop();
-
-				// Synchromize settings to HID Guardian.
-				//AppHelper.SynchronizeToHidGuardian();
 
 				SettingsTimer.Start();
 			}
@@ -589,7 +577,6 @@ namespace x360ce.App
 				tmp.Delete();
 			}
 			SaveAll();
-			AppHelper.UnInitializeHidGuardian();
 		}
 
 		#region Timer
@@ -1002,8 +989,7 @@ namespace x360ce.App
 					new CppX64RuntimeInstallIssue(),
 					new HotfixIssue(),
 					new XboxDriversIssue(),
-					new VirtualDeviceDriverIssue(),
-					new HidGuardianDriverIssue()
+					new VirtualDeviceDriverIssue()
 				);
 				IssuesPanel.IsSuspended = new Func<bool>(IssuesPanel_IsSuspended);
 				IssuesPanel.CheckCompleted += IssuesPanel_CheckCompleted;

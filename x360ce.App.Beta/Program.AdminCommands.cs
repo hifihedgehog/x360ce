@@ -59,20 +59,14 @@ namespace x360ce.App
 				DInput.VirtualDriverInstaller.UninstallViGEmBus();
 				return true;
 			}
-			if (ic.Parameters.ContainsKey(AdminCommand.InstallHidGuardian.ToString()))
+			if (ic.Parameters.ContainsKey(AdminCommand.InstallHidHide.ToString()))
 			{
-				DInput.VirtualDriverInstaller.InstallHidGuardian();
+				DInput.VirtualDriverInstaller.InstallHidHide();
 				return true;
 			}
-			if (ic.Parameters.ContainsKey(AdminCommand.UninstallHidGuardian.ToString()))
+			if (ic.Parameters.ContainsKey(AdminCommand.UninstallHidHide.ToString()))
 			{
-				DInput.VirtualDriverInstaller.UninstallHidGuardian();
-				return true;
-			}
-			if (ic.Parameters.ContainsKey(AdminCommand.UninstallDevice.ToString()))
-			{
-				var hwid = ic.Parameters[AdminCommand.UninstallDevice.ToString()];
-				DInput.VirtualDriverInstaller.UnInstallDevice(hwid);
+				DInput.VirtualDriverInstaller.UninstallHidHide();
 				return true;
 			}
 			return false;

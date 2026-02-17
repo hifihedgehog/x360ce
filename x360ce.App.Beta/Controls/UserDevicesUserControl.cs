@@ -73,7 +73,7 @@ namespace x360ce.App.Controls
 		{
 			var list = new SortableBindingList<UserDevice>();
 			list.SynchronizingObject = ControlsHelper.MainTaskScheduler;
-			// Exclude Syste/Virtual devices.
+			// Exclude System/Virtual devices.
 			UserDevice[] devices;
 			lock (SettingsManager.UserDevices.SyncRoot)
 			{
@@ -120,23 +120,12 @@ namespace x360ce.App.Controls
 					? new Bitmap(16, 16)
 					: DeviceDetector.GetClassIcon(item.ConnectionClass, 16)?.ToBitmap();
 			}
-			else if (column == IsHiddenColumn)
-			{
-				var left = row.Cells[e.ColumnIndex].OwningColumn.Width;
-				// Show checkbox.
-				if (item.AllowHide && e.CellStyle.Padding.Left >= 0)
-					e.CellStyle.Padding = new Padding();
-				// Hide checkbox (move out of the sight).
-				if (!item.AllowHide && e.CellStyle.Padding.Left == 0)
-					e.CellStyle.Padding = new Padding(left, 0, 0, 0);
-			}
 			else if (column == DeviceIdColumn)
 			{
 				var d = item.Device;
 				if (d != null)
 				{
 				}
-				//e.Value = item.de
 			}
 		}
 
@@ -244,77 +233,6 @@ namespace x360ce.App.Controls
 				// Changed check (enabled state) of the current item.
 				ud.IsEnabled = !ud.IsEnabled;
 			}
-			else if (column == IsHiddenColumn)
-			{
-				if (ud.AllowHide)
-				{
-					var canModify = ViGEm.HidGuardianHelper.CanModifyParameters(true);
-					if (canModify)
-					{
-						//var ids = AppHelper.GetIdsToAffect(ud.HidDeviceId, ud.HidHardwareIds);
-						var ids = new string[] { ud.DevDeviceId };
-						ud.IsHidden = !ud.IsHidden;
-						// Use begin invoke which will prevent mouse multi-select rows.
-						ControlsHelper.BeginInvoke(() =>
-						{
-							AppHelper.SynchronizeToHidGuardian(ud.InstanceGuid);
-						});
-					}
-					else
-					{
-						var form = new MessageBoxForm();
-						form.StartPosition = FormStartPosition.CenterParent;
-						form.ShowForm("Can't modify HID Guardian registry.\r\nPlease run this application as Administrator once in order to fix permissions.", "Permission Denied", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-					}
-				}
-			}
-		}
-
-		private void ShowHiddenDevicesMenuItem_Click(object sender, EventArgs e)
-		{
-			var devices = ViGEm.HidGuardianHelper.GetAffected();
-			var form = new MessageBoxForm();
-			form.StartPosition = FormStartPosition.CenterParent;
-			var text = devices.Length == 0
-				? "None"
-				// Join and make && visible.
-				: string.Join("\r\n", devices).Replace("&", "&&");
-			form.ShowForm(text, "Affected Devices", MessageBoxButtons.OK, MessageBoxIcon.Information);
-		}
-
-		private void ShowEnumeratedDevicesMenuItem_Click(object sender, EventArgs e)
-		{
-			var devices = ViGEm.HidGuardianHelper.GetEnumeratedDevices();
-			var form = new MessageBoxForm();
-			form.StartPosition = FormStartPosition.CenterParent;
-			var text = devices.Length == 0
-				? "None"
-				// Join and make && visible.
-				: string.Join("\r\n", devices).Replace("&", "&&");
-			form.ShowForm(text, "Enumerated Devices", MessageBoxButtons.OK, MessageBoxIcon.Information);
-		}
-
-		private void UnhideAllDevicesMenuItem_Click(object sender, EventArgs e)
-		{
-			AppHelper.UnhideAllDevices();
-		}
-
-		private void synchronizeToHidGuardianToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-			var canModify = AppHelper.SynchronizeToHidGuardian();
-			if (!canModify)
-			{
-				var form = new MessageBoxForm();
-				form.StartPosition = FormStartPosition.CenterParent;
-				form.ShowForm("Can't modify HID Guardian registry.\r\nPlease run this application as Administrator once in order to fix permissions.", "Permission Denied", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-			}
-		}
-
-		[DefaultValue(true), Browsable(true)]
-		public bool IsVisibleIsHiddenColumn
-		{
-			get { return IsHiddenColumn.Visible; }
-			set { IsHiddenColumn.Visible = false; }
 		}
 
 		private void DevicesDataGridView_DataError(object sender, DataGridViewDataErrorEventArgs e)

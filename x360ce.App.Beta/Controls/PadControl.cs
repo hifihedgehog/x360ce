@@ -1256,8 +1256,7 @@ namespace x360ce.App.Controls
 				return;
 			// Check if device already have old settings before adding new ones.
 			var noOldSettings = SettingsManager.GetSettings(game.FileName, MappedTo).Count == 0;
-			SettingsManager.MapGamePadDevices(game, MappedTo, selectedUserDevices,
-				SettingsManager.Options.HidGuardianConfigureAutomatically);
+			SettingsManager.MapGamePadDevices(game, MappedTo, selectedUserDevices);
 			var hasNewSettings = SettingsManager.GetSettings(game.FileName, MappedTo).Count > 0;
 			// If new devices mapped and button is not enabled then...
 			if (noOldSettings && hasNewSettings && !EnableButton.Checked)
@@ -1276,8 +1275,7 @@ namespace x360ce.App.Controls
 				return;
 			var settingsOld = SettingsManager.GetSettings(game.FileName, MappedTo);
 			var setting = GetSelectedSetting();
-			SettingsManager.UnMapGamePadDevices(game, setting,
-				SettingsManager.Options.HidGuardianConfigureAutomatically);
+			SettingsManager.UnMapGamePadDevices(game, setting);
 			var settingsNew = SettingsManager.GetSettings(game.FileName, MappedTo);
 			// if all devices unmapped and mapping is enabled then...
 			if (settingsOld.Count > 0 && settingsNew.Count == 0 && EnableButton.Checked)

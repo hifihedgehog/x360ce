@@ -975,7 +975,7 @@ namespace x360ce.App
 			}
 		}
 
-		public static void MapGamePadDevices(UserGame game, MapTo mappedTo, UserDevice[] devices, bool configureHidGuardian)
+		public static void MapGamePadDevices(UserGame game, MapTo mappedTo, UserDevice[] devices)
 		{
 			foreach (var ud in devices)
 			{
@@ -1004,27 +1004,13 @@ namespace x360ce.App
 					setting.MapTo = (int)mappedTo;
 				}
 			}
-			if (configureHidGuardian)
-			{
-				var instanceGuids = devices.Select(x => x.InstanceGuid).ToArray();
-				var changed = AutoHideShowMappedDevices(game, instanceGuids);
-				if (changed)
-					AppHelper.SynchronizeToHidGuardian(instanceGuids);
-			}
 		}
 
-		public static void UnMapGamePadDevices(UserGame game, UserSetting setting, bool configureHidGuardian)
+		public static void UnMapGamePadDevices(UserGame game, UserSetting setting)
 		{
 			// Disable map.
 			if (setting != null)
 				setting.MapTo = (int)MapTo.Disabled;
-			if (configureHidGuardian)
-			{
-				// Unhide device if no longer mapped.
-				var changed = SettingsManager.AutoHideShowMappedDevices(game, new Guid[] { setting.InstanceGuid });
-				if (changed)
-					AppHelper.SynchronizeToHidGuardian(setting.InstanceGuid);
-			}
 		}
 
 		/// <summary>

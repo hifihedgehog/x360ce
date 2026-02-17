@@ -243,8 +243,8 @@
     <Compile Include="Controls\JcDataGridView.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Controls\OptionsHidGuardianControl.xaml.cs">
-      <DependentUpon>OptionsHidGuardianControl.xaml</DependentUpon>
+    <Compile Include="Controls\OptionsHidHideControl.xaml.cs">
+      <DependentUpon>OptionsHidHideControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\OptionsInternetUserControl.cs">
       <SubType>UserControl</SubType>
@@ -438,7 +438,6 @@
     <Compile Include="Issues\CppX86RuntimeInstallIssue.cs" />
     <Compile Include="Issues\ExeFileIssue.cs" />
     <Compile Include="Issues\HotfixIssue.cs" />
-    <Compile Include="Issues\HidGuardianDriverIssue.cs" />
     <Compile Include="Issues\VirtualDeviceDriverIssue.cs" />
     <Compile Include="Issues\XboxDriversIssue.cs" />
     <Compile Include="MainForm.Tray.cs">
@@ -466,7 +465,6 @@
     <Compile Include="ViGEm\Client\ViGEmClient.x360ce.cs" />
     <Compile Include="ViGEm\Client\ViGEmTarget.cs" />
     <Compile Include="ViGEm\Client\Enums\VIGEM_ERROR.cs" />
-    <Compile Include="ViGEm\HidGuardianHelper.cs" />
     <EmbeddedResource Include="Controls\AboutControl.resx">
       <DependentUpon>AboutControl.cs</DependentUpon>
       <SubType>Designer</SubType>
@@ -572,7 +570,7 @@
     <EmbeddedResource Include="Presets\x360ce.Philips_Wireless_PC_Controller.ini" />
     <None Include="app.config" />
     <EmbeddedResource Include="Documents\Help.rtf" />
-    <EmbeddedResource Include="Documents\Help_HidGuardian.rtf" />
+    <EmbeddedResource Include="Documents\Help_HidHide.rtf" />
     <Compile Include="Common\SettingsManager.LoadAndSync.cs" />
     <None Include="ClassDiagram1.cd" />
     <None Include="packages.config" />
@@ -596,7 +594,6 @@
     <EmbeddedResource Include="Resources\x360ce_Games.xml.gz" />
     <EmbeddedResource Include="Resources\x360ce.Layouts.xml.gz" />
     <EmbeddedResource Include="Resources\x360ce.Programs.xml.gz" />
-    <EmbeddedResource Include="Resources\ViGEmBus.zip" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="MainForm.resx">
@@ -664,6 +661,8 @@
     <Content Include="Forms\MessageBoxFormImages\MessageBoxIcon_Question_32x32.png" />
     <Content Include="Forms\MessageBoxFormImages\MessageBoxIcon_Warning.ico" />
     <Content Include="Forms\MessageBoxFormImages\MessageBoxIcon_Warning_32x32.png" />
+    <EmbeddedResource Include="Resources\HidHide_1.5.230_x64.exe" />
+    <EmbeddedResource Include="Resources\ViGEmBus_1.22.0_x64_x86_arm64.exe" />
     <EmbeddedResource Include="Resources\DXTweak\DXTweak2.exe" />
     <EmbeddedResource Include="Resources\ViGEmClient\x64\ViGEmClient.dll" />
     <EmbeddedResource Include="Resources\ViGEmClient\x86\ViGEmClient.dll" />
@@ -675,7 +674,6 @@
     <Content Include="Images\app_48x48.png" />
     <EmbeddedResource Include="Resources\SharpDX\SharpDX.DirectInput.dll" />
     <EmbeddedResource Include="Resources\SharpDX\SharpDX.dll" />
-    <EmbeddedResource Include="Resources\HidGuardian.zip" />
     <None Include="Resources\SharpDX\SharpDX.xml">
       <SubType>Designer</SubType>
     </None>
@@ -785,7 +783,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="Controls\OptionsHidGuardianControl.xaml">
+    <Page Include="Controls\OptionsHidHideControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -7,8 +7,7 @@
     {
         InstallViGEmBus,
 		UninstallViGEmBus,
-        InstallHidGuardian,
-        UninstallHidGuardian,
-		UninstallDevice,
-    }
+		InstallHidHide,
+		UninstallHidHide,
+	}
 }

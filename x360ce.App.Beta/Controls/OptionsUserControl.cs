@@ -19,7 +19,7 @@ namespace x360ce.App.Controls
 			// Make font more consistent with the rest of the interface.
 			Controls.OfType<ToolStrip>().ToList().ForEach(x => x.Font = Font);
 			LocationsToolStrip.Font = Font;
-			AppHelper.LoadHelp(HelpRichTextBox, "Documents.Help_HidGuardian.rtf");
+			AppHelper.LoadHelp(HelpRichTextBox, "Documents.Help_HidHide.rtf");
 		}
 
 		public void InitOptions()
@@ -33,7 +33,7 @@ namespace x360ce.App.Controls
 			if (MainForm.Current.MainTabControl.SelectedTab == MainForm.Current.OptionsPanel.Parent)
 			{
 				RefreshViGEmBusStatus();
-				RefreshHidGuardianStatus();
+				RefreshHidHideStatus();
 			}
 		}
 
@@ -99,7 +99,6 @@ namespace x360ce.App.Controls
 			SettingsManager.LoadAndMonitor(x => x.EnableShowFormInfo, ShowFormInfoCheckBox);
 			SettingsManager.LoadAndMonitor(x => x.ShowTestButton, ShowTestButtonCheckBox);
 			SettingsManager.LoadAndMonitor(x => x.UseDeviceBufferedData, UseDeviceBufferedDataCheckBox);
-			SettingsManager.LoadAndMonitor(x => x.HidGuardianConfigureAutomatically, HidGuardianConfigureAutomaticallyCheckBox);
 			SettingsManager.LoadAndMonitor(x => x.ShareButtonAction, ShareButtonActionTextBox);
 			SettingsManager.LoadAndMonitor(x => x.AutoDetectForegroundWindow, AutoDetectForegroundWindowCheckBox);
 			SettingsManager.LoadAndMonitor(x => x.IsProcessDPIAware, IsProcessDPIAwareCheckBox);
@@ -301,7 +300,6 @@ namespace x360ce.App.Controls
 			RefreshViGEmBusStatus();
 		}
 
-
 		private void ViGEmBusRefreshButton_Click(object sender, EventArgs e)
 		{
 			RefreshViGEmBusStatus();
@@ -310,14 +308,11 @@ namespace x360ce.App.Controls
 		void RefreshViGEmBusStatus()
 		{
 			ControlsHelper.SetText(ViGEmBusTextBox, "Please wait...");
-			// run in another thread, to make sure it is not freezing interface.
 			var ts = new System.Threading.ThreadStart(delegate ()
 			{
-				// Get Virtual Bus and HID Guardian status.
 				var bus = DInput.VirtualDriverInstaller.GetViGemBusDriverInfo();
 				ControlsHelper.BeginInvoke(() =>
 				{
-					// Update Bus status.
 					var busStatus = bus.DriverVersion == 0
 						? "Not installed"
 						: string.Format("{0} {1}", bus.Description, bus.GetVersion());
@@ -332,45 +327,39 @@ namespace x360ce.App.Controls
 
 		#endregion
 
-		#region HID Guardian
+		#region HID Hide
 
-		private void HidGuardianInstallButton_Click(object sender, EventArgs e)
+		private void HidHideInstallButton_Click(object sender, EventArgs e)
 		{
-			HidGuardianTextBox.Text = "Installing. Please Wait...";
-			Program.RunElevated(AdminCommand.InstallHidGuardian);
-			ViGEm.HidGuardianHelper.InsertCurrentProcessToWhiteList();
-			RefreshHidGuardianStatus();
+			HidHideTextBox.Text = "Installing. Please Wait...";
+			DInput.VirtualDriverInstaller.InstallHidHide();
+			RefreshHidHideStatus();
 		}
 
-		private void HidGuardianRefreshButton_Click(object sender, EventArgs e)
+		private void HidHideRefreshButton_Click(object sender, EventArgs e)
 		{
-			RefreshHidGuardianStatus();
+			RefreshHidHideStatus();
 		}
 
-		private void HidGuardianUninstallButton_Click(object sender, EventArgs e)
+		private void HidHideUninstallButton_Click(object sender, EventArgs e)
 		{
-			HidGuardianTextBox.Text = "Uninstalling. Please Wait...";
-			Program.RunElevated(AdminCommand.UninstallHidGuardian);
-			RefreshHidGuardianStatus();
+			HidHideTextBox.Text = "Uninstalling. Please Wait...";
+			DInput.VirtualDriverInstaller.UninstallHidHide();
+			RefreshHidHideStatus();
 		}
 
-		void RefreshHidGuardianStatus()
+		void RefreshHidHideStatus()
 		{
-			ControlsHelper.SetText(HidGuardianTextBox, "Please wait...");
-			// run in another thread, to make sure it is not freezing interface.
+			ControlsHelper.SetText(HidHideTextBox, "Please wait...");
 			var ts = new System.Threading.ThreadStart(delegate ()
 			{
-				// Get Virtual Bus and HID Guardian status.
-				var hid = DInput.VirtualDriverInstaller.GetHidGuardianDriverInfo();
+				var statusText = DInput.VirtualDriverInstaller.GetHidHideStatusText();
+				var isInstalled = DInput.VirtualDriverInstaller.IsHidHideInstalled();
 				ControlsHelper.BeginInvoke(() =>
 				{
-					// Update HID status.
-					var hidStatus = hid.DriverVersion == 0
-						? "Not installed"
-						: string.Format("{0} {1}", hid.Description, hid.GetVersion());
-					ControlsHelper.SetText(HidGuardianTextBox, hidStatus);
-					HidGuardianInstallButton.Enabled = hid.DriverVersion == 0;
-					HidGuardianUninstallButton.Enabled = hid.DriverVersion != 0;
+					ControlsHelper.SetText(HidHideTextBox, statusText);
+					HidHideInstallButton.Enabled = !isInstalled;
+					HidHideUninstallButton.Enabled = isInstalled;
 				});
 			});
 			var t = new System.Threading.Thread(ts);
