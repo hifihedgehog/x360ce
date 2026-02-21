@@ -288,6 +288,7 @@
 			this.DirectInputPanel.Name = "DirectInputPanel";
 			this.DirectInputPanel.Size = new System.Drawing.Size(1492, 802);
 			this.DirectInputPanel.TabIndex = 0;
+			// 
 			// AdvancedTabPage
 			// 
 			this.AdvancedTabPage.Controls.Add(this.AdvancedOptionsPanel);
@@ -326,8 +327,8 @@
 			// 
 			// CombinedIndexComboBox
 			// 
-			this.CombinedIndexComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.CombinedIndexComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.CombinedIndexComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 			this.CombinedIndexComboBox.FormattingEnabled = true;
 			this.CombinedIndexComboBox.Location = new System.Drawing.Point(283, 109);
@@ -376,8 +377,8 @@
 			// 
 			// PassThroughIndexComboBox
 			// 
-			this.PassThroughIndexComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.PassThroughIndexComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.PassThroughIndexComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 			this.PassThroughIndexComboBox.Enabled = false;
 			this.PassThroughIndexComboBox.FormattingEnabled = true;
@@ -411,8 +412,8 @@
 			// 
 			// DeviceSubTypeComboBox
 			// 
-			this.DeviceSubTypeComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.DeviceSubTypeComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.DeviceSubTypeComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 			this.DeviceSubTypeComboBox.FormattingEnabled = true;
 			this.DeviceSubTypeComboBox.Location = new System.Drawing.Point(280, 233);
@@ -445,8 +446,8 @@
 			// 
 			// AxisToDPadGroupBox
 			// 
-			this.AxisToDPadGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.AxisToDPadGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.AxisToDPadGroupBox.Controls.Add(this.AxisToDPadEnabledCheckBox);
 			this.AxisToDPadGroupBox.Controls.Add(this.AxisToDPadOffsetTrackBar);
 			this.AxisToDPadGroupBox.Controls.Add(this.AxisToDPadOffsetTextBox);
@@ -574,8 +575,8 @@
 			// 
 			// GeneralCenterPanel
 			// 
-			this.GeneralCenterPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
+			this.GeneralCenterPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+			| System.Windows.Forms.AnchorStyles.Left)));
 			this.GeneralCenterPanel.Controls.Add(this.RemapAllButton);
 			this.GeneralCenterPanel.Controls.Add(this.MapNameComboBox);
 			this.GeneralCenterPanel.Controls.Add(this.XboxImageHost);
@@ -609,8 +610,8 @@
 			// 
 			// MapNameComboBox
 			// 
-			this.MapNameComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.MapNameComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.MapNameComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 			this.MapNameComboBox.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
 			this.MapNameComboBox.FormattingEnabled = true;
@@ -1481,8 +1482,8 @@
 			// 
 			// PadTabControl
 			// 
-			this.PadTabControl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.PadTabControl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.PadTabControl.Controls.Add(this.GeneralTabPage);
 			this.PadTabControl.Controls.Add(this.AdvancedTabPage);
 			this.PadTabControl.Controls.Add(this.ButtonsTabPage);
@@ -1527,6 +1528,8 @@
 			// 
 			// AxisToButtonGroupBox
 			// 
+			this.AxisToButtonGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.AxisToButtonGroupBox.Controls.Add(this.AxisToButtonADeadZonePanel);
 			this.AxisToButtonGroupBox.Controls.Add(this.AxisToDPadRightDeadZonePanel);
 			this.AxisToButtonGroupBox.Controls.Add(this.AxisToRightThumbButtonDeadZonePanel);
@@ -1543,8 +1546,8 @@
 			this.AxisToButtonGroupBox.Controls.Add(this.AxisToButtonBDeadZonePanel);
 			this.AxisToButtonGroupBox.Location = new System.Drawing.Point(6, 6);
 			this.AxisToButtonGroupBox.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
-			this.AxisToButtonGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.AxisToButtonGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.AxisToButtonGroupBox.Location = new System.Drawing.Point(8, 7);
 			this.AxisToButtonGroupBox.Margin = new System.Windows.Forms.Padding(8, 7, 8, 7);
 			this.AxisToButtonGroupBox.Name = "AxisToButtonGroupBox";
@@ -1553,6 +1556,7 @@
 			this.AxisToButtonGroupBox.TabIndex = 3;
 			this.AxisToButtonGroupBox.TabStop = false;
 			this.AxisToButtonGroupBox.Text = "DInput Axis To Virtual XInput Button DeadZones (Map on [General] Tab First):";
+			// 
 			// AxisToButtonADeadZonePanel
 			// 
 			this.AxisToButtonADeadZonePanel.GamepadButton = SharpDX.XInput.GamepadButtonFlags.A;
@@ -1679,7 +1683,6 @@
 			this.AxisToButtonBDeadZonePanel.Size = new System.Drawing.Size(1124, 54);
 			this.AxisToButtonBDeadZonePanel.TabIndex = 0;
 			// 
-			// 
 			// DPadTabPage
 			// 
 			this.DPadTabPage.BackColor = System.Drawing.SystemColors.Control;
@@ -1716,6 +1719,8 @@
 			// 
 			// TriggersPanel
 			// 
+			this.TriggersPanel.Controls.Add(this.LeftTriggerUserControl);
+			this.TriggersPanel.Controls.Add(this.RightTriggerUserControl);
 			this.TriggersPanel.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.TriggersPanel.Location = new System.Drawing.Point(8, 7);
 			this.TriggersPanel.Margin = new System.Windows.Forms.Padding(8, 7, 8, 7);
@@ -1761,6 +1766,8 @@
 			// 
 			// LeftThumbPanel
 			// 
+			this.LeftThumbPanel.Controls.Add(this.LeftThumbXUserControl);
+			this.LeftThumbPanel.Controls.Add(this.LeftThumbYUserControl);
 			this.LeftThumbPanel.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.LeftThumbPanel.Location = new System.Drawing.Point(8, 7);
 			this.LeftThumbPanel.Margin = new System.Windows.Forms.Padding(8, 7, 8, 7);
@@ -1806,13 +1813,14 @@
 			// 
 			// RightThumbPanel
 			// 
+			this.RightThumbPanel.Controls.Add(this.RightThumbXUserControl);
+			this.RightThumbPanel.Controls.Add(this.RightThumbYUserControl);
 			this.RightThumbPanel.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.RightThumbPanel.Location = new System.Drawing.Point(8, 7);
 			this.RightThumbPanel.Margin = new System.Windows.Forms.Padding(8, 7, 8, 7);
 			this.RightThumbPanel.Name = "RightThumbPanel";
 			this.RightThumbPanel.Size = new System.Drawing.Size(1991, 1034);
 			this.RightThumbPanel.TabIndex = 1;
-
 			// 
 			// RightThumbXUserControl
 			// 
@@ -1880,8 +1888,8 @@
 			// 
 			// ForceFeedbackGroupBox
 			// 
-			this.ForceFeedbackGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.ForceFeedbackGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.ForceFeedbackGroupBox.Controls.Add(this.EffectDescriptionLabel);
 			this.ForceFeedbackGroupBox.Controls.Add(this.ForceTypeComboBox);
 			this.ForceFeedbackGroupBox.Controls.Add(this.ForceEnableCheckBox);
@@ -1901,9 +1909,9 @@
 			// 
 			// EffectDescriptionLabel
 			// 
-			this.EffectDescriptionLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.EffectDescriptionLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+			| System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.EffectDescriptionLabel.Location = new System.Drawing.Point(16, 157);
 			this.EffectDescriptionLabel.Margin = new System.Windows.Forms.Padding(8, 0, 8, 0);
 			this.EffectDescriptionLabel.Name = "EffectDescriptionLabel";
@@ -2406,23 +2414,23 @@
 			this.MappedDevicesDataGridView.AllowUserToAddRows = false;
 			this.MappedDevicesDataGridView.AllowUserToDeleteRows = false;
 			this.MappedDevicesDataGridView.AllowUserToResizeRows = false;
-			this.MappedDevicesDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			this.MappedDevicesDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+			| System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.MappedDevicesDataGridView.BackgroundColor = System.Drawing.Color.White;
 			this.MappedDevicesDataGridView.BorderStyle = System.Windows.Forms.BorderStyle.None;
 			this.MappedDevicesDataGridView.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
 			this.MappedDevicesDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			this.MappedDevicesDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.IsOnlineColumn,
-            this.ConnectionClassColumn,
-            this.IsEnabledColumn,
-            this.SettingIdColumn,
-            this.CompletionColumn,
-            this.InstanceIdColumn,
-            this.VendorNameColumn,
-            this.ProductNameColumn,
-            this.MapToColumn});
+			this.IsOnlineColumn,
+			this.ConnectionClassColumn,
+			this.IsEnabledColumn,
+			this.SettingIdColumn,
+			this.CompletionColumn,
+			this.InstanceIdColumn,
+			this.VendorNameColumn,
+			this.ProductNameColumn,
+			this.MapToColumn});
 			dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
 			dataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Window;
 			dataGridViewCellStyle3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -2571,11 +2579,11 @@
 			this.GamesToolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
 			this.GamesToolStrip.ImageScalingSize = new System.Drawing.Size(20, 20);
 			this.GamesToolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.RemoveMapButton,
-            this.AddMapButton,
-            this.AutoMapButton,
-            this.EnableButton,
-            this.GetXInputStatesCheckBox});
+			this.RemoveMapButton,
+			this.AddMapButton,
+			this.AutoMapButton,
+			this.EnableButton,
+			this.GetXInputStatesCheckBox});
 			this.GamesToolStrip.Location = new System.Drawing.Point(0, 0);
 			this.GamesToolStrip.Name = "GamesToolStrip";
 			this.GamesToolStrip.Padding = new System.Windows.Forms.Padding(11, 0, 3, 0);
@@ -2712,6 +2720,7 @@
 			this.Margin = new System.Windows.Forms.Padding(8, 7, 8, 7);
 			this.Name = "PadControl";
 			this.Size = new System.Drawing.Size(2043, 1455);
+			this.DirectInputTabPage.ResumeLayout(false);
 			this.AdvancedTabPage.ResumeLayout(false);
 			this.AdvancedOptionsPanel.ResumeLayout(false);
 			this.CombineGroupBox.ResumeLayout(false);
@@ -2733,11 +2742,15 @@
 			this.PadTabControl.ResumeLayout(false);
 			this.ButtonsTabPage.ResumeLayout(false);
 			this.AxisToButtonPanel.ResumeLayout(false);
+			this.AxisToButtonGroupBox.ResumeLayout(false);
 			this.DPadTabPage.ResumeLayout(false);
 			this.DPadPanel.ResumeLayout(false);
 			this.TriggersTabPage.ResumeLayout(false);
+			this.TriggersPanel.ResumeLayout(false);
 			this.LeftThumbTabPage.ResumeLayout(false);
+			this.LeftThumbPanel.ResumeLayout(false);
 			this.RightThumbTabPage.ResumeLayout(false);
+			this.RightThumbPanel.ResumeLayout(false);
 			this.ForceFeedbackTabPage.ResumeLayout(false);
 			this.ForceFeedbackPanel.ResumeLayout(false);
 			this.ForceFeedbackPanel.PerformLayout();
